@@ -1,5 +1,5 @@
 [package]
-name = "atsam4e_hal"
+name = "atsam4e16e_hal"
 version = "0.1.0"
 authors = ["John W. Terrell <john@coolpeoplenetworks.com>"]
 edition = "2018"
