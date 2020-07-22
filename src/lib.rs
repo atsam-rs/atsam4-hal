@@ -1,6 +1,6 @@
-//! HAL for the ATSAM4E16E microcontroller
+//! HAL for the ATSAM4 series of microcontrollers
 //!
-//! This is an implementation of the [`embedded-hal`] traits for the ATSAM4E16E microcontroller
+//! This is an implementation of the [`embedded-hal`] traits for the ATSAM4 microcontrollers
 //!
 //! [`embedded-hal`]: https://github.com/japaric/embedded-hal
 //!
@@ -26,9 +26,22 @@
 #![deny(warnings)]
 #![no_std]
 
-extern crate cast;
-extern crate cortex_m;
-extern crate embedded_hal as hal;
-extern crate nb;
-pub extern crate atsam4e16e;
-extern crate void;
+// extern crate cast;
+// extern crate cortex_m;
+// extern crate embedded_hal as hal;
+// extern crate nb;
+// extern crate void;
+
+pub mod common;
+
+#[cfg(feature = "sam4e")]
+pub mod sam4e;
+#[cfg(feature = "sam4e")]
+pub use self::sam4e::*;
+
+#[cfg(feature = "sam4e16e")]
+pub use atsam4e16e as target_device;
+#[cfg(feature = "sam4e16e")]
+pub mod sam4e;
+#[cfg(feature = "sam4e16e")]
+pub use self::sam4e16e::*;

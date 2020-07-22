@@ -1,13 +1,13 @@
 [package]
-name = "atsam4e16e_hal"
+name = "atsam4_hal"
 version = "0.1.0"
 authors = ["John W. Terrell <john@coolpeoplenetworks.com>"]
 edition = "2018"
-description = "HAL for the ATSAM4E16E microcontrollers"
-keywords = ["arm", "cortex-m", "atsam4e16e", "hal"]
+description = "HAL for the ATSAM4 microcontrollers"
+keywords = ["arm", "cortex-m", "atsam4", "atsam4e", "atsam4e16e", "hal"]
 categories = ["embedded", "hardware-support", "no-std"]
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/atsam4e-rs/atsam4e16e-hal"
+repository = "https://github.com/atsam4-rs/atsam4-hal"
 
 [dependencies.cast]
 version = "0.2.2"
@@ -26,11 +26,13 @@ version = "0.1.0"
 
 [dependencies.atsam4e16e]
 version = "0.1.0"
-git = "https://github.com/atsam4e-rs/atsam4e16e"
+git = "https://github.com/atsam4-rs/atsam4e16e"
+optional = true
 
 [dependencies.void]
 version = "1.0.2"
 default-features = false
 
 [features]
-rt = ["atsam4e16e/rt"]
+sam4e = []
+sam4e16e = ["sam4e"]

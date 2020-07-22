@@ -1,0 +1,1 @@
+//! Module containing common code for the SAM4E16E microcontroller
