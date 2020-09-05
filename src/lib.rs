@@ -16,32 +16,22 @@
 //!
 //! [cortex-m-quickstart]: https://docs.rs/cortex-m-quickstart/~0.3
 //!
-//! # Examples
-//!
-//! Examples of *using* these abstractions can be found in the documentation of the [`f3`] crate.
-//!
-//! [`f3`]: https://docs.rs/f3/~0.6
 
 #![deny(missing_docs)]
 #![deny(warnings)]
 #![no_std]
 
-// extern crate cast;
-// extern crate cortex_m;
-// extern crate embedded_hal as hal;
-// extern crate nb;
-// extern crate void;
-
 pub mod common;
 
-#[cfg(feature = "sam4e")]
+#[cfg(feature = "atsam4e16e")]
+pub use atsam4e16e_pac as pac;
+
+#[cfg(feature = "atsam4e")]
 pub mod sam4e;
-#[cfg(feature = "sam4e")]
+#[cfg(feature = "atsam4e")]
 pub use self::sam4e::*;
 
-#[cfg(feature = "sam4e16e")]
-pub use atsam4e16e as target_device;
-#[cfg(feature = "sam4e16e")]
-pub mod sam4e;
-#[cfg(feature = "sam4e16e")]
+#[cfg(feature = "atsam4e16e")]
+pub mod sam4e16e;
+#[cfg(feature = "atsam4e16e")]
 pub use self::sam4e16e::*;

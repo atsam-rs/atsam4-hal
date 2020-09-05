@@ -1,5 +1,5 @@
 [package]
-name = "atsam4_hal"
+name = "atsam4-hal"
 version = "0.1.0"
 authors = ["John W. Terrell <john@coolpeoplenetworks.com>"]
 edition = "2018"
@@ -9,11 +9,11 @@ categories = ["embedded", "hardware-support", "no-std"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/atsam4-rs/atsam4-hal"
 
+[dependencies]
+
 [dependencies.cast]
 version = "0.2.2"
 default-features = false
-
-[dependencies]
 
 [dependencies.cortex-m]
 version = "0.5.0"
@@ -24,9 +24,9 @@ version = "0.2.0"
 [dependencies.nb]
 version = "0.1.0"
 
-[dependencies.atsam4e16e]
+[dependencies.atsam4e16e-pac]
 version = "0.1.0"
-git = "https://github.com/atsam4-rs/atsam4e16e"
+path = "../atsam4e16e"
 optional = true
 
 [dependencies.void]
@@ -34,5 +34,5 @@ version = "1.0.2"
 default-features = false
 
 [features]
-sam4e = []
-sam4e16e = ["sam4e"]
+atsam4e = []
+atsam4e16e = ["atsam4e", "atsam4e16e-pac", "atsam4e16e-pac/rt"]
