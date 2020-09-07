@@ -17,11 +17,14 @@
 //! [cortex-m-quickstart]: https://docs.rs/cortex-m-quickstart/~0.3
 //!
 
-#![deny(missing_docs)]
-#![deny(warnings)]
+//#![deny(missing_docs)]
+//#![deny(warnings)]
 #![no_std]
 
 pub mod common;
+pub use common::*;
+
+pub extern crate embedded_hal as hal;
 
 #[cfg(feature = "atsam4e16e")]
 pub use atsam4e16e_pac as pac;
