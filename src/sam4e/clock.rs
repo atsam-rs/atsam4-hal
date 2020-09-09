@@ -33,7 +33,7 @@ impl ClockController {
         Self::enable_plla_clock(&mut pmc, multiplier, divider);
         Self::wait_for_plla_lock(&pmc);
 
-        let prescaler = 1;
+        let prescaler = 0; // 0 = no prescaling.
         Self::switch_master_clock_to_plla(&mut pmc, prescaler);
 
         let master_clock_frequency = Self::calculate_master_clock_frequency(&pmc);

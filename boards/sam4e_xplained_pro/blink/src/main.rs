@@ -7,9 +7,9 @@ extern crate cortex_m_semihosting;
 extern crate atsam4_hal as hal;
 extern crate embedded_hal;
 
-#[cfg(not(feature = "use_semihosting"))]
+#[cfg(not(feature = "panic_semihosting"))]
 extern crate panic_halt;
-#[cfg(feature = "use_semihosting")]
+#[cfg(feature = "panic_semihosting")]
 extern crate panic_semihosting;
 
 use cortex_m_rt::entry;

@@ -28,12 +28,13 @@ optional = true
 [dependencies.panic-semihosting]
 version = "~0.5"
 optional = true
+features = ["jlink-quirks"]
 
 [dependencies.atsam4-hal]
 path = "../../.."
 
 [features]
-default = ["rt", "atsam4-hal/atsam4e16e", "panic_halt"]
+default = ["rt", "atsam4-hal/atsam4e16e", "panic_semihosting"]
 rt = ["cortex-m-rt"]
 panic_halt = ["panic-halt"]
 panic_abort = ["panic-abort"]
