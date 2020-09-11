@@ -1,9 +1,0 @@
-# vim:ft=toml:
-[target.thumbv7em-none-eabihf]
-runner = 'arm-none-eabi-gdb -q -x debugscript.gdb'
-
-[build]
-target = "thumbv7em-none-eabihf"
-rustflags = [
-   "-C", "link-arg=-Tlink.x",
-]
