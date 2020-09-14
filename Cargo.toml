@@ -9,8 +9,6 @@ categories = ["embedded", "hardware-support", "no-std"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/atsam4-rs/atsam4-hal"
 
-[dependencies]
-
 [dependencies.cast]
 version = "0.2.2"
 default-features = false
@@ -26,7 +24,6 @@ version = "0.1.0"
 
 [dependencies.atsam4e16e-pac]
 version = "0.1.0"
-path = "../atsam4e16e"
 optional = true
 
 [dependencies.void]
