@@ -24,7 +24,8 @@
 pub mod common;
 pub use common::*;
 
-pub extern crate embedded_hal as hal;
+pub extern crate embedded_hal;
+pub use embedded_hal::digital::v2::*;
 
 #[cfg(feature = "atsam4e16e")]
 pub use atsam4e16e_pac as pac;

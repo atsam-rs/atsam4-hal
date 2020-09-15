@@ -4,7 +4,7 @@ use cortex_m::peripheral::syst::SystClkSource;
 use cortex_m::peripheral::SYST;
 
 use crate::time::Hertz;
-use hal::blocking::delay::{DelayMs, DelayUs};
+pub use embedded_hal::blocking::delay::{DelayMs, DelayUs};
 
 /// System timer (SysTick) as a delay provider
 pub struct Delay {

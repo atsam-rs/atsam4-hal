@@ -37,13 +37,13 @@ pub struct OpenDrain;
 pub struct PFA;
 
 /// Peripheral function B (type state)
-pub struct PFB;
+// pub struct PFB;
 
-/// Peripheral function C (type state)
-pub struct PFC;
+// /// Peripheral function C (type state)
+// pub struct PFC;
 
-/// Peripheral function D (type state)
-pub struct PFD;
+// /// Peripheral function D (type state)
+// pub struct PFD;
 
 macro_rules! gpio {
     ($GPIOX:ident, $gpiox:ident, $PXx:ident, [
@@ -52,21 +52,69 @@ macro_rules! gpio {
         pub mod $gpiox {
             use core::marker::PhantomData;
 
-            use hal::digital::v2::OutputPin;
+            use embedded_hal::digital::v2::OutputPin;
             use crate::pac::{$gpiox, $GPIOX};
 
             use super::{
-                PFA, PFB, PFC, PFD,
+                PFA, //PFB, PFC, PFD,
                 GpioExt,
                 Floating, Input, OpenDrain, Output, PullDown, PullUp, PushPull,
             };
 
+            /// Opaque port reference
+            pub struct Port {
+                _0: (),
+            }
+
+            impl Port {
+                pub(crate) fn puer(&mut self) -> &$gpiox::PUER {
+                    unsafe { &(*$GPIOX::ptr()).puer }
+                }
+
+                pub(crate) fn pudr(&mut self) -> &$gpiox::PUDR {
+                    unsafe { &(*$GPIOX::ptr()).pudr }
+                }
+
+                pub(crate) fn ppder(&mut self) -> &$gpiox::PPDER {
+                    unsafe { &(*$GPIOX::ptr()).ppder }
+                }
+
+                pub(crate) fn ppddr(&mut self) -> &$gpiox::PPDDR {
+                    unsafe { &(*$GPIOX::ptr()).ppddr }
+                }
+
+                pub(crate) fn abcdsr1(&mut self) -> &$gpiox::ABCDSR {
+                    unsafe { &(*$GPIOX::ptr()).abcdsr[0] }
+                }
+
+                pub(crate) fn abcdsr2(&mut self) -> &$gpiox::ABCDSR {
+                    unsafe { &(*$GPIOX::ptr()).abcdsr[0] }
+                }
+
+                pub(crate) fn idr(&mut self) -> &$gpiox::IDR {
+                    unsafe { &(*$GPIOX::ptr()).idr }
+                }
+
+                pub(crate) fn mder(&mut self) -> &$gpiox::MDER {
+                    unsafe { &(*$GPIOX::ptr()).mder }
+                }
+
+                pub(crate) fn mddr(&mut self) -> &$gpiox::MDDR {
+                    unsafe { &(*$GPIOX::ptr()).mddr }
+                }
+
+                pub(crate) fn oer(&mut self) -> &$gpiox::OER {
+                    unsafe { &(*$GPIOX::ptr()).oer }
+                }
+
+                pub(crate) fn per(&mut self) -> &$gpiox::PER {
+                    unsafe { &(*$GPIOX::ptr()).per }
+                }
+            }
+
             /// GPIO parts
             pub struct Parts {
-                /// Opaque PeripheralSelectRegister1
-                pub abcdsr1: PeripheralSelectRegister1,
-                /// Opaque PeripheralSelectRegister2
-                pub abcdsr2: PeripheralSelectRegister2,
+                pub port: Port,
                 $(
                     /// Pin
                     pub $pxi: $PXi<$MODE>,
@@ -83,147 +131,14 @@ macro_rules! gpio {
                     // ahb.rstr().modify(|_, w| w.$iopxrst().clear_bit());
 
                     Parts {
-                        abcdsr1: PeripheralSelectRegister1 { _0: () },
-                        abcdsr2: PeripheralSelectRegister2 { _0: () },
+                        port: Port { _0: () },
                         $(
                             $pxi: $PXi { _mode: PhantomData },
                         )+
                     }
                 }
             }
-
-            /// Opaque PullUpDisableRegister (PIO_PUDR)
-            pub struct PullUpDisableRegister {
-                _0: (),
-            }
-
-            impl PullUpDisableRegister {
-                pub(crate) fn pudr(&mut self) -> &$gpiox::PUDR {
-                    unsafe { &(*$GPIOX::ptr()).pudr }
-                }
-            }
-
-            /// Opaque PullUpEnableRegister (PIO_PUER)
-            pub struct PullUpEnableRegister {
-                _0: (),
-            }
-
-            impl PullUpEnableRegister {
-                pub(crate) fn puer(&mut self) -> &$gpiox::PUER {
-                    unsafe { &(*$GPIOX::ptr()).puer }
-                }
-            }
             
-            /// Opaque PadPulldownDisableRegister (PIO_PPDDR)
-            pub struct PadPulldownDisableRegister {
-                _0: (),
-            }
-
-            impl PadPulldownDisableRegister {
-                pub(crate) fn ppddr(&mut self) -> &$gpiox::PPDDR {
-                    unsafe { &(*$GPIOX::ptr()).ppddr }
-                }
-            }
-
-            /// Opaque PadPulldownEnableRegister (PIO_PPDER)
-            pub struct PadPulldownEnableRegister {
-                _0: (),
-            }
-
-            impl PadPulldownEnableRegister {
-                pub(crate) fn ppder(&mut self) -> &$gpiox::PPDER {
-                    unsafe { &(*$GPIOX::ptr()).ppder }
-                }
-            }
-
-            /// Opaque PeripheralSelectRegister1 (PIO_ABCDSR1)
-            pub struct PeripheralSelectRegister1 {
-                _0: (),
-            }
-
-            impl PeripheralSelectRegister1 {
-                pub(crate) fn abcdsr1(&mut self) -> &$gpiox::ABCDSR {
-                    unsafe { &(*$GPIOX::ptr()).abcdsr[0] }
-                }
-            }
-
-            /// Opaque PeripheralSelectRegister2 (ABCDSR2)
-            pub struct PeripheralSelectRegister2 {
-                _0: (),
-            }
-
-            impl PeripheralSelectRegister2 {
-                pub(crate) fn abcdsr2(&mut self) -> &$gpiox::ABCDSR {
-                    unsafe { &(*$GPIOX::ptr()).abcdsr[0] }
-                }
-            }
-
-            /// Opaque InterruptDisableRegister (PIO_IDR)
-            pub struct InterruptDisableRegister {
-                _0: (),
-            }
-
-            impl InterruptDisableRegister {
-                pub(crate) fn idr(&mut self) -> &$gpiox::IDR {
-                    unsafe { &(*$GPIOX::ptr()).idr }
-                }
-            }
-            
-            /// Opaque MultiDriverEnableRegister (PIO_MDER)
-            pub struct MultiDriverEnableRegister {
-                _0: (),
-            }
-
-            impl MultiDriverEnableRegister {
-                pub(crate) fn mder(&mut self) -> &$gpiox::MDER {
-                    unsafe { &(*$GPIOX::ptr()).mder }
-                }
-            }
-
-            /// Opaque OutputEnableRegister (PIO_OER)
-            pub struct OutputEnableRegister {
-                _0: (),
-            }
-
-            impl OutputEnableRegister {
-                pub(crate) fn oer(&mut self) -> &$gpiox::OER {
-                    unsafe { &(*$GPIOX::ptr()).oer }
-                }
-            }
-
-            /// Opaque PIOEnableRegister (PIO_PER)
-            pub struct PIOEnableRegister {
-                _0: (),
-            }
-
-            impl PIOEnableRegister {
-                pub(crate) fn per(&mut self) -> &$gpiox::PER {
-                    unsafe { &(*$GPIOX::ptr()).per }
-                }
-            }
-            
-            // /// Opaque SODR (Set Output Data Register) register
-            // pub struct SODR {
-            //     _0: (),
-            // }
-
-            // impl SODR {
-            //     pub(crate) fn sodr(&mut self) -> &$gpioy::SODR {
-            //         unsafe { &(*$GPIOX::ptr()).sodr }
-            //     }
-            // }
-
-            // /// Opaque CODR (Clear Output Data Register) register
-            // pub struct CODR {
-            //     _0: (),
-            // }
-
-            // impl CODR {
-            //     pub(crate) fn codr(&mut self) -> &$gpioy::CODR {
-            //         unsafe { &(*$GPIOX::ptr()).codr }
-            //     }
-            // }
-
             /// Partially erased pin
             pub struct $PXx<MODE> {
                 i: u8,
@@ -256,11 +171,10 @@ macro_rules! gpio {
                     /// Configures the pin to serve as peripheral function A (PFA)
                     pub fn into_pfa(
                         self,
-                        abcdsr1: &mut PeripheralSelectRegister1,
-                        abcdsr2: &mut PeripheralSelectRegister2,
+                        port: &mut Port,
                     ) -> $PXi<PFA> {
-                        abcdsr1.abcdsr1().modify(|r, w| unsafe { w.bits(r.bits() & !(1 << $i)) });
-                        abcdsr2.abcdsr2().modify(|r, w| unsafe { w.bits(r.bits() & !(1 << $i)) });
+                        port.abcdsr1().modify(|r, w| unsafe { w.bits(r.bits() & !(1 << $i)) });
+                        port.abcdsr2().modify(|r, w| unsafe { w.bits(r.bits() & !(1 << $i)) });
 
                         $PXi { _mode: PhantomData }
                     }
@@ -270,11 +184,10 @@ macro_rules! gpio {
                     /// Configures the pin to operate as a floating input pin
                     pub fn into_floating_input(
                         self,
-                        pudr: &mut PullUpDisableRegister,
-                        ppddr: &mut PadPulldownDisableRegister,
+                        port: &mut Port,
                     ) -> $PXi<Input<Floating>> {
-                        pudr.pudr().write_with_zero(|w| unsafe { w.bits(1 << $i) });
-                        ppddr.ppddr().write_with_zero(|w| unsafe { w.bits(1 << $i) });
+                        port.pudr().write_with_zero(|w| unsafe { w.bits(1 << $i) });
+                        port.ppddr().write_with_zero(|w| unsafe { w.bits(1 << $i) });
 
                         $PXi { _mode: PhantomData }
                     }
@@ -282,11 +195,10 @@ macro_rules! gpio {
                     /// Configures the pin to operate as a pulled down input pin
                     pub fn into_pull_down_input(
                         self,
-                        pudr: &mut PullUpDisableRegister,
-                        ppder: &mut PadPulldownEnableRegister,
+                        port: &mut Port,
                     ) -> $PXi<Input<PullDown>> {
-                        pudr.pudr().write_with_zero(|w| unsafe { w.bits(1 << $i) });  // disable pull-up (this must happen first when enabling pull-down resistors)
-                        ppder.ppder().write_with_zero(|w| unsafe { w.bits(1 << $i) });  // enable pull-down
+                        port.pudr().write_with_zero(|w| unsafe { w.bits(1 << $i) });  // disable pull-up (this must happen first when enabling pull-down resistors)
+                        port.ppder().write_with_zero(|w| unsafe { w.bits(1 << $i) });  // enable pull-down
 
                         $PXi { _mode: PhantomData }
                     }
@@ -294,11 +206,10 @@ macro_rules! gpio {
                     /// Configures the pin to operate as a pulled up input pin
                     pub fn into_pull_up_input(
                         self,
-                        ppddr: &mut PadPulldownDisableRegister,
-                        puer: &mut PullUpEnableRegister,
+                        port: &mut Port,
                     ) -> $PXi<Input<PullUp>> {
-                        ppddr.ppddr().write_with_zero(|w| unsafe { w.bits(1 << $i) });
-                        puer.puer().write_with_zero(|w| unsafe { w.bits(1 << $i) });
+                        port.ppddr().write_with_zero(|w| unsafe { w.bits(1 << $i) });
+                        port.puer().write_with_zero(|w| unsafe { w.bits(1 << $i) });
 
                         $PXi { _mode: PhantomData }
                     }
@@ -306,47 +217,42 @@ macro_rules! gpio {
                     /// Configures the pin to operate as an open drain output pin
                     pub fn into_open_drain_output(
                         self,
-                        idr: &mut InterruptDisableRegister,
-                        mder: &mut MultiDriverEnableRegister,
-                        oer: &mut OutputEnableRegister,
-                        per: &mut PIOEnableRegister,
+                        port: &mut Port,
                     ) -> $PXi<Output<OpenDrain>> {
                         // Disable interrupts for pin
-                        idr.idr().write_with_zero(|w| unsafe { w.bits(1 << $i) });
+                        port.idr().write_with_zero(|w| unsafe { w.bits(1 << $i) });
 
                         // Enable open-drain/multi-drive
-                        mder.mder().write_with_zero(|w| unsafe { w.bits(1 << $i) });
+                        port.mder().write_with_zero(|w| unsafe { w.bits(1 << $i) });
 
                         // Enable output mode
-                        oer.oer().write_with_zero(|w| unsafe { w.bits(1 << $i) });
+                        port.oer().write_with_zero(|w| unsafe { w.bits(1 << $i) });
 
                         // Enable pio mode (disables peripheral control of pin)
-                        per.per().write_with_zero(|w| unsafe { w.bits(1 << $i) });
+                        port.per().write_with_zero(|w| unsafe { w.bits(1 << $i) });
 
                         $PXi { _mode: PhantomData }
                     }
 
                     // Configures the pin to operate as an push pull output pin
-                    // pub fn into_push_pull_output(
-                    //     self,
-                    //     moder: &mut MODER,
-                    //     otyper: &mut OTYPER,
-                    // ) -> $PXi<Output<PushPull>> {
-                    //     let offset = 2 * $i;
+                    pub fn into_push_pull_output(
+                         self,
+                         port: &mut Port,
+                    ) -> $PXi<Output<PushPull>> {
+                        // Disable interrupts for pin
+                        port.idr().write_with_zero(|w| unsafe { w.bits(1 << $i) });
 
-                    //     // general purpose output mode
-                    //     let mode = 0b01;
-                    //     moder.moder().modify(|r, w| unsafe {
-                    //         w.bits((r.bits() & !(0b11 << offset)) | (mode << offset))
-                    //     });
+                        // Disable open-drain/multi-drive
+                        port.mddr().write_with_zero(|w| unsafe { w.bits(1 << $i) });
 
-                    //     // push pull output
-                    //     otyper
-                    //         .otyper()
-                    //         .modify(|r, w| unsafe { w.bits(r.bits() & !(0b1 << $i)) });
+                        // Enable output mode
+                        port.oer().write_with_zero(|w| unsafe { w.bits(1 << $i) });
 
-                    //     $PXi { _mode: PhantomData }
-                    // }
+                        // Enable pio mode (disables peripheral control of pin)
+                        port.per().write_with_zero(|w| unsafe { w.bits(1 << $i) });
+
+                        $PXi { _mode: PhantomData }
+                    }
                 }
 
                 // impl $PXi<Output<OpenDrain>> {
@@ -379,17 +285,21 @@ macro_rules! gpio {
                 //     }
                 // }
 
-                // impl<MODE> OutputPin for $PXi<Output<MODE>> {
-                //     fn set_high(&mut self) {
-                //         // NOTE(unsafe) atomic write to a stateless register
-                //         unsafe { (*$GPIOX::ptr()).sodr.write(|w| w.bits(1 << $i)) }
-                //     }
+                impl<MODE> OutputPin for $PXi<Output<MODE>> {
+                    type Error = ();
 
-                //     fn set_low(&mut self) {
-                //         // NOTE(unsafe) atomic write to a stateless register
-                //         unsafe { (*$GPIOX::ptr()).codr.write(|w| w.bits(1 << $i)) }
-                //     }
-                // }
+                    fn set_high(&mut self) -> Result<(), Self::Error> {
+                        // NOTE(unsafe) atomic write to a stateless register
+                        unsafe { (*$GPIOX::ptr()).sodr.write_with_zero(|w| w.bits(1 << $i)) }
+                        Ok(())
+                    }
+
+                    fn set_low(&mut self) -> Result<(), Self::Error> {
+                        // NOTE(unsafe) atomic write to a stateless register
+                        unsafe { (*$GPIOX::ptr()).codr.write_with_zero(|w| w.bits(1 << $i)) }
+                        Ok(())
+                    }
+                }
             )+
         }
     }
@@ -433,89 +343,99 @@ gpio!(PIOA, pioa, PAx, [
     PA31: (pa31, 31, Input<Floating>),
 ]);
 
-// gpio!(GPIOB, gpiob, gpiob, iopben, iopbrst, PBx, [
-//     PB0: (pb0, 0, Input<Floating>, AFRL),
-//     PB1: (pb1, 1, Input<Floating>, AFRL),
-//     PB2: (pb2, 2, Input<Floating>, AFRL),
-//     // TODO these are configured as JTAG pins
-//     // PB3: (3, Input<Floating>),
-//     // PB4: (4, Input<Floating>),
-//     PB5: (pb5, 5, Input<Floating>, AFRL),
-//     PB6: (pb6, 6, Input<Floating>, AFRL),
-//     PB7: (pb7, 7, Input<Floating>, AFRL),
-//     PB8: (pb8, 8, Input<Floating>, AFRH),
-//     PB9: (pb9, 9, Input<Floating>, AFRH),
-//     PB10: (pb10, 10, Input<Floating>, AFRH),
-//     PB11: (pb11, 11, Input<Floating>, AFRH),
-//     PB12: (pb12, 12, Input<Floating>, AFRH),
-//     PB13: (pb13, 13, Input<Floating>, AFRH),
-//     PB14: (pb14, 14, Input<Floating>, AFRH),
-//     PB15: (pb15, 15, Input<Floating>, AFRH),
-// ]);
+gpio!(PIOB, piob, PBx, [
+    PB0: (pb0, 0, Input<Floating>),
+    PB1: (pb1, 1, Input<Floating>),
+    PB2: (pb2, 2, Input<Floating>),
+    PB3: (pb3, 3, Input<Floating>),
+    PB4: (pb4, 4, Input<Floating>),
+    PB5: (pb5, 5, Input<Floating>),
+    PB6: (pb6, 6, Input<Floating>),
+    PB7: (pb7, 7, Input<Floating>),
+    PB8: (pb8, 8, Input<Floating>),
+    PB9: (pb9, 9, Input<Floating>),
 
-// gpio!(GPIOC, gpioc, gpioc, iopcen, iopcrst, PCx, [
-//     PC0: (pc0, 0, Input<Floating>, AFRL),
-//     PC1: (pc1, 1, Input<Floating>, AFRL),
-//     PC2: (pc2, 2, Input<Floating>, AFRL),
-//     PC3: (pc3, 3, Input<Floating>, AFRL),
-//     PC4: (pc4, 4, Input<Floating>, AFRL),
-//     PC5: (pc5, 5, Input<Floating>, AFRL),
-//     PC6: (pc6, 6, Input<Floating>, AFRL),
-//     PC7: (pc7, 7, Input<Floating>, AFRL),
-//     PC8: (pc8, 8, Input<Floating>, AFRH),
-//     PC9: (pc9, 9, Input<Floating>, AFRH),
-//     PC10: (pc10, 10, Input<Floating>, AFRH),
-//     PC11: (pc11, 11, Input<Floating>, AFRH),
-//     PC12: (pc12, 12, Input<Floating>, AFRH),
-//     PC13: (pc13, 13, Input<Floating>, AFRH),
-//     PC14: (pc14, 14, Input<Floating>, AFRH),
-//     PC15: (pc15, 15, Input<Floating>, AFRH),
-// ]);
+    PB10: (pb10, 10, Input<Floating>),
+    PB11: (pb11, 11, Input<Floating>),
+    PB12: (pb12, 12, Input<Floating>),
+    PB13: (pb13, 13, Input<Floating>),
+    PB14: (pb14, 14, Input<Floating>),
 
-// gpio!(GPIOD, gpiod, gpioc, iopden, iopdrst, PDx, [
-//     PD0: (pd0, 0, Input<Floating>, AFRL),
-//     PD1: (pd1, 1, Input<Floating>, AFRL),
-//     PD2: (pd2, 2, Input<Floating>, AFRL),
-//     PD3: (pd3, 3, Input<Floating>, AFRL),
-//     PD4: (pd4, 4, Input<Floating>, AFRL),
-//     PD5: (pd5, 5, Input<Floating>, AFRL),
-//     PD6: (pd6, 6, Input<Floating>, AFRL),
-//     PD7: (pd7, 7, Input<Floating>, AFRL),
-//     PD8: (pd8, 8, Input<Floating>, AFRH),
-//     PD9: (pd9, 9, Input<Floating>, AFRH),
-//     PD10: (pd10, 10, Input<Floating>, AFRH),
-//     PD11: (pd11, 11, Input<Floating>, AFRH),
-//     PD12: (pd12, 12, Input<Floating>, AFRH),
-//     PD13: (pd13, 13, Input<Floating>, AFRH),
-//     PD14: (pd14, 14, Input<Floating>, AFRH),
-//     PD15: (pd15, 15, Input<Floating>, AFRH),
-// ]);
+    // PB15-31 do not exist.
+]);
 
-// gpio!(GPIOE, gpioe, gpioc, iopeen, ioperst, PEx, [
-//     PE0: (pe0, 0, Input<Floating>, AFRL),
-//     PE1: (pe1, 1, Input<Floating>, AFRL),
-//     PE2: (pe2, 2, Input<Floating>, AFRL),
-//     PE3: (pe3, 3, Input<Floating>, AFRL),
-//     PE4: (pe4, 4, Input<Floating>, AFRL),
-//     PE5: (pe5, 5, Input<Floating>, AFRL),
-//     PE6: (pe6, 6, Input<Floating>, AFRL),
-//     PE7: (pe7, 7, Input<Floating>, AFRL),
-//     PE8: (pe8, 8, Input<Floating>, AFRH),
-//     PE9: (pe9, 9, Input<Floating>, AFRH),
-//     PE10: (pe10, 10, Input<Floating>, AFRH),
-//     PE11: (pe11, 11, Input<Floating>, AFRH),
-//     PE12: (pe12, 12, Input<Floating>, AFRH),
-//     PE13: (pe13, 13, Input<Floating>, AFRH),
-//     PE14: (pe14, 14, Input<Floating>, AFRH),
-//     PE15: (pe15, 15, Input<Floating>, AFRH),
-// ]);
+gpio!(PIOC, pioc, PCx, [
+    PC0: (pc0, 0, Input<Floating>),
+    PC1: (pc1, 1, Input<Floating>),
+    PC2: (pc2, 2, Input<Floating>),
+    PC3: (pc3, 3, Input<Floating>),
+    PC4: (pc4, 4, Input<Floating>),
+    PC5: (pc5, 5, Input<Floating>),
+    PC6: (pc6, 6, Input<Floating>),
+    PC7: (pc7, 7, Input<Floating>),
+    PC8: (pc8, 8, Input<Floating>),
+    PC9: (pc9, 9, Input<Floating>),
 
-// gpio!(GPIOF, gpiof, gpioc, iopfen, iopfrst, PFx, [
-//     PF0: (pf0, 0, Input<Floating>, AFRL),
-//     PF1: (pf1, 1, Input<Floating>, AFRL),
-//     PF2: (pf2, 2, Input<Floating>, AFRL),
-//     PF4: (pf3, 4, Input<Floating>, AFRL),
-//     PF6: (pf6, 6, Input<Floating>, AFRL),
-//     PF9: (pf9, 9, Input<Floating>, AFRH),
-//     PF10: (pf10, 10, Input<Floating>, AFRH),
-// ]);
+    PC10: (pc10, 10, Input<Floating>),
+    PC11: (pc11, 11, Input<Floating>),
+    PC12: (pc12, 12, Input<Floating>),
+    PC13: (pc13, 13, Input<Floating>),
+    PC14: (pc14, 14, Input<Floating>),
+    PC15: (pc15, 15, Input<Floating>),
+    PC16: (pc16, 16, Input<Floating>),
+    PC17: (pc17, 17, Input<Floating>),
+    PC18: (pc18, 18, Input<Floating>),
+    PC19: (pc19, 19, Input<Floating>),
+
+    PC20: (pc20, 20, Input<Floating>),
+    PC21: (pc21, 21, Input<Floating>),
+    PC22: (pc22, 22, Input<Floating>),
+    PC23: (pc23, 23, Input<Floating>),
+    PC24: (pc24, 24, Input<Floating>),
+    PC25: (pc25, 25, Input<Floating>),
+    PC26: (pc26, 26, Input<Floating>),
+    PC27: (pc27, 27, Input<Floating>),
+    PC28: (pc28, 28, Input<Floating>),
+    PC29: (pc29, 29, Input<Floating>),
+
+    PC30: (pc30, 30, Input<Floating>),
+    PC31: (pc31, 31, Input<Floating>),
+]);
+
+gpio!(PIOD, piod, PDx, [
+    PD0: (pd0, 0, Input<Floating>),
+    PD1: (pd1, 1, Input<Floating>),
+    PD2: (pd2, 2, Input<Floating>),
+    PD3: (pd3, 3, Input<Floating>),
+    PD4: (pd4, 4, Input<Floating>),
+    PD5: (pd5, 5, Input<Floating>),
+    PD6: (pd6, 6, Input<Floating>),
+    PD7: (pd7, 7, Input<Floating>),
+    PD8: (pd8, 8, Input<Floating>),
+    PD9: (pd9, 9, Input<Floating>),
+
+    PD10: (pd10, 10, Input<Floating>),
+    PD11: (pd11, 11, Input<Floating>),
+    PD12: (pd12, 12, Input<Floating>),
+    PD13: (pd13, 13, Input<Floating>),
+    PD14: (pd14, 14, Input<Floating>),
+    PD15: (pd15, 15, Input<Floating>),
+    PD16: (pd16, 16, Input<Floating>),
+    PD17: (pd17, 17, Input<Floating>),
+    PD18: (pd18, 18, Input<Floating>),
+    PD19: (pd19, 19, Input<Floating>),
+
+    PD20: (pd20, 20, Input<Floating>),
+    PD21: (pd21, 21, Input<Floating>),
+    PD22: (pd22, 22, Input<Floating>),
+    PD23: (pd23, 23, Input<Floating>),
+    PD24: (pd24, 24, Input<Floating>),
+    PD25: (pd25, 25, Input<Floating>),
+    PD26: (pd26, 26, Input<Floating>),
+    PD27: (pd27, 27, Input<Floating>),
+    PD28: (pd28, 28, Input<Floating>),
+    PD29: (pd29, 29, Input<Floating>),
+
+    PD30: (pd30, 30, Input<Floating>),
+    PD31: (pd31, 31, Input<Floating>),
+]);
