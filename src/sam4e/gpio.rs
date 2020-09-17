@@ -19,13 +19,13 @@ pub trait GpioExt {
     fn split(self) -> Self::Parts;
 }
 
-pub struct PortAggregate {
+pub struct Ports {
 }
 
-impl PortAggregate {
+impl Ports {
     pub fn new(_pioa: PIOA, _piob: PIOB, _pioc: PIOC, _piod: PIOD) -> Self {
         // The above arguments are consumed here...never to be seen again.
-        PortAggregate {
+        Ports {
         }
     }
 }
@@ -167,7 +167,7 @@ macro_rules! port {
             )+
         }
         
-        impl GpioExt for PortAggregate {
+        impl GpioExt for Ports {
             type Parts = Parts;
         
             /// Split the PORT peripheral into discrete pins
@@ -438,117 +438,152 @@ macro_rules! pin {
 }
 
 port!([
-    PA0: (pa0, 0),
-    PA1: (pa1, 1),
-    PA2: (pa2, 2),
-    PA3: (pa3, 3),
-    PA4: (pa4, 4),
-    PA5: (pa5, 5),
-    PA6: (pa6, 6),
-    PA7: (pa7, 7),
-    PA8: (pa8, 8),
-    PA9: (pa9, 9),
-    PA10: (pa10, 10),
-    PA11: (pa11, 11),
-    PA12: (pa12, 12),
-    PA13: (pa13, 13),
-    PA14: (pa14, 14),
-    PA15: (pa15, 15),
-    PA16: (pa16, 16),
-    PA17: (pa17, 17),
-    PA18: (pa18, 18),
-    PA19: (pa19, 19),
-    PA20: (pa20, 20),
-    PA21: (pa21, 21),
-    PA22: (pa22, 22),
-    PA23: (pa23, 23),
-    PA24: (pa24, 24),
-    PA25: (pa25, 25),
-    PA26: (pa26, 26),
-    PA27: (pa27, 27),
-    PA28: (pa28, 28),
-    PA29: (pa29, 29),
-    PA30: (pa30, 30),
-    PA31: (pa31, 31),
+    Pa0: (pa0, 0),
+    Pa1: (pa1, 1),
+    Pa2: (pa2, 2),
+    Pa3: (pa3, 3),
+    Pa4: (pa4, 4),
+    Pa5: (pa5, 5),
+    Pa6: (pa6, 6),
+    Pa7: (pa7, 7),
+    Pa8: (pa8, 8),
+    Pa9: (pa9, 9),
+    Pa10: (pa10, 10),
+    Pa11: (pa11, 11),
+    Pa12: (pa12, 12),
+    Pa13: (pa13, 13),
+    Pa14: (pa14, 14),
+    Pa15: (pa15, 15),
+    Pa16: (pa16, 16),
+    Pa17: (pa17, 17),
+    Pa18: (pa18, 18),
+    Pa19: (pa19, 19),
+    Pa20: (pa20, 20),
+    Pa21: (pa21, 21),
+    Pa22: (pa22, 22),
+    Pa23: (pa23, 23),
+    Pa24: (pa24, 24),
+    Pa25: (pa25, 25),
+    Pa26: (pa26, 26),
+    Pa27: (pa27, 27),
+    Pa28: (pa28, 28),
+    Pa29: (pa29, 29),
+    Pa30: (pa30, 30),
+    Pa31: (pa31, 31),
 ],[
-    PB0: (pb0, 0),
-    PB1: (pb1, 1),
-    PB2: (pb2, 2),
-    PB3: (pb3, 3),
-    PB4: (pb4, 4),
-    PB5: (pb5, 5),
-    PB6: (pb6, 6),
-    PB7: (pb7, 7),
-    PB8: (pb8, 8),
-    PB9: (pb9, 9),
-    PB10: (pb10, 10),
-    PB11: (pb11, 11),
-    PB12: (pb12, 12),
-    PB13: (pb13, 13),
-    PB14: (pb14, 14),
+    Pb0: (pb0, 0),
+    Pb1: (pb1, 1),
+    Pb2: (pb2, 2),
+    Pb3: (pb3, 3),
+    Pb4: (pb4, 4),
+    Pb5: (pb5, 5),
+    Pb6: (pb6, 6),
+    Pb7: (pb7, 7),
+    Pb8: (pb8, 8),
+    Pb9: (pb9, 9),
+    Pb10: (pb10, 10),
+    Pb11: (pb11, 11),
+    Pb12: (pb12, 12),
+    Pb13: (pb13, 13),
+    Pb14: (pb14, 14),
 
     // PB15-31 do not exist.
 
 ],
 [
-    PC0: (pc0, 0),
-    PC1: (pc1, 1),
-    PC2: (pc2, 2),
-    PC3: (pc3, 3),
-    PC4: (pc4, 4),
-    PC5: (pc5, 5),
-    PC6: (pc6, 6),
-    PC7: (pc7, 7),
-    PC10: (pc10, 10),
-    PC11: (pc11, 11),
-    PC12: (pc12, 12),
-    PC13: (pc13, 13),
-    PC14: (pc14, 14),
-    PC15: (pc15, 15),
-    PC16: (pc16, 16),
-    PC17: (pc17, 17),
-    PC18: (pc18, 18),
-    PC19: (pc19, 19),
-    PC20: (pc20, 20),
-    PC21: (pc21, 21),
-    PC22: (pc22, 22),
-    PC23: (pc23, 23),
-    PC24: (pc24, 24),
-    PC25: (pc25, 25),
-    PC26: (pc26, 26),
-    PC27: (pc27, 27),
-    PC28: (pc28, 28),
-    PC30: (pc30, 30),
-    PC31: (pc31, 31),
+    Pc0: (pc0, 0),
+    Pc1: (pc1, 1),
+    Pc2: (pc2, 2),
+    Pc3: (pc3, 3),
+    Pc4: (pc4, 4),
+    Pc5: (pc5, 5),
+    Pc6: (pc6, 6),
+    Pc7: (pc7, 7),
+    Pc10: (pc10, 10),
+    Pc11: (pc11, 11),
+    Pc12: (pc12, 12),
+    Pc13: (pc13, 13),
+    Pc14: (pc14, 14),
+    Pc15: (pc15, 15),
+    Pc16: (pc16, 16),
+    Pc17: (pc17, 17),
+    Pc18: (pc18, 18),
+    Pc19: (pc19, 19),
+    Pc20: (pc20, 20),
+    Pc21: (pc21, 21),
+    Pc22: (pc22, 22),
+    Pc23: (pc23, 23),
+    Pc24: (pc24, 24),
+    Pc25: (pc25, 25),
+    Pc26: (pc26, 26),
+    Pc27: (pc27, 27),
+    Pc28: (pc28, 28),
+    Pc30: (pc30, 30),
+    Pc31: (pc31, 31),
 ],
 [
-    PD0: (pd0, 0),
-    PD1: (pd1, 1),
-    PD2: (pd2, 2),
-    PD3: (pd3, 3),
-    PD4: (pd4, 4),
-    PD5: (pd5, 5),
-    PD6: (pd6, 6),
-    PD7: (pd7, 7),
-    PD10: (pd10, 10),
-    PD11: (pd11, 11),
-    PD12: (pd12, 12),
-    PD13: (pd13, 13),
-    PD14: (pd14, 14),
-    PD15: (pd15, 15),
-    PD16: (pd16, 16),
-    PD17: (pd17, 17),
-    PD18: (pd18, 18),
-    PD19: (pd19, 19),
-    PD20: (pd20, 20),
-    PD21: (pd21, 21),
-    PD22: (pd22, 22),
-    PD23: (pd23, 23),
-    PD24: (pd24, 24),
-    PD25: (pd25, 25),
-    PD26: (pd26, 26),
-    PD27: (pd27, 27),
-    PD28: (pd28, 28),
-    PD30: (pd30, 30),
-    PD31: (pd31, 31),
+    Pd0: (pd0, 0),
+    Pd1: (pd1, 1),
+    Pd2: (pd2, 2),
+    Pd3: (pd3, 3),
+    Pd4: (pd4, 4),
+    Pd5: (pd5, 5),
+    Pd6: (pd6, 6),
+    Pd7: (pd7, 7),
+    Pd10: (pd10, 10),
+    Pd11: (pd11, 11),
+    Pd12: (pd12, 12),
+    Pd13: (pd13, 13),
+    Pd14: (pd14, 14),
+    Pd15: (pd15, 15),
+    Pd16: (pd16, 16),
+    Pd17: (pd17, 17),
+    Pd18: (pd18, 18),
+    Pd19: (pd19, 19),
+    Pd20: (pd20, 20),
+    Pd21: (pd21, 21),
+    Pd22: (pd22, 22),
+    Pd23: (pd23, 23),
+    Pd24: (pd24, 24),
+    Pd25: (pd25, 25),
+    Pd26: (pd26, 26),
+    Pd27: (pd27, 27),
+    Pd28: (pd28, 28),
+    Pd30: (pd30, 30),
+    Pd31: (pd31, 31),
 ]);
+
+#[macro_export]
+macro_rules! define_pins {
+    ($(#[$topattr:meta])* struct $Type:ident,
+     $( $(#[$attr:meta])* pin $name:ident = $pin_ident:ident),+ , ) => {
+
+        paste! {
+            $(#[$topattr])*
+            pub struct $Type {
+                /// Opaque port reference
+                pub port: Port,
+
+                $(
+                    $(#[$attr])*
+                    pub $name: [<P $pin_ident>]<Input<Floating>>
+                ),+
+            }
+        }
+
+        impl $Type {
+            /// Returns the pins for the device
+            paste! {
+                pub fn new(ports: Ports) -> Self {
+                    let parts = ports.split();
+                    $Type {
+                        port: parts.port,
+                        $(
+                        $name: parts.[<p $pin_ident>]
+                        ),+
+                    }
+                }
+            }
+        }
+    }
+}
