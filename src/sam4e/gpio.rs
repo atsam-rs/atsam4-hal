@@ -44,6 +44,15 @@ pub struct Output<MODE> {
     _mode: PhantomData<MODE>,
 }
 
+/// Peripheral Function A
+pub struct PfA;
+/// Peripheral Function B
+pub struct PfB;
+/// Peripheral Function C
+pub struct PfC;
+/// Peripheral Function D
+pub struct PfD;
+
 /// Floating Input
 pub struct Floating;
 /// Pulled down Input
@@ -71,6 +80,14 @@ macro_rules! create_port_peripheral_struct {
                 unsafe { &(*$GPIO::ptr()).pudr }
             }
     
+            pub(crate) fn _ier(&mut self) -> &$gpio::IER {
+                unsafe { &(*$GPIO::ptr()).ier }
+            }
+
+            pub(crate) fn idr(&mut self) -> &$gpio::IDR {
+                unsafe { &(*$GPIO::ptr()).idr }
+            }
+
             pub(crate) fn ppder(&mut self) -> &$gpio::PPDER {
                 unsafe { &(*$GPIO::ptr()).ppder }
             }
@@ -79,18 +96,14 @@ macro_rules! create_port_peripheral_struct {
                 unsafe { &(*$GPIO::ptr()).ppddr }
             }
     
-            pub(crate) fn _abcdsr1(&mut self) -> &$gpio::ABCDSR {
+            pub(crate) fn abcdsr1(&mut self) -> &$gpio::ABCDSR {
                 unsafe { &(*$GPIO::ptr()).abcdsr[0] }
             }
     
-            pub(crate) fn _abcdsr2(&mut self) -> &$gpio::ABCDSR {
+            pub(crate) fn abcdsr2(&mut self) -> &$gpio::ABCDSR {
                 unsafe { &(*$GPIO::ptr()).abcdsr[1] }
             }
-    
-            pub(crate) fn idr(&mut self) -> &$gpio::IDR {
-                unsafe { &(*$GPIO::ptr()).idr }
-            }
-    
+        
             pub(crate) fn mder(&mut self) -> &$gpio::MDER {
                 unsafe { &(*$GPIO::ptr()).mder }
             }
@@ -105,6 +118,10 @@ macro_rules! create_port_peripheral_struct {
     
             pub(crate) fn per(&mut self) -> &$gpio::PER {
                 unsafe { &(*$GPIO::ptr()).per }
+            }      
+
+            pub(crate) fn pdr(&mut self) -> &$gpio::PDR {
+                unsafe { &(*$GPIO::ptr()).pdr }
             }      
 
             pub(crate) fn _sodr(&mut self) -> &$gpio::SODR {
@@ -129,9 +146,6 @@ pub struct Port {
     portb: PortB,
     portc: PortC,
     portd: PortD,
-}
-
-impl Port {
 }
 
 macro_rules! port {
@@ -280,6 +294,53 @@ macro_rules! pin {
         // function!(PfN, into_function_n, n);
 
         impl<MODE> $PinType<MODE> {
+            fn enable_pin(port: &mut Port) {
+                port.$pio.per().write_with_zero(|w| unsafe { w.bits(1 << $i) });
+            }
+
+            fn disable_pin(port: &mut Port) {
+                port.$pio.pdr().write_with_zero(|w| unsafe { w.bits(1 << $i) });
+            }
+
+            fn _enable_pin_interrupt(port: &mut Port) {
+                port.$pio._ier().write_with_zero(|w| unsafe { w.bits(1 << $i) });
+            }
+
+            fn disable_pin_interrupt(port: &mut Port) {
+                port.$pio.idr().write_with_zero(|w| unsafe { w.bits(1 << $i) });
+            }
+
+            pub fn into_peripheral_function_a(self, port: &mut Port) -> $PinType<PfA> {
+                port.$pio.abcdsr1().modify(|r, w| unsafe { w.bits(r.bits() & !(1 << $i)) });
+                port.$pio.abcdsr2().modify(|r, w| unsafe { w.bits(r.bits() & !(1 << $i)) });
+
+                Self::disable_pin(port);
+                $PinType { _mode: PhantomData }
+            }
+
+            pub fn into_peripheral_function_b(self, port: &mut Port) -> $PinType<PfB> {
+                port.$pio.abcdsr1().modify(|r, w| unsafe { w.bits(r.bits() | (1 << $i)) });
+                port.$pio.abcdsr2().modify(|r, w| unsafe { w.bits(r.bits() & !(1 << $i)) });
+
+                Self::disable_pin(port);
+                $PinType { _mode: PhantomData }
+            }
+
+            pub fn into_peripheral_function_c(self, port: &mut Port) -> $PinType<PfC> {
+                port.$pio.abcdsr1().modify(|r, w| unsafe { w.bits(r.bits() & !(1 << $i)) });
+                port.$pio.abcdsr2().modify(|r, w| unsafe { w.bits(r.bits() | (1 << $i)) });
+
+                Self::disable_pin(port);
+                $PinType { _mode: PhantomData }
+            }
+
+            pub fn into_peripheral_function_d(self, port: &mut Port) -> $PinType<PfD> {
+                port.$pio.abcdsr1().modify(|r, w| unsafe { w.bits(r.bits() | (1 << $i)) });
+                port.$pio.abcdsr2().modify(|r, w| unsafe { w.bits(r.bits() | (1 << $i)) });
+
+                Self::disable_pin(port);
+                $PinType { _mode: PhantomData }
+            }
 
             pub fn into_floating_input(self, port: &mut Port) -> $PinType<Input<Floating>> {
                 port.$pio.pudr().write_with_zero(|w| unsafe { w.bits(1 << $i) });
@@ -304,8 +365,7 @@ macro_rules! pin {
 
             /// Configures the pin to operate as an open drain output
             pub fn into_open_drain_output(self, port: &mut Port) -> $PinType<Output<OpenDrain>> {
-                // Disable interrupts for pin
-                port.$pio.idr().write_with_zero(|w| unsafe { w.bits(1 << $i) });
+                Self::disable_pin_interrupt(port);
 
                 // Enable open-drain/multi-drive
                 port.$pio.mder().write_with_zero(|w| unsafe { w.bits(1 << $i) });
@@ -314,15 +374,14 @@ macro_rules! pin {
                 port.$pio.oer().write_with_zero(|w| unsafe { w.bits(1 << $i) });
 
                 // Enable pio mode (disables peripheral control of pin)
-                port.$pio.per().write_with_zero(|w| unsafe { w.bits(1 << $i) });
+                Self::enable_pin(port);
 
                 $PinType { _mode: PhantomData }
             }
 
             /// Configures the pin to operate as a push-pull output
             pub fn into_push_pull_output(self, port: &mut Port) -> $PinType<Output<PushPull>> {
-                // Disable interrupts for pin
-                port.$pio.idr().write_with_zero(|w| unsafe { w.bits(1 << $i) });
+                Self::disable_pin_interrupt(port);
 
                 // Disable open-drain/multi-drive
                 port.$pio.mddr().write_with_zero(|w| unsafe { w.bits(1 << $i) });
@@ -433,7 +492,7 @@ macro_rules! pin {
                 unsafe { (*$PIO::ptr()).codr.write_with_zero(|w| w.bits(1 << $i)) }
                 Ok(())
             }
-}
+        }
     };
 }
 
@@ -518,6 +577,7 @@ port!([
     Pc26: (pc26, 26),
     Pc27: (pc27, 27),
     Pc28: (pc28, 28),
+    Pc29: (pc29, 29),
     Pc30: (pc30, 30),
     Pc31: (pc31, 31),
 ],
@@ -549,6 +609,7 @@ port!([
     Pd26: (pd26, 26),
     Pd27: (pd27, 27),
     Pd28: (pd28, 28),
+    Pd29: (pd29, 29),
     Pd30: (pd30, 30),
     Pd31: (pd31, 31),
 ]);
@@ -556,17 +617,16 @@ port!([
 #[macro_export]
 macro_rules! define_pins {
     ($(#[$topattr:meta])* struct $Type:ident,
-     $( $(#[$attr:meta])* pin $name:ident = $pin_ident:ident),+ , ) => {
+     $( $(#[$attr:meta])* pin $name:ident = $pin_ident:ident<$pin_type:ty, $into_method:ident>),+ , ) => {
 
         paste! {
             $(#[$topattr])*
             pub struct $Type {
                 /// Opaque port reference
                 pub port: Port,
-
                 $(
                     $(#[$attr])*
-                    pub $name: [<P $pin_ident>]<Input<Floating>>
+                    pub $name: [<P $pin_ident>]<$pin_type>
                 ),+
             }
         }
@@ -575,11 +635,16 @@ macro_rules! define_pins {
             /// Returns the pins for the device
             paste! {
                 pub fn new(ports: Ports) -> Self {
-                    let parts = ports.split();
+                    let mut parts = ports.split();
+                    // Create local pins with the correct type so we can put them into the
+                    // pin structure below.
+                    $(
+                        let [<new_pin $pin_ident>] = parts.[<p $pin_ident>].$into_method(&mut parts.port);
+                    )+
                     $Type {
                         port: parts.port,
                         $(
-                        $name: parts.[<p $pin_ident>]
+                        $name: [<new_pin $pin_ident>]
                         ),+
                     }
                 }
