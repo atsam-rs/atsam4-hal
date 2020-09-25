@@ -1,10 +1,77 @@
 // See Chapter 28 of ATSAM4 Datasheet
-use crate::pac::{EFC, PMC};
+use crate::pac::{EFC, PMC, pmc};
 use crate::time::{Hertz};
+use core::marker::PhantomData;
+
+// Peripheral Clock State
+pub struct Enabled;
+pub struct Disabled;
+
+pub struct PeripheralClock<STATE> {
+    _state: PhantomData<STATE>,
+}
+
+macro_rules! peripheral_clocks {
+    (
+        $($PeripheralType:ident, $peripheral_ident:ident, $i:expr,)+
+    ) => {
+        pub struct PeripheralClocks {
+            $(
+                pub $peripheral_ident: $PeripheralType<Disabled>,
+            )+
+        }
+
+        impl PeripheralClocks {
+            pub fn new() -> Self {
+                PeripheralClocks {
+                    $(
+                        $peripheral_ident: $PeripheralType { _state: PhantomData },
+                    )+
+                }
+            }
+        }
+
+        $(
+            pub struct $PeripheralType<STATE> {
+                _state: PhantomData<STATE>,
+            }
+
+            impl<STATE> $PeripheralType<STATE> {
+                pub(crate) fn pcer0(&mut self) -> &pmc::PMC_PCER0 {
+                    unsafe { &(*PMC::ptr()).pmc_pcer0 }
+                }
+
+                pub(crate) fn pcdr0(&mut self) -> &pmc::PMC_PCDR0 {
+                    unsafe { &(*PMC::ptr()).pmc_pcdr0 }
+                }
+
+                pub fn into_enabled_clock(mut self) -> $PeripheralType<Enabled> {
+                    self.pcer0().write_with_zero(|w| unsafe { w.bits(1 << $i) });
+                    $PeripheralType { _state: PhantomData }
+                }
+
+                pub fn into_disabled_clock(mut self) -> $PeripheralType<Disabled> {
+                    self.pcdr0().write_with_zero(|w| unsafe { w.bits(1 << $i) });
+                    $PeripheralType { _state: PhantomData }
+                }
+            }
+        )+
+    }
+}
+
+peripheral_clocks! (
+    UART0Clock, uart_0, 7,
+    StaticMemoryControllerClock, static_memory_controller, 8,
+    ParallelIOControllerAClock, parallel_io_controller_a, 9,
+    ParallelIOControllerBClock, parallel_io_controller_b, 10,
+    ParallelIOControllerCClock, parallel_io_controller_c, 11,
+    ParallelIOControllerDClock, parallel_io_controller_d, 12,
+);
 
 pub struct ClockController {
     _pmc: PMC,
     master_clock_frequency: Hertz,
+    pub peripheral_clocks: PeripheralClocks,
 }
 
 impl ClockController {
@@ -43,6 +110,7 @@ impl ClockController {
         ClockController {
             _pmc: pmc,
             master_clock_frequency: master_clock_frequency,
+            peripheral_clocks: PeripheralClocks::new(),
         }
     }
 
@@ -182,11 +250,5 @@ impl ClockController {
 
     fn wait_for_master_clock_ready(pmc: &PMC) {
         while !Self::is_master_clock_ready(pmc) {}
-    }
-}
-
-impl Into<Hertz> for ClockController {
-    fn into(self) -> Hertz {
-        self.master_clock_frequency
     }
 }
