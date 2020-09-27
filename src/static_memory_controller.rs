@@ -1,5 +1,5 @@
 use {
-    atsam4e16e_pac::{
+    crate::pac::{
         SMC, smc,
     },
     crate::clock::{
@@ -173,8 +173,8 @@ chip_select!(ChipSelect3, 3);
 pub struct StaticMemoryController {
     clock: PhantomData<StaticMemoryControllerClock<Enabled>>,
 
-    ncs1: PhantomData<Pd18<PfA>>,
-    ncs3: PhantomData<Pd19<PfA>>,
+    ncs1: PhantomData<NCS1>,
+    ncs3: PhantomData<NCS3>,
 
     nrd: PhantomData<Pc11<PfA>>,
     nwe: PhantomData<Pc8<PfA>>,
@@ -219,12 +219,34 @@ pub struct StaticMemoryController {
     pub chip_select3: ChipSelect3<Uninitialized>,
 }
 
+#[cfg(feature = "atsam4e")]
+pub enum NCS1 {
+    C15(Pc15<PfA>),
+    D18(Pd18<PfA>),
+}
+
+#[cfg(feature = "atsam4e")]
+pub enum NCS3 {
+    C12(Pc12<PfA>),
+    D19(Pd19<PfA>),
+}
+
+#[cfg(feature = "atsam4s")]
+pub enum NCS1 {
+    C15(Pc15<PfA>),
+}
+
+#[cfg(feature = "atsam4s")]
+pub enum NCS3 {
+    C12(Pc12<PfA>),
+}
+
 impl StaticMemoryController {
     pub fn new(
         _clock: StaticMemoryControllerClock<Enabled>,
 
-        _ncs1: Pd18<PfA>,
-        _ncs3: Pd19<PfA>,
+        _ncs1: NCS1,
+        _ncs3: NCS3,
 
         _nrd: Pc11<PfA>,
         _nwe: Pc8<PfA>,

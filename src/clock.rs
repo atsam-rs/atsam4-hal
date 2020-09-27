@@ -1,5 +1,12 @@
-// See Chapter 28 of ATSAM4 Datasheet
+#[cfg(feature = "atsam4e")]
 use crate::pac::{EFC, PMC, pmc};
+
+#[cfg(feature = "atsam4s")]
+use crate::pac::{EFC0, EFC1, PMC, pmc};
+
+#[cfg(feature = "atsam4s")]
+pub struct EFC(pub EFC0, pub EFC1);
+
 use crate::time::{Hertz};
 use core::marker::PhantomData;
 
@@ -59,6 +66,7 @@ macro_rules! peripheral_clocks {
     }
 }
 
+#[cfg(feature = "atsam4e")]
 peripheral_clocks! (
     UART0Clock, uart_0, 7,
     StaticMemoryControllerClock, static_memory_controller, 8,
@@ -66,6 +74,14 @@ peripheral_clocks! (
     ParallelIOControllerBClock, parallel_io_controller_b, 10,
     ParallelIOControllerCClock, parallel_io_controller_c, 11,
     ParallelIOControllerDClock, parallel_io_controller_d, 12,
+);
+
+#[cfg(feature = "atsam4s")]
+peripheral_clocks! (
+    StaticMemoryControllerClock, static_memory_controller, 10,
+    ParallelIOControllerAClock, parallel_io_controller_a, 11,
+    ParallelIOControllerBClock, parallel_io_controller_b, 12,
+    ParallelIOControllerCClock, parallel_io_controller_c, 13,
 );
 
 pub struct ClockController {
@@ -172,12 +188,27 @@ impl ClockController {
     }
 
     fn set_flash_wait_states_to_maximum(efc: &mut EFC) {
+        #[cfg(feature = "atsam4e")]
         efc.fmr.modify(|_, w| unsafe { w.fws().bits(5).cloe().set_bit() });
+
+        #[cfg(feature = "atsam4s")]
+        {
+            efc.0.fmr.modify(|_, w| unsafe { w.fws().bits(5).cloe().set_bit() });
+            efc.1.fmr.modify(|_, w| unsafe { w.fws().bits(5).cloe().set_bit() });
+        }
     }
 
     fn set_flash_wait_states_for_clock_frequency(efc: &mut EFC, clock_frequency: Hertz) {
         let wait_state_count = Self::get_flash_wait_states_for_clock_frequency(clock_frequency);
+
+        #[cfg(feature = "atsam4e")]
         efc.fmr.modify(|_, w| unsafe { w.fws().bits(wait_state_count).cloe().set_bit() });
+
+        #[cfg(feature = "atsam4s")]
+        {
+            efc.0.fmr.modify(|_, w| unsafe { w.fws().bits(wait_state_count).cloe().set_bit() });
+            efc.1.fmr.modify(|_, w| unsafe { w.fws().bits(wait_state_count).cloe().set_bit() });
+        }
     }
 
     fn switch_main_clock_to_fast_rc_12mhz(pmc: &mut PMC) {
@@ -238,8 +269,13 @@ impl ClockController {
         Self::wait_for_master_clock_ready(pmc);
 
         // Set the master clock source to PLLA
+        // BUGBUG: What requires the 'unsafe' on SAM4?  SVD issue?
         let clock_source : u8 = 2; // 2 = PLLA
+        #[cfg(feature = "atsam4e")]
         pmc.pmc_mckr.modify(|_, w| unsafe { w.css().bits(clock_source) });
+
+        #[cfg(feature = "atsam4s")]
+        pmc.pmc_mckr.modify(|_, w| w.css().bits(clock_source) );
 
         Self::wait_for_master_clock_ready(pmc);
     }

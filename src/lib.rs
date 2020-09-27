@@ -21,21 +21,17 @@
 //#![deny(warnings)]
 #![no_std]
 
-pub mod common;
-pub use common::*;
-
 pub extern crate embedded_hal;
 pub use embedded_hal::digital::v2::*;
 
 #[cfg(feature = "atsam4e16e")]
 pub use atsam4e16e_pac as pac;
 
-#[cfg(feature = "atsam4e")]
-pub mod sam4e;
-#[cfg(feature = "atsam4e")]
-pub use self::sam4e::*;
+#[cfg(feature = "atsam4sd32c")]
+pub use atsam4sd32c_pac as pac;
 
-#[cfg(feature = "atsam4e16e")]
-pub mod sam4e16e;
-#[cfg(feature = "atsam4e16e")]
-pub use self::sam4e16e::*;
+pub mod clock;
+pub mod delay;
+pub mod gpio;
+pub mod static_memory_controller;
+pub mod time;
