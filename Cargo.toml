@@ -28,11 +28,12 @@ version = "0.1.0"
 
 [dependencies.atsam4e16e-pac]
 version = "0.1.2"
+path = "../atsam4e16e-pac"
 optional = true
-#path = "../atsam4e16e-pac"
 
 [dependencies.atsam4sd32c-pac]
 version = "0.1.1"
+path = "../atsam4sd32c-pac"
 optional = true
 
 [dependencies.void]
