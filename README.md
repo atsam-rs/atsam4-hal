@@ -2,7 +2,7 @@
 
 This repository holds the Hardware Abstractino Layer Crate for the Microchip/Atmel `ATSAM4` microcontroller family.
 
-[![Build Status](https://travis-ci.org/atsam4-rs/atsam4-hal.svg?branch=master)](https://travis-ci.org/atsam4-rs/atsam4-hal)
+[![Build Status](https://api.travis-ci.com/atsam4-rs/atsam4-hal.svg?branch=master)](https://api.travis-ci.com/atsam4-rs/atsam4-hal)
 
 NOTE: This crate is still under active development.   Currently only the ATSAM4E and ATSAM4S are supported.
 
