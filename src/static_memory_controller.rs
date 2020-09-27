@@ -219,26 +219,18 @@ pub struct StaticMemoryController {
     pub chip_select3: ChipSelect3<Uninitialized>,
 }
 
-#[cfg(feature = "atsam4e")]
 pub enum NCS1 {
     C15(Pc15<PfA>),
+
+    #[cfg(feature = "atsam4e")]
     D18(Pd18<PfA>),
 }
 
-#[cfg(feature = "atsam4e")]
 pub enum NCS3 {
     C12(Pc12<PfA>),
+
+    #[cfg(feature = "atsam4e")]
     D19(Pd19<PfA>),
-}
-
-#[cfg(feature = "atsam4s")]
-pub enum NCS1 {
-    C15(Pc15<PfA>),
-}
-
-#[cfg(feature = "atsam4s")]
-pub enum NCS3 {
-    C12(Pc12<PfA>),
 }
 
 impl StaticMemoryController {
