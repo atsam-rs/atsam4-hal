@@ -2,14 +2,14 @@ language: rust
 
 matrix:
   include:
-    - env: TARGET=thumbv7em-none-eabi
+    - env: TARGET=thumbv7em-none-eabi FEATURES=atsam4sd32c
       rust: stable
       addons:
         apt:
           packages:
             - gcc-arm-none-eabi
 
-    - env: TARGET=thumbv7em-none-eabihf
+    - env: TARGET=thumbv7em-none-eabihf FEATURES=atsam4e16e
       rust: stable
       addons:
         apt:

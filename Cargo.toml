@@ -39,7 +39,6 @@ version = "1.0.2"
 default-features = false
 
 [features]
-default = ["atsam4e16e"]
 atsam4e = []
 atsam4e16e = ["atsam4e", "atsam4e16e-pac", "atsam4e16e-pac/rt"]
 atsam4s = []
