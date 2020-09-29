@@ -167,6 +167,12 @@ impl Into<Miliseconds> for Microseconds {
     }
 }
 
+impl Into<Hertz> for Bps {
+    fn into(self) -> Hertz {
+        Hertz(self.0)
+    }
+}
+
 // Frequency <-> Period
 
 impl Into<Hertz> for Microseconds {

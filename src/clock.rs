@@ -7,12 +7,14 @@ use crate::pac::{EFC0, EFC1, PMC, pmc};
 #[cfg(feature = "atsam4s")]
 pub struct EFC(pub EFC0, pub EFC1);
 
-use crate::time::{Hertz};
+use crate::time::{Hertz, U32Ext};
 use core::marker::PhantomData;
 
 // Peripheral Clock State
 pub struct Enabled;
 pub struct Disabled;
+
+static mut MASTER_CLOCK_FREQUENCY: u32 = 0;
 
 pub struct PeripheralClock<STATE> {
     _state: PhantomData<STATE>,
@@ -48,18 +50,40 @@ macro_rules! peripheral_clocks {
                     unsafe { &(*PMC::ptr()).pmc_pcer0 }
                 }
 
+                pub(crate) fn pcer1(&mut self) -> &pmc::PMC_PCER1 {
+                    unsafe { &(*PMC::ptr()).pmc_pcer1 }
+                }
+
                 pub(crate) fn pcdr0(&mut self) -> &pmc::PMC_PCDR0 {
                     unsafe { &(*PMC::ptr()).pmc_pcdr0 }
                 }
 
                 pub fn into_enabled_clock(mut self) -> $PeripheralType<Enabled> {
-                    self.pcer0().write_with_zero(|w| unsafe { w.bits(1 << $i) });
+                    if $i <= 31 {
+                        let shift = $i;
+                        self.pcer0().write_with_zero(|w| unsafe { w.bits(1 << shift) });
+                    }
+                    else {
+                        let shift = ($i - 32);
+                        self.pcer1().write_with_zero(|w| unsafe { w.bits(1 << shift) });
+                    }
                     $PeripheralType { _state: PhantomData }
                 }
 
                 pub fn into_disabled_clock(mut self) -> $PeripheralType<Disabled> {
-                    self.pcdr0().write_with_zero(|w| unsafe { w.bits(1 << $i) });
+                    if $i <= 31 {
+                        let shift = $i;
+                        self.pcdr0().write_with_zero(|w| unsafe { w.bits(1 << shift) });
+                    }
+                    else {
+                        let shift = ($i - 32);
+                        self.pcdr0().write_with_zero(|w| unsafe { w.bits(1 << shift) });
+                    }
                     $PeripheralType { _state: PhantomData }
+                }
+
+                pub fn frequency(&self) -> Hertz {
+                    unsafe { MASTER_CLOCK_FREQUENCY.hz() }
                 }
             }
         )+
@@ -74,10 +98,13 @@ peripheral_clocks! (
     ParallelIOControllerBClock, parallel_io_controller_b, 10,
     ParallelIOControllerCClock, parallel_io_controller_c, 11,
     ParallelIOControllerDClock, parallel_io_controller_d, 12,
+    UART1Clock, uart_1, 45,
 );
 
 #[cfg(feature = "atsam4s")]
 peripheral_clocks! (
+    UART0Clock, uart_0, 8,
+    UART1Clock, uart_1, 9,
     StaticMemoryControllerClock, static_memory_controller, 10,
     ParallelIOControllerAClock, parallel_io_controller_a, 11,
     ParallelIOControllerBClock, parallel_io_controller_b, 12,
@@ -86,7 +113,6 @@ peripheral_clocks! (
 
 pub struct ClockController {
     _pmc: PMC,
-    master_clock_frequency: Hertz,
     pub peripheral_clocks: PeripheralClocks,
 }
 
@@ -108,7 +134,7 @@ impl ClockController {
             panic!("external oscillator not supported")
         }
         
-        Self::wait_for_main_clock_ready(&mut pmc);
+        Self::wait_for_main_clock_ready(&pmc);
 
         // Set up the PLL for 120Mhz operation (12Mhz RC * (10 / 1) = 120Mhz)
         let multiplier:u16 = 10;
@@ -119,19 +145,22 @@ impl ClockController {
         let prescaler = 0; // 0 = no prescaling.
         Self::switch_master_clock_to_plla(&mut pmc, prescaler);
 
-        let master_clock_frequency = Self::calculate_master_clock_frequency(&pmc);
+        let master_clock_frequency = Self::calculate_master_clock_frequency(&pmc);      
 
         Self::set_flash_wait_states_for_clock_frequency(efc, master_clock_frequency);
 
+        unsafe {
+            MASTER_CLOCK_FREQUENCY = master_clock_frequency.0;
+        }
+        
         ClockController {
             _pmc: pmc,
-            master_clock_frequency: master_clock_frequency,
             peripheral_clocks: PeripheralClocks::new(),
         }
     }
 
     pub fn get_master_clock_frequency(&self) -> Hertz {
-        self.master_clock_frequency
+        unsafe { MASTER_CLOCK_FREQUENCY.hz() }
     }
 
     fn calculate_master_clock_frequency(pmc: &PMC) -> Hertz {
