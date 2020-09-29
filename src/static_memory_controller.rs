@@ -1,4 +1,7 @@
 use {
+    paste::paste,
+    core::marker::PhantomData,
+
     crate::pac::{
         SMC, smc,
     },
@@ -7,10 +10,7 @@ use {
         Enabled,
     },
     crate::gpio::*,
-    paste::paste,
 };
-
-use core::marker::PhantomData;
 
 // Chip Select Mode
 pub struct Uninitialized;
