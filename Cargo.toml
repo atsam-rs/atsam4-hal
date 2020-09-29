@@ -1,6 +1,6 @@
 [package]
 name = "atsam4-hal"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["John W. Terrell <john@coolpeoplenetworks.com>"]
 edition = "2018"
 description = "HAL for the ATSAM4 microcontrollers"
