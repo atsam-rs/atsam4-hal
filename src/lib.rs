@@ -43,28 +43,24 @@ pub mod time;
 // peripheral initialization
 #[pre_init]
 unsafe fn pre_init() {
-    // Clock initialization
-    pac::PMC::borrow_unchecked(|pmc| {
-        initialize_clock(pmc);
-    });
-}
-
-unsafe fn initialize_clock(pmc: &mut pac::PMC) {
-    // Disable the watchdog timer (it starts running at reset)
+    // Disable the watchdog timer if requested.
     #[cfg(feature = "disable_watchdog_timer")]
     pac::WDT::borrow_unchecked(|wdt| {
         wdt.mr.modify(|_, w| w.wddis().set_bit())
     });
 
-    #[cfg(feature = "atsam4e")]
-    pac::EFC::borrow_unchecked(|efc| {
-        clock::init(pmc, efc);
-    });
-
-    #[cfg(feature = "atsam4s")]
-    pac::EFC0::borrow_unchecked(|efc0| {
-        pac::EFC1::borrow_unchecked(|efc1| {
-            clock::init(pmc, efc0, efc1);
+    // Clock initialization
+    pac::PMC::borrow_unchecked(|pmc| {
+        #[cfg(feature = "atsam4e")]
+        pac::EFC::borrow_unchecked(|efc| {
+            clock::init(pmc, efc);
+        });
+    
+        #[cfg(feature = "atsam4s")]
+        pac::EFC0::borrow_unchecked(|efc0| {
+            pac::EFC1::borrow_unchecked(|efc1| {
+                clock::init(pmc, efc0, efc1);
+            });
         });
     });
 }
@@ -74,40 +70,21 @@ unsafe trait BorrowUnchecked {
     fn borrow_unchecked<T>(f: impl FnOnce(&mut Self) -> T) -> T;
 }
 
-unsafe impl BorrowUnchecked for pac::WDT {
-    fn borrow_unchecked<T>(f: impl FnOnce(&mut Self) -> T) -> T {
-        let mut p = unsafe { mem::transmute(()) };
-        f(&mut p)
-    }
-}
-
-unsafe impl BorrowUnchecked for pac::PMC {
-    fn borrow_unchecked<T>(f: impl FnOnce(&mut Self) -> T) -> T {
-        let mut p = unsafe { mem::transmute(()) };
-        f(&mut p)
+macro_rules! borrow_unchecked {
+    ($($peripheral:ident),*) => {
+        $(
+            unsafe impl BorrowUnchecked for pac::$peripheral {
+                fn borrow_unchecked<T>(f: impl FnOnce(&mut Self) -> T) -> T {
+                    let mut p = unsafe { mem::transmute(()) };
+                    f(&mut p)
+                }
+            }
+        )*
     }
 }
 
 #[cfg(feature = "atsam4e")]
-unsafe impl BorrowUnchecked for pac::EFC {
-    fn borrow_unchecked<T>(f: impl FnOnce(&mut Self) -> T) -> T {
-        let mut p = unsafe { mem::transmute(()) };
-        f(&mut p)
-    }
-}
+borrow_unchecked!(WDT, PMC, EFC);
 
 #[cfg(feature = "atsam4s")]
-unsafe impl BorrowUnchecked for pac::EFC0 {
-    fn borrow_unchecked<T>(f: impl FnOnce(&mut Self) -> T) -> T {
-        let mut p = unsafe { mem::transmute(()) };
-        f(&mut p)
-    }
-}
-
-#[cfg(feature = "atsam4s")]
-unsafe impl BorrowUnchecked for pac::EFC1 {
-    fn borrow_unchecked<T>(f: impl FnOnce(&mut Self) -> T) -> T {
-        let mut p = unsafe { mem::transmute(()) };
-        f(&mut p)
-    }
-}
+borrow_unchecked!(WDT, PMC, EFC0, EFC1);
