@@ -51,6 +51,7 @@ unsafe fn pre_init() {
 
 unsafe fn initialize_clock(pmc: &mut pac::PMC) {
     // Disable the watchdog timer (it starts running at reset)
+    #[cfg(feature = "disable_watchdog_timer")]
     pac::WDT::borrow_unchecked(|wdt| {
         wdt.mr.modify(|_, w| w.wddis().set_bit())
     });
