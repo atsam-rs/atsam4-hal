@@ -6,6 +6,8 @@ use cortex_m::peripheral::SYST;
 use crate::time::Hertz;
 pub use embedded_hal::blocking::delay::{DelayMs, DelayUs};
 
+use crate::clock::*;
+
 /// System timer (SysTick) as a delay provider
 pub struct Delay {
     sysclock: Hertz,
@@ -14,12 +16,12 @@ pub struct Delay {
 
 impl Delay {
     /// Configures the system timer (SysTick) as a delay provider
-    pub fn new(mut syst: SYST, sysclock: Hertz) -> Self {
+    pub fn new(mut syst: SYST) -> Self {
         syst.set_clock_source(SystClkSource::Core);
 
         Delay {
             syst,
-            sysclock: sysclock,
+            sysclock: get_master_clock_frequency(),
         }
     }
 
