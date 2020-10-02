@@ -36,5 +36,6 @@ branches:
     - master
 
 notifications:
-  email:
-    on_success: never
+  slack: 
+    rooms:
+      - atsam4-rs:2l6arv4v0riVqmNnuGTgcXn2#atsam4-hal
