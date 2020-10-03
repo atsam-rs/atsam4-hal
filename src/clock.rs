@@ -4,12 +4,15 @@ use crate::pac::{EFC, PMC, pmc};
 #[cfg(feature = "atsam4s")]
 use crate::pac::{EFC0, EFC1, PMC, pmc};
 
-use crate::time::{Hertz, U32Ext};
+use crate::time::Hertz;
 use crate::BorrowUnchecked;
 
 use core::marker::PhantomData;
+use cortex_m::interrupt;
 
-static mut MASTER_CLOCK_FREQUENCY: u32 = 0;
+lazy_static! {
+    static ref MASTER_CLOCK_FREQUENCY: Hertz = calculate_master_clock_frequency_static();
+}
 
 // called by pre_init()
 #[cfg(feature = "atsam4e")]
@@ -28,15 +31,7 @@ pub fn init(pmc: &mut PMC, efc0: &mut EFC0, efc1: &mut EFC1) {
 }
 
 pub fn get_master_clock_frequency() -> Hertz {
-    unsafe {
-        if MASTER_CLOCK_FREQUENCY == 0 {
-            PMC::borrow_unchecked(|pmc| {
-                MASTER_CLOCK_FREQUENCY = calculate_master_clock_frequency(&pmc).0;
-            });
-        }
-
-        MASTER_CLOCK_FREQUENCY.hz()
-    }
+    *MASTER_CLOCK_FREQUENCY
 }
 
 fn setup_main_clock(pmc: &mut PMC) -> Hertz {
@@ -95,6 +90,14 @@ fn calculate_master_clock_frequency(pmc: &PMC) -> Hertz {
     };
 
     Hertz(mclk_freq)
+}
+
+fn calculate_master_clock_frequency_static() -> Hertz {
+    interrupt::free(|_| {
+        PMC::borrow_unchecked(|pmc| {
+            calculate_master_clock_frequency(&pmc)
+        })
+    })
 }
 
 fn get_flash_wait_states_for_clock_frequency(clock_frequency: Hertz) -> u8 {
@@ -283,7 +286,7 @@ macro_rules! peripheral_clocks {
                 }
 
                 pub fn frequency(&self) -> Hertz {
-                    unsafe { MASTER_CLOCK_FREQUENCY.hz() }
+                    get_master_clock_frequency()
                 }
             }
         )+
@@ -298,6 +301,8 @@ peripheral_clocks! (
     ParallelIOControllerBClock, parallel_io_controller_b, 10,
     ParallelIOControllerCClock, parallel_io_controller_c, 11,
     ParallelIOControllerDClock, parallel_io_controller_d, 12,
+    ParallelIOControllerEClock, parallel_io_controller_e, 13,
+    GMACClock, gmac, 44,
     UART1Clock, uart_1, 45,
 );
 

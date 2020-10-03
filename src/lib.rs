@@ -21,6 +21,9 @@
 //#![deny(warnings)]
 #![no_std]
 
+#[macro_use]
+extern crate lazy_static;
+
 pub extern crate embedded_hal;
 pub use embedded_hal::digital::v2::*;
 

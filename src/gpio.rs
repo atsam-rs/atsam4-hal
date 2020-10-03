@@ -14,12 +14,14 @@ use {
         PIOB, piob,
         PIOC, pioc,
         PIOD, piod,
+        PIOE, pioe,
     },
     crate::clock::{
         ParallelIOControllerAClock,
         ParallelIOControllerBClock,
         ParallelIOControllerCClock,
         ParallelIOControllerDClock,
+        ParallelIOControllerEClock,
         Enabled,
     },
 };
@@ -59,6 +61,10 @@ pub struct Ports {
     piod: PhantomData<PIOD>,
     #[cfg(feature = "atsam4e")]
     piod_clock: PhantomData<ParallelIOControllerDClock<Enabled>>,
+    #[cfg(feature = "atsam4e")]
+    pioe: PhantomData<PIOE>,
+    #[cfg(feature = "atsam4e")]
+    pioe_clock: PhantomData<ParallelIOControllerEClock<Enabled>>,
 }
 
 impl Ports {
@@ -72,6 +78,10 @@ impl Ports {
                _piod: PIOD,
                #[cfg(feature = "atsam4e")]
                _piod_clock: ParallelIOControllerDClock<Enabled>,
+               #[cfg(feature = "atsam4e")]
+               _pioe: PIOE,
+               #[cfg(feature = "atsam4e")]
+               _pioe_clock: ParallelIOControllerEClock<Enabled>,
             ) -> Self {
         // The above arguments are consumed here...never to be seen again.
         Ports {
@@ -85,6 +95,10 @@ impl Ports {
             piod: PhantomData,
             #[cfg(feature = "atsam4e")]
             piod_clock: PhantomData,
+            #[cfg(feature = "atsam4e")]
+            pioe: PhantomData,
+            #[cfg(feature = "atsam4e")]
+            pioe_clock: PhantomData,
         }
     }
 }
@@ -133,6 +147,8 @@ macro_rules! pins {
         $($PinTypeC:ident: ($pin_identC:ident, $pin_noC:expr),)+
     ],[
         $($PinTypeD:ident: ($pin_identD:ident, $pin_noD:expr),)+
+    ],[
+        $($PinTypeE:ident: ($pin_identE:ident, $pin_noE:expr),)+
     ]) => {
         /// Holds the GPIO broken out pin instances (consumes the Ports object)
         pub struct Pins {
@@ -152,6 +168,11 @@ macro_rules! pins {
                 /// Pin $pin_identD
                 #[cfg(feature = "atsam4e")]
                 pub $pin_identD: $PinTypeD<Input<Floating>>,
+            )+
+            $(
+                /// Pin $pin_identE
+                #[cfg(feature = "atsam4e")]
+                pub $pin_identE: $PinTypeE<Input<Floating>>,
             )+
         }
         
@@ -174,6 +195,10 @@ macro_rules! pins {
                         #[cfg(feature = "atsam4e")]
                         $pin_identD: $PinTypeD { _mode: PhantomData },
                     )+
+                    $(
+                        #[cfg(feature = "atsam4e")]
+                        $pin_identE: $PinTypeE { _mode: PhantomData },
+                    )+
                 }
             }
         }
@@ -190,6 +215,10 @@ macro_rules! pins {
         $(
             #[cfg(feature = "atsam4e")]
             pin!($PinTypeD, $pin_identD, $pin_noD, PIOD, piod);
+        )+    
+        $(
+            #[cfg(feature = "atsam4e")]
+            pin!($PinTypeE, $pin_identE, $pin_noE, PIOE, pioe);
         )+    
     };
 }    
@@ -537,6 +566,16 @@ pins!([
     Pd29: (pd29, 29),
     Pd30: (pd30, 30),
     Pd31: (pd31, 31),
+],
+[
+    Pe0: (pe0, 0),
+    Pe1: (pe1, 1),
+    Pe2: (pe2, 2),
+    Pe3: (pe3, 3),
+    Pe4: (pe4, 4),
+    Pe5: (pe5, 5),
+
+    // Pe6-31 do not exist.
 ]);
 
 #[macro_export]

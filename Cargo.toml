@@ -41,6 +41,10 @@ optional = true
 version = "1.0.2"
 default-features = false
 
+[dependencies.lazy_static]
+version = "1.4.0"
+features = ["spin_no_std"]
+
 [features]
 default = ["atsam4e16e"]
 disable_watchdog_timer = []
