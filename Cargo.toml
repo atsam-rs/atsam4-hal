@@ -38,8 +38,8 @@ version = "0.1.1"
 optional = true
 
 [dependencies.eui48]
-version = "0.1.0"
-path = "../eui48-rs"
+git = "https://github.com/CoolpeopleNetworks/eui48-rs.git"
+tag = "v0.1.0"
 
 [dependencies.void]
 version = "1.0.2"
