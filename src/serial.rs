@@ -60,14 +60,13 @@ pub enum Error {
     // omitted: other error variants
 }
 
-macro_rules! serial_ports {
+macro_rules! uarts {
     (
         $($PortType:ident: (
-            $port_ident:ident,
-            $pin_rx:ty,
-            $pin_tx:ty,
             $UART:ident,
-            $uart:ident
+            $uart:ident,
+            $pin_rx:ty,
+            $pin_tx:ty
         ),)+
     ) => {
         paste! {
@@ -81,7 +80,7 @@ macro_rules! serial_ports {
 
                 impl $PortType {
                     pub fn new (
-                        mut uart: $port_ident,
+                        mut uart: $UART,
                         clock: [<$UART Clock>]<Enabled>,
                         _rx_pin: $pin_rx,
                         _tx_pin: $pin_tx,
@@ -94,11 +93,6 @@ macro_rules! serial_ports {
                         if clock_divisor < 1 || clock_divisor > 65535 {
                             panic!("Unsupported baud_rate specified for serial device (cd = {})", clock_divisor);
                         }
-
-                        // // The UART only supports 1 stop bit.
-                        // if stop_bits != StopBits::One {
-                        //     panic!("Unsupported stop_bit specified for serial_device ({:?})", stop_bits);
-                        // }
 
                         // Configure the baud rate generator
                         uart.brgr.write(|w| unsafe { w.bits(clock_divisor) });
@@ -125,7 +119,7 @@ macro_rules! serial_ports {
                         Self::enable(&mut uart);
 
                         $PortType {
-                            uart: uart,
+                            uart,
                             clock: PhantomData,
                             rx_pin: PhantomData,
                             tx_pin: PhantomData,
@@ -206,13 +200,16 @@ macro_rules! serial_ports {
 }
 
 #[cfg(feature = "atsam4s")]
-serial_ports! (
-    Serial0: (UART0, Pa9<PfA>, Pa10<PfA>, UART0, uart0),
-    Serial1: (UART1, Pb2<PfA>, Pb3<PfA>, UART1, uart1),
+uarts! (
+    Uart0: (UART0, uart0, Pa9<PfA>, Pa10<PfA>),
+    Uart1: (UART1, uart1, Pb2<PfA>, Pb3<PfA>),
 );
 
 #[cfg(feature = "atsam4e")]
-serial_ports! (
-    Serial0: (UART0, Pa9<PfA>, Pa10<PfA>, UART0, uart0),
-    Serial1: (UART1, Pa5<PfC>, Pa6<PfC>, UART1, uart1),
+uarts! (
+    Uart0: (UART0, uart0, Pa9<PfA>, Pa10<PfA>),
+    Uart1: (UART1, uart1, Pa5<PfC>, Pa6<PfC>),
 );
+
+pub type Serial0 = Uart0;
+pub type Serial1 = Uart1;

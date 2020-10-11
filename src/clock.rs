@@ -216,9 +216,13 @@ fn wait_for_master_clock_ready(pmc: &PMC) {
 }
 
 // Peripheral Clock State
+#[derive(Default)]
 pub struct Enabled;
+
+#[derive(Default)]
 pub struct Disabled;
 
+#[derive(Default)]
 pub struct PeripheralClock<STATE> {
     _state: PhantomData<STATE>,
 }
@@ -227,6 +231,7 @@ macro_rules! peripheral_clocks {
     (
         $($PeripheralType:ident, $peripheral_ident:ident, $i:expr,)+
     ) => {
+        #[derive(Default)]
         pub struct PeripheralClocks {
             $(
                 pub $peripheral_ident: $PeripheralType<Disabled>,
@@ -244,6 +249,7 @@ macro_rules! peripheral_clocks {
         }
 
         $(
+            #[derive(Default)]
             pub struct $PeripheralType<STATE> {
                 _state: PhantomData<STATE>,
             }
@@ -316,6 +322,7 @@ peripheral_clocks! (
     ParallelIOControllerCClock, parallel_io_controller_c, 13,
 );
 
+#[derive(Default)]
 pub struct ClockController {
     pub peripheral_clocks: PeripheralClocks,
 }

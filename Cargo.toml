@@ -37,6 +37,10 @@ optional = true
 version = "0.1.1"
 optional = true
 
+[dependencies.eui48]
+version = "0.1.0"
+path = "../eui48-rs"
+
 [dependencies.void]
 version = "1.0.2"
 default-features = false
@@ -45,8 +49,12 @@ default-features = false
 version = "1.4.0"
 features = ["spin_no_std"]
 
+[dependencies.volatile]
+version = "0.4.1"
+
 [features]
 default = ["atsam4e16e"]
+unstable = []
 disable_watchdog_timer = []
 atsam4e = []
 atsam4e16e = ["atsam4e", "atsam4e16e-pac", "atsam4e16e-pac/rt"]
