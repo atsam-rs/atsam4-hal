@@ -51,54 +51,33 @@ pub trait GpioExt {
 }
 
 pub struct Ports {
-    pioa: PhantomData<PIOA>,
-    pioa_clock: PhantomData<ParallelIOControllerAClock<Enabled>>,
-    piob: PhantomData<PIOB>,
-    piob_clock: PhantomData<ParallelIOControllerBClock<Enabled>>,
-    pioc: PhantomData<PIOC>,
-    pioc_clock: PhantomData<ParallelIOControllerCClock<Enabled>>,
+    pioa: PhantomData<(PIOA, ParallelIOControllerAClock<Enabled>)>,
+    piob: PhantomData<(PIOB, ParallelIOControllerBClock<Enabled>)>,
+    pioc: PhantomData<(PIOC, ParallelIOControllerCClock<Enabled>)>,
     #[cfg(feature = "atsam4e")]
-    piod: PhantomData<PIOD>,
+    piod: PhantomData<(PIOD, ParallelIOControllerDClock<Enabled>)>,
     #[cfg(feature = "atsam4e")]
-    piod_clock: PhantomData<ParallelIOControllerDClock<Enabled>>,
-    #[cfg(feature = "atsam4e")]
-    pioe: PhantomData<PIOE>,
-    #[cfg(feature = "atsam4e")]
-    pioe_clock: PhantomData<ParallelIOControllerEClock<Enabled>>,
+    pioe: PhantomData<(PIOE, ParallelIOControllerEClock<Enabled>)>,
 }
 
 impl Ports {
-    pub fn new(_pioa: PIOA,
-               _pioa_clock: ParallelIOControllerAClock<Enabled>,
-               _piob: PIOB, 
-               _piob_clock: ParallelIOControllerBClock<Enabled>,
-               _pioc: PIOC, 
-               _pioc_clock: ParallelIOControllerCClock<Enabled>,
+    pub fn new(_pioa: (PIOA, ParallelIOControllerAClock<Enabled>),
+               _piob: (PIOB, ParallelIOControllerBClock<Enabled>),
+               _pioc: (PIOC, ParallelIOControllerCClock<Enabled>),
                #[cfg(feature = "atsam4e")]
-               _piod: PIOD,
+               _piod: (PIOD, ParallelIOControllerDClock<Enabled>),
                #[cfg(feature = "atsam4e")]
-               _piod_clock: ParallelIOControllerDClock<Enabled>,
-               #[cfg(feature = "atsam4e")]
-               _pioe: PIOE,
-               #[cfg(feature = "atsam4e")]
-               _pioe_clock: ParallelIOControllerEClock<Enabled>,
+               _pioe: (PIOE, ParallelIOControllerEClock<Enabled>),
             ) -> Self {
         // The above arguments are consumed here...never to be seen again.
         Ports {
             pioa: PhantomData,
-            pioa_clock: PhantomData,
             piob: PhantomData,
-            piob_clock: PhantomData,
             pioc: PhantomData,
-            pioc_clock: PhantomData,
             #[cfg(feature = "atsam4e")]
             piod: PhantomData,
             #[cfg(feature = "atsam4e")]
-            piod_clock: PhantomData,
-            #[cfg(feature = "atsam4e")]
             pioe: PhantomData,
-            #[cfg(feature = "atsam4e")]
-            pioe_clock: PhantomData,
         }
     }
 }

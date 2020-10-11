@@ -27,11 +27,16 @@ extern crate lazy_static;
 pub extern crate embedded_hal;
 pub use embedded_hal::digital::v2::*;
 
+#[cfg(feature = "net")]
+extern crate smoltcp;
+
 #[cfg(feature = "atsam4e16e")]
 pub use atsam4e16e_pac as pac;
 
 #[cfg(feature = "atsam4sd32c")]
 pub use atsam4sd32c_pac as pac;
+
+pub use eui48::Identifier as MacAddress;
 
 use cortex_m_rt::pre_init;
 use core::mem;
@@ -42,6 +47,10 @@ pub mod gpio;
 pub mod static_memory_controller;
 pub mod serial;
 pub mod time;
+
+#[cfg(all(feature = "atsam4e16e", feature = "unstable"))]
+#[allow(dead_code)]             // TODO: REMOVE WHEN STABLE
+pub mod ethernet_controller;
 
 // peripheral initialization
 #[pre_init]
