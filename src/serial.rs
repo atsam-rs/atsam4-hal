@@ -2,33 +2,20 @@ extern crate nb;
 
 // device crate
 use {
-    paste::paste,
+    crate::clock::{Enabled, UART0Clock, UART1Clock},
+    crate::gpio::{Pa10, Pa9, PfA},
+    crate::pac::{UART0, UART1},
+    crate::time::Bps,
     core::marker::PhantomData,
-
-    crate::pac::{
-        UART0,
-        UART1,
-    },
-    crate::clock::{
-        UART0Clock,
-        UART1Clock,
-        Enabled,
-    },
-    crate::gpio::{ Pa9, Pa10, PfA },
-    crate::time::{ Bps },
-
-    embedded_hal::{serial::Read, serial::Write}
+    embedded_hal::{serial::Read, serial::Write},
+    paste::paste,
 };
 
 #[cfg(feature = "atsam4s")]
-use {
-    crate::gpio::{ Pb2, Pb3 },
-};
+use crate::gpio::{Pb2, Pb3};
 
 #[cfg(feature = "atsam4e")]
-use {
-    crate::gpio::{ Pa5, Pa6, PfC },
-};
+use crate::gpio::{Pa5, Pa6, PfC};
 
 #[derive(Debug)]
 pub enum Parity {
@@ -71,7 +58,7 @@ macro_rules! uarts {
     ) => {
         paste! {
             $(
-                pub struct $PortType { 
+                pub struct $PortType {
                     uart: $UART,
                     clock: PhantomData<[<$UART Clock>]<Enabled>>,
                     rx_pin: PhantomData<$pin_rx>,
@@ -139,12 +126,12 @@ macro_rules! uarts {
                     }
 
                     pub fn write_string_blocking(&mut self, data: &str) {
-                        for c in data.chars() { 
+                        for c in data.chars() {
                             loop {
                                 if let Err(_e) = self.write(c as u8) {
                                     continue;
                                 }
-                                
+
                                 break;
                             }
                         }
@@ -200,13 +187,13 @@ macro_rules! uarts {
 }
 
 #[cfg(feature = "atsam4s")]
-uarts! (
+uarts!(
     Uart0: (UART0, uart0, Pa9<PfA>, Pa10<PfA>),
     Uart1: (UART1, uart1, Pb2<PfA>, Pb3<PfA>),
 );
 
 #[cfg(feature = "atsam4e")]
-uarts! (
+uarts!(
     Uart0: (UART0, uart0, Pa9<PfA>, Pa10<PfA>),
     Uart1: (UART1, uart1, Pa5<PfC>, Pa6<PfC>),
 );

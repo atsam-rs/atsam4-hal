@@ -1,14 +1,10 @@
-use core::marker::PhantomData;
 use crate::{
-    pac::{
-        GMAC,
-    },
-    clock::{
-        GMACClock, Enabled
-    },
+    clock::{Enabled, GMACClock},
+    pac::GMAC,
 };
-use paste::paste;
+use core::marker::PhantomData;
 use eui48::Identifier as MacAddress;
+use paste::paste;
 
 mod rxbufdescblock;
 use rxbufdescblock::*;
@@ -68,20 +64,17 @@ macro_rules! define_mac_address_function {
                 });
             }
         }
-    }
+    };
 }
 
 pub struct EthernetController {
-    gmac: GMAC, 
+    gmac: GMAC,
     clock: PhantomData<GMACClock<Enabled>>,
 }
 
 impl EthernetController {
-    pub fn new(
-        gmac: (GMAC, GMACClock<Enabled>),
-        options: EthernetOptions,
-    ) -> Self {
-        let mut e = EthernetController{
+    pub fn new(gmac: (GMAC, GMACClock<Enabled>), options: EthernetOptions) -> Self {
+        let mut e = EthernetController {
             gmac: gmac.0,
             clock: PhantomData,
         };
@@ -100,7 +93,7 @@ impl EthernetController {
             if options.copy_all_frames {
                 w.caf().set_bit();
             }
-        
+
             if options.disable_broadcast {
                 w.nbc().set_bit();
             }
@@ -116,7 +109,7 @@ impl EthernetController {
                     0 => e.set_mac_address2(alternate),
                     1 => e.set_mac_address3(alternate),
                     2 => e.set_mac_address4(alternate),
-                    _ => panic!("unexpected alternate mac address offset in 3 element array")
+                    _ => panic!("unexpected alternate mac address offset in 3 element array"),
                 }
             }
         }
@@ -131,8 +124,8 @@ impl EthernetController {
 
     fn reset(&mut self) {
         self.gmac.ncr.reset();
-        self.disable_all_interrupts();   
-        self.clear_statistics();     
+        self.disable_all_interrupts();
+        self.clear_statistics();
 
         // Clear all bits in the receive status register
         self.gmac.rsr.reset();
@@ -149,47 +142,71 @@ impl EthernetController {
 
     fn disable_all_interrupts(&mut self) {
         self.gmac.idr.write_with_zero(|w| {
-            w.mfs().set_bit().
-              rcomp().set_bit().
-              rxubr().set_bit().
-              txubr().set_bit().
-              tur().set_bit().
-              rlex().set_bit().
-              tfc().set_bit().
-              tcomp().set_bit().
-              rovr().set_bit().
-              hresp().set_bit().
-              pfnz().set_bit().
-              ptz().set_bit().
-              pftr().set_bit().
-              exint().set_bit().
-              drqfr().set_bit().
-              sfr().set_bit().
-              drqft().set_bit().
-              sft().set_bit().
-              pdrqfr().set_bit().
-              pdrsfr().set_bit().
-              pdrqft().set_bit().
-              pdrsft().set_bit().
-              sri().set_bit().
-              wol().set_bit()
+            w.mfs()
+                .set_bit()
+                .rcomp()
+                .set_bit()
+                .rxubr()
+                .set_bit()
+                .txubr()
+                .set_bit()
+                .tur()
+                .set_bit()
+                .rlex()
+                .set_bit()
+                .tfc()
+                .set_bit()
+                .tcomp()
+                .set_bit()
+                .rovr()
+                .set_bit()
+                .hresp()
+                .set_bit()
+                .pfnz()
+                .set_bit()
+                .ptz()
+                .set_bit()
+                .pftr()
+                .set_bit()
+                .exint()
+                .set_bit()
+                .drqfr()
+                .set_bit()
+                .sfr()
+                .set_bit()
+                .drqft()
+                .set_bit()
+                .sft()
+                .set_bit()
+                .pdrqfr()
+                .set_bit()
+                .pdrsfr()
+                .set_bit()
+                .pdrqft()
+                .set_bit()
+                .pdrsft()
+                .set_bit()
+                .sri()
+                .set_bit()
+                .wol()
+                .set_bit()
         });
     }
 
     fn enable_transmit(&mut self) {
-        self.gmac.ncr.modify(|_, w| w.txen().set_bit( ))
+        self.gmac.ncr.modify(|_, w| w.txen().set_bit())
     }
 
     fn disable_transmit(&mut self) {
-        self.gmac.ncr.modify(|_, w| w.txen().clear_bit( ))
+        self.gmac.ncr.modify(|_, w| w.txen().clear_bit())
     }
 
     fn enable_receive(&mut self) {
-        self.gmac.ncr.modify(|_, w| w.rxen().set_bit( ))
+        self.gmac.ncr.modify(|_, w| w.rxen().set_bit())
     }
 
     fn disable_receive(&mut self) {
-        self.gmac.ncr.modify(|_, w| w.rxen().clear_bit( ))
+        self.gmac.ncr.modify(|_, w| w.rxen().clear_bit())
     }
 
     // Hardware/MAC address manipulation
@@ -200,27 +217,23 @@ impl EthernetController {
 
     // Statistics
     fn clear_statistics(&mut self) {
-        self.gmac.ncr.modify(|_, w| {
-            w.clrstat().set_bit()
-        })
+        self.gmac.ncr.modify(|_, w| w.clrstat().set_bit())
     }
 
     fn increment_statistics(&mut self) {
-        self.gmac.ncr.modify(|_, w| {
-            w.incstat().set_bit()
-        })
+        self.gmac.ncr.modify(|_, w| w.incstat().set_bit())
     }
-    
+
     // PHY interface
     fn is_phy_idle(&self) -> bool {
         self.gmac.nsr.read().idle().bit()
     }
 
     fn enable_management_port(&mut self) {
-        self.gmac.ncr.modify(|_, w| w.mpe().set_bit( ))
+        self.gmac.ncr.modify(|_, w| w.mpe().set_bit())
     }
 
     fn disable_management_port(&mut self) {
-        self.gmac.ncr.modify(|_, w| w.mpe().clear_bit( ))
+        self.gmac.ncr.modify(|_, w| w.mpe().clear_bit())
     }
 }

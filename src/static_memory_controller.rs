@@ -1,15 +1,9 @@
 use {
-    paste::paste,
-    core::marker::PhantomData,
-
-    crate::pac::{
-        SMC, smc,
-    },
-    crate::clock::{
-        StaticMemoryControllerClock,
-        Enabled,
-    },
+    crate::clock::{Enabled, StaticMemoryControllerClock},
     crate::gpio::*,
+    crate::pac::{smc, SMC},
+    core::marker::PhantomData,
+    paste::paste,
 };
 
 // Chip Select Mode
@@ -19,7 +13,7 @@ pub struct Configured;
 #[derive(Copy, Clone)]
 pub enum WaitMode {
     Frozen,
-    Ready
+    Ready,
 }
 
 #[derive(Copy, Clone)]
@@ -57,12 +51,12 @@ pub struct ChipSelectConfiguration {
 
     pub access_mode: AccessMode,
 
-    pub wait_mode: Option<WaitMode>,    // If some(), wait mode is as specified, otherwise disabled.
+    pub wait_mode: Option<WaitMode>, // If some(), wait mode is as specified, otherwise disabled.
 
     pub data_float_time: u8,
 
     pub tdf_optimization: bool,
-    pub page_size: Option<PageSize>,     // If some(), page mode is enabled with the given size.
+    pub page_size: Option<PageSize>, // If some(), page mode is enabled with the given size.
 }
 
 macro_rules! chip_select {
@@ -93,12 +87,12 @@ macro_rules! chip_select {
                 }
 
                 pub fn into_configured_state(mut self, config: &ChipSelectConfiguration) -> $ChipSelectType<Configured> {
-                    self.setup().write(|w| unsafe { 
+                    self.setup().write(|w| unsafe {
                         w.nwe_setup().bits(config.nwe_setup_length).
                           ncs_wr_setup().bits(config.ncs_write_setup_length).
                           nrd_setup().bits(config.nrd_setup_length).
                           ncs_rd_setup().bits(config.ncs_read_setup_length)
-                    });  
+                    });
 
                     self.pulse().write(|w| unsafe {
                         w.nwe_pulse().bits(config.nwe_pulse_length).
@@ -131,16 +125,16 @@ macro_rules! chip_select {
                         else {
                             w.exnw_mode().bits(0);
                         }
-    
+
                         w.tdf_cycles().bits(config.data_float_time);
-    
+
                         if (config.tdf_optimization) {
                             w.tdf_mode().set_bit();
                         }
                         else {
                             w.tdf_mode().clear_bit();
                         }
-                        
+
                         if let Some(page_size) = config.page_size {
                             let value = match page_size {
                                 PageSize::FourBytes => 0,
@@ -192,14 +186,14 @@ pub enum NCS3 {
 }
 
 type DataLines = (
-    Pc0<PfA>, 
-    Pc1<PfA>, 
-    Pc2<PfA>, 
-    Pc3<PfA>, 
-    Pc4<PfA>, 
-    Pc5<PfA>, 
-    Pc6<PfA>, 
-    Pc7<PfA>
+    Pc0<PfA>,
+    Pc1<PfA>,
+    Pc2<PfA>,
+    Pc3<PfA>,
+    Pc4<PfA>,
+    Pc5<PfA>,
+    Pc6<PfA>,
+    Pc7<PfA>,
 );
 
 type AddressLines = (
@@ -226,7 +220,7 @@ type AddressLines = (
     Pa24<PfC>,
     Pc16<PfA>,
     Pc17<PfA>,
-    Pa25<PfC>
+    Pa25<PfC>,
 );
 
 impl StaticMemoryController {
@@ -238,15 +232,15 @@ impl StaticMemoryController {
 
         _nrd: Pc11<PfA>,
         _nwe: Pc8<PfA>,
-    
+
         _data_lines: DataLines,
         _address_lines: AddressLines,
     ) -> Self {
         StaticMemoryController {
-            chip_select0: ChipSelect0::<Uninitialized>{ _mode: PhantomData, },
-            chip_select1: ChipSelect1::<Uninitialized>{ _mode: PhantomData, },
-            chip_select2: ChipSelect2::<Uninitialized>{ _mode: PhantomData, },
-            chip_select3: ChipSelect3::<Uninitialized>{ _mode: PhantomData, },
+            chip_select0: ChipSelect0::<Uninitialized> { _mode: PhantomData },
+            chip_select1: ChipSelect1::<Uninitialized> { _mode: PhantomData },
+            chip_select2: ChipSelect2::<Uninitialized> { _mode: PhantomData },
+            chip_select3: ChipSelect3::<Uninitialized> { _mode: PhantomData },
         }
     }
 
