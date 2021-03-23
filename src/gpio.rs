@@ -15,10 +15,14 @@ use {
 
 #[cfg(feature = "atsam4s")]
 use {
-    crate::clock::{
-        Enabled, ParallelIOControllerAClock, ParallelIOControllerBClock, ParallelIOControllerCClock,
-    },
-    crate::pac::{pioa, piob, pioc, PIOA, PIOB, PIOC},
+    crate::clock::{Enabled, ParallelIOControllerAClock, ParallelIOControllerBClock},
+    crate::pac::{pioa, piob, PIOA, PIOB},
+};
+
+#[cfg(feature = "atsam4s_c")]
+use {
+    crate::clock::ParallelIOControllerCClock,
+    crate::pac::{pioc, PIOC},
 };
 
 /// The GpioExt trait allows splitting the PORT hardware into
@@ -29,10 +33,10 @@ pub trait GpioExt {
     /// Consume and split the device into its constitent parts
     fn split(self) -> Self::Parts;
 }
-
 pub struct Ports {
     pioa: PhantomData<(PIOA, ParallelIOControllerAClock<Enabled>)>,
     piob: PhantomData<(PIOB, ParallelIOControllerBClock<Enabled>)>,
+    #[cfg(any(feature = "atsam4s_c", feature = "atsam4e"))]
     pioc: PhantomData<(PIOC, ParallelIOControllerCClock<Enabled>)>,
     #[cfg(feature = "atsam4e")]
     piod: PhantomData<(PIOD, ParallelIOControllerDClock<Enabled>)>,
@@ -44,7 +48,10 @@ impl Ports {
     pub fn new(
         _pioa: (PIOA, ParallelIOControllerAClock<Enabled>),
         _piob: (PIOB, ParallelIOControllerBClock<Enabled>),
-        _pioc: (PIOC, ParallelIOControllerCClock<Enabled>),
+        #[cfg(any(feature = "atsam4s_c", feature = "atsam4e"))] _pioc: (
+            PIOC,
+            ParallelIOControllerCClock<Enabled>,
+        ),
         #[cfg(feature = "atsam4e")] _piod: (PIOD, ParallelIOControllerDClock<Enabled>),
         #[cfg(feature = "atsam4e")] _pioe: (PIOE, ParallelIOControllerEClock<Enabled>),
     ) -> Self {
@@ -52,6 +59,7 @@ impl Ports {
         Ports {
             pioa: PhantomData,
             piob: PhantomData,
+            #[cfg(any(feature = "atsam4s_c", feature = "atsam4e"))]
             pioc: PhantomData,
             #[cfg(feature = "atsam4e")]
             piod: PhantomData,
@@ -120,6 +128,7 @@ macro_rules! pins {
             )+
             $(
                 /// Pin $pin_identC
+                #[cfg(any(feature = "atsam4s_c", feature = "atsam4e"))]
                 pub $pin_identC: $PinTypeC<Input<Floating>>,
             )+
             $(
@@ -147,6 +156,7 @@ macro_rules! pins {
                         $pin_identB: $PinTypeB { _mode: PhantomData },
                     )+
                     $(
+                        #[cfg(any(feature = "atsam4s_c", feature = "atsam4e"))]
                         $pin_identC: $PinTypeC { _mode: PhantomData },
                     )+
                     $(
@@ -168,6 +178,7 @@ macro_rules! pins {
             pin!($PinTypeB, $pin_identB, $pin_noB, PIOB, piob);
         )+
         $(
+            #[cfg(any(feature = "atsam4s_c", feature = "atsam4e"))]
             pin!($PinTypeC, $pin_identC, $pin_noC, PIOC, pioc);
         )+
         $(

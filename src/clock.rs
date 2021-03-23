@@ -4,7 +4,10 @@
 use crate::pac::{pmc, EFC, PMC};
 
 #[cfg(feature = "atsam4s")]
-use crate::pac::{pmc, EFC0, EFC1, PMC};
+use crate::pac::{pmc, EFC0, PMC};
+
+#[cfg(feature = "atsam4sd")]
+use crate::pac::EFC1;
 
 use crate::time::Hertz;
 use crate::BorrowUnchecked;
@@ -26,10 +29,19 @@ pub fn init(pmc: &mut PMC, efc: &mut EFC) {
 
 // called by pre_init()
 #[cfg(feature = "atsam4s")]
-pub fn init(pmc: &mut PMC, efc0: &mut EFC0, efc1: &mut EFC1) {
-    set_flash_wait_states_to_maximum(efc0, efc1);
+pub fn init(pmc: &mut PMC, efc0: &mut EFC0, #[cfg(feature = "atsam4sd")] efc1: &mut EFC1) {
+    set_flash_wait_states_to_maximum(
+        efc0,
+        #[cfg(feature = "atsam4sd")]
+        efc1,
+    );
     let master_clock_frequency = setup_main_clock(pmc);
-    set_flash_wait_states_to_match_frequence(efc0, efc1, master_clock_frequency);
+    set_flash_wait_states_to_match_frequence(
+        efc0,
+        #[cfg(feature = "atsam4sd")]
+        efc1,
+        master_clock_frequency,
+    );
 }
 
 pub fn get_master_clock_frequency() -> Hertz {
@@ -120,7 +132,13 @@ fn set_flash_wait_states_to_maximum(efc: &mut EFC) {
         .modify(|_, w| unsafe { w.fws().bits(5).cloe().set_bit() });
 }
 
-#[cfg(feature = "atsam4s")]
+#[cfg(all(feature = "atsam4s", not(feature = "atsam4sd")))]
+fn set_flash_wait_states_to_maximum(efc0: &mut EFC0) {
+    efc0.fmr
+        .modify(|_, w| unsafe { w.fws().bits(5).cloe().set_bit() });
+}
+
+#[cfg(feature = "atsam4sd")]
 fn set_flash_wait_states_to_maximum(efc0: &mut EFC0, efc1: &mut EFC1) {
     efc0.fmr
         .modify(|_, w| unsafe { w.fws().bits(5).cloe().set_bit() });
@@ -139,13 +157,14 @@ fn set_flash_wait_states_to_match_frequence(efc: &mut EFC, clock_frequency: Hert
 #[cfg(feature = "atsam4s")]
 fn set_flash_wait_states_to_match_frequence(
     efc0: &mut EFC0,
-    efc1: &mut EFC1,
+    #[cfg(feature = "atsam4sd")] efc1: &mut EFC1,
     clock_frequency: Hertz,
 ) {
     let wait_state_count = get_flash_wait_states_for_clock_frequency(clock_frequency);
 
     efc0.fmr
         .modify(|_, w| unsafe { w.fws().bits(wait_state_count).cloe().set_bit() });
+    #[cfg(feature = "atsam4sd")]
     efc1.fmr
         .modify(|_, w| unsafe { w.fws().bits(wait_state_count).cloe().set_bit() });
 }

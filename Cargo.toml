@@ -33,6 +33,14 @@ version = "0.1.0"
 version = "0.1.2"
 optional = true
 
+[dependencies.atsam4s4b-pac]
+version = "0.1.1"
+optional = true
+
+[dependencies.atsam4s8b-pac]
+version = "0.1.1"
+optional = true
+
 [dependencies.atsam4sd32c-pac]
 version = "0.1.1"
 optional = true
@@ -56,7 +64,18 @@ version = "0.4.1"
 default = ["atsam4e16e"]
 unstable = []
 disable_watchdog_timer = []
+
+# atsam4e
 atsam4e = []
 atsam4e16e = ["atsam4e", "atsam4e16e-pac", "atsam4e16e-pac/rt"]
+
+# atsam4s
 atsam4s = []
-atsam4sd32c = ["atsam4s", "atsam4sd32c-pac", "atsam4sd32c-pac/rt"]
+atsam4s_a = [] # 48-pin
+atsam4s_b = [] # 64-pin
+atsam4s_c = [] # 100-pin
+atsam4sd = [] # Dual bank flash
+
+atsam4s4b = ["atsam4s", "atsam4s_b", "atsam4s4b-pac", "atsam4s4b-pac/rt"]
+atsam4s8b = ["atsam4s", "atsam4s_b", "atsam4s8b-pac", "atsam4s8b-pac/rt"]
+atsam4sd32c = ["atsam4s", "atsam4sd", "atsam4s_c", "atsam4sd32c-pac", "atsam4sd32c-pac/rt"]

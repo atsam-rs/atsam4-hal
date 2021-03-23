@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        mcu: [atsam4e16e, atsam4sd32c]
+        mcu: [atsam4e16e, atsam4s4b, atsam4s8b, atsam4sd32c]
 
     steps:
       - uses: actions/checkout@v1
