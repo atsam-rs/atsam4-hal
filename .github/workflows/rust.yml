@@ -1,0 +1,85 @@
+name: Rust
+
+on: [push, pull_request]
+
+jobs:
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        mcu: [atsam4e16e, atsam4sd32c]
+
+    steps:
+      - uses: actions/checkout@v1
+        # atsam4e toolchain
+      - uses: actions-rs/toolchain@v1
+        if: ${{ contains(matrix.mcu, 'atsam4e') }}
+        with:
+          target: thumbv7em-none-eabihf
+          toolchain: stable
+          override: true
+      - uses: actions-rs/toolchain@v1
+        if: ${{ contains(matrix.mcu, 'atsam4s') }}
+        with:
+          target: thumbv7em-none-eabi
+          toolchain: stable
+          override: true
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-none-eabi
+      - uses: actions-rs/cargo@v1
+        if: ${{ contains(matrix.mcu, 'atsam4e') }}
+        with:
+          command: check
+          args: --target thumbv7em-none-eabihf --no-default-features --features ${{ matrix.mcu }}
+      - uses: actions-rs/cargo@v1
+        if: ${{ contains(matrix.mcu, 'atsam4s') }}
+        with:
+          command: check
+          args: --target thumbv7em-none-eabi --no-default-features --features ${{ matrix.mcu }}
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --target x86_64-unknown-linux-gnu
+
+  fmt:
+    name: Rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - run: rustup component add rustfmt
+      - uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: -- --check
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - run: rustup component add clippy
+      - uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --target x86_64-unknown-linux-gnu -- -D warnings
