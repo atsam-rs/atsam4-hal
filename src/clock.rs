@@ -1,8 +1,8 @@
 #[cfg(feature = "atsam4e")]
-use crate::pac::{EFC, PMC, pmc};
+use crate::pac::{pmc, EFC, PMC};
 
 #[cfg(feature = "atsam4s")]
-use crate::pac::{EFC0, EFC1, PMC, pmc};
+use crate::pac::{pmc, EFC0, EFC1, PMC};
 
 use crate::time::Hertz;
 use crate::BorrowUnchecked;
@@ -36,43 +36,44 @@ pub fn get_master_clock_frequency() -> Hertz {
 
 fn setup_main_clock(pmc: &mut PMC) -> Hertz {
     switch_main_clock_to_fast_rc_12mhz(pmc);
-    
+
     wait_for_main_clock_ready(&pmc);
 
     // Set up the PLL for 120Mhz operation (12Mhz RC * (10 / 1) = 120Mhz)
-    let multiplier:u16 = 10;
-    let divider:u8 = 1;
+    let multiplier: u16 = 10;
+    let divider: u8 = 1;
     enable_plla_clock(pmc, multiplier, divider);
     wait_for_plla_lock(&pmc);
 
     let prescaler = 0; // 0 = no prescaling.
     switch_master_clock_to_plla(pmc, prescaler);
 
-    calculate_master_clock_frequency(&pmc)  
+    calculate_master_clock_frequency(&pmc)
 }
 
 fn calculate_master_clock_frequency(pmc: &PMC) -> Hertz {
     let mut mclk_freq = match pmc.pmc_mckr.read().css().bits() {
-        0 => { // Slow clock
+        0 => {
+            // Slow clock
             panic!("Unsupported clock source: Slow clock.")
-        },
-        1 => { // Main clock
+        }
+        1 => {
+            // Main clock
             panic!("Unsupported clock source: Main clock.")
-        },
-        2 => { // PLL
-            let mut mclk_freq:u32 = match pmc.ckgr_mor.read().moscsel().bit_is_set() {
+        }
+        2 => {
+            // PLL
+            let mut mclk_freq: u32 = match pmc.ckgr_mor.read().moscsel().bit_is_set() {
                 true => 12000000,
-                false => {
-                    match pmc.ckgr_mor.read().moscrcf().bits() {
-                        0 => 4000000,
-                        1 => 8000000,
-                        2 => 12000000,
-                        _ => panic!("Unexpected value detected ready from pmc.ckgr_mor.moscrcf")
-                    }
-                }
+                false => match pmc.ckgr_mor.read().moscrcf().bits() {
+                    0 => 4000000,
+                    1 => 8000000,
+                    2 => 12000000,
+                    _ => panic!("Unexpected value detected ready from pmc.ckgr_mor.moscrcf"),
+                },
             };
 
-            let plla_clock_source:u8 = 2; // 2 = PLLA
+            let plla_clock_source: u8 = 2; // 2 = PLLA
             if pmc.pmc_mckr.read().css().bits() == plla_clock_source {
                 mclk_freq *= (pmc.ckgr_pllar.read().mula().bits() + 1) as u32;
                 mclk_freq /= (pmc.ckgr_pllar.read().diva().bits()) as u32;
@@ -80,12 +81,12 @@ fn calculate_master_clock_frequency(pmc: &PMC) -> Hertz {
 
             mclk_freq
         }
-        _ => panic!("Invalid value found in PMC_MCKR.CSS")
+        _ => panic!("Invalid value found in PMC_MCKR.CSS"),
     };
 
     // Factor in the prescaler
     mclk_freq = match pmc.pmc_mckr.read().pres().bits() {
-        7 => mclk_freq / 3,                 // Special case for a 3 prescaler
+        7 => mclk_freq / 3, // Special case for a 3 prescaler
         prescaler => mclk_freq >> prescaler,
     };
 
@@ -93,11 +94,7 @@ fn calculate_master_clock_frequency(pmc: &PMC) -> Hertz {
 }
 
 fn calculate_master_clock_frequency_static() -> Hertz {
-    interrupt::free(|_| {
-        PMC::borrow_unchecked(|pmc| {
-            calculate_master_clock_frequency(&pmc)
-        })
-    })
+    interrupt::free(|_| PMC::borrow_unchecked(|pmc| calculate_master_clock_frequency(&pmc)))
 }
 
 fn get_flash_wait_states_for_clock_frequency(clock_frequency: Hertz) -> u8 {
@@ -108,34 +105,47 @@ fn get_flash_wait_states_for_clock_frequency(clock_frequency: Hertz) -> u8 {
         c if c.0 < 80000000 => 3,
         c if c.0 < 100000000 => 4,
         c if c.0 < 123000000 => 5,
-        _ => panic!("Invalid frequency provided to get_flash_wait_states(): {} ", clock_frequency.0),
+        _ => panic!(
+            "Invalid frequency provided to get_flash_wait_states(): {} ",
+            clock_frequency.0
+        ),
     }
 }
 
 #[cfg(feature = "atsam4e")]
 fn set_flash_wait_states_to_maximum(efc: &mut EFC) {
-    efc.fmr.modify(|_, w| unsafe { w.fws().bits(5).cloe().set_bit() });
+    efc.fmr
+        .modify(|_, w| unsafe { w.fws().bits(5).cloe().set_bit() });
 }
 
 #[cfg(feature = "atsam4s")]
 fn set_flash_wait_states_to_maximum(efc0: &mut EFC0, efc1: &mut EFC1) {
-    efc0.fmr.modify(|_, w| unsafe { w.fws().bits(5).cloe().set_bit() });
-    efc1.fmr.modify(|_, w| unsafe { w.fws().bits(5).cloe().set_bit() });
+    efc0.fmr
+        .modify(|_, w| unsafe { w.fws().bits(5).cloe().set_bit() });
+    efc1.fmr
+        .modify(|_, w| unsafe { w.fws().bits(5).cloe().set_bit() });
 }
 
 #[cfg(feature = "atsam4e")]
 fn set_flash_wait_states_to_match_frequence(efc: &mut EFC, clock_frequency: Hertz) {
     let wait_state_count = get_flash_wait_states_for_clock_frequency(clock_frequency);
 
-    efc.fmr.modify(|_, w| unsafe { w.fws().bits(wait_state_count).cloe().set_bit() });
+    efc.fmr
+        .modify(|_, w| unsafe { w.fws().bits(wait_state_count).cloe().set_bit() });
 }
 
 #[cfg(feature = "atsam4s")]
-fn set_flash_wait_states_to_match_frequence(efc0: &mut EFC0, efc1: &mut EFC1, clock_frequency: Hertz) {
+fn set_flash_wait_states_to_match_frequence(
+    efc0: &mut EFC0,
+    efc1: &mut EFC1,
+    clock_frequency: Hertz,
+) {
     let wait_state_count = get_flash_wait_states_for_clock_frequency(clock_frequency);
 
-    efc0.fmr.modify(|_, w| unsafe { w.fws().bits(wait_state_count).cloe().set_bit() });
-    efc1.fmr.modify(|_, w| unsafe { w.fws().bits(wait_state_count).cloe().set_bit() });
+    efc0.fmr
+        .modify(|_, w| unsafe { w.fws().bits(wait_state_count).cloe().set_bit() });
+    efc1.fmr
+        .modify(|_, w| unsafe { w.fws().bits(wait_state_count).cloe().set_bit() });
 }
 
 fn switch_main_clock_to_fast_rc_12mhz(pmc: &mut PMC) {
@@ -147,15 +157,18 @@ fn switch_main_clock_to_fast_rc_12mhz(pmc: &mut PMC) {
 }
 
 fn enable_fast_rc_oscillator(pmc: &mut PMC) {
-    pmc.ckgr_mor.modify(|_, w| unsafe { w.key().bits(0x37).moscrcen().set_bit() });
+    pmc.ckgr_mor
+        .modify(|_, w| unsafe { w.key().bits(0x37).moscrcen().set_bit() });
 }
 
 fn change_fast_rc_oscillator_to_12_mhz(pmc: &mut PMC) {
-    pmc.ckgr_mor.modify(|_, w| unsafe { w.key().bits(0x37).moscrcf()._12_mhz() });
+    pmc.ckgr_mor
+        .modify(|_, w| unsafe { w.key().bits(0x37).moscrcf()._12_mhz() });
 }
 
 fn switch_to_fast_rc_oscillator(pmc: &mut PMC) {
-    pmc.ckgr_mor.modify(|_, w| unsafe { w.key().bits(0x37).moscsel().clear_bit() });
+    pmc.ckgr_mor
+        .modify(|_, w| unsafe { w.key().bits(0x37).moscsel().clear_bit() });
 }
 
 fn wait_for_fast_rc_oscillator_to_stabilize(pmc: &PMC) {
@@ -174,11 +187,21 @@ fn enable_plla_clock(pmc: &mut PMC, multiplier: u16, divider: u8) {
     disable_plla_clock(pmc);
 
     // NOTE: the datasheet indicates the multplier used it MULA + 1 - hence the subtraction when setting the multiplier.
-    pmc.ckgr_pllar.modify(|_, w| unsafe { w.one().set_bit().pllacount().bits(0x3f).mula().bits(multiplier - 1).diva().bits(divider) });
+    pmc.ckgr_pllar.modify(|_, w| unsafe {
+        w.one()
+            .set_bit()
+            .pllacount()
+            .bits(0x3f)
+            .mula()
+            .bits(multiplier - 1)
+            .diva()
+            .bits(divider)
+    });
 }
 
 fn disable_plla_clock(pmc: &mut PMC) {
-    pmc.ckgr_pllar.modify(|_, w| unsafe { w.one().set_bit().mula().bits(0) });
+    pmc.ckgr_pllar
+        .modify(|_, w| unsafe { w.one().set_bit().mula().bits(0) });
 }
 
 fn is_plla_locked(pmc: &PMC) -> bool {
@@ -191,18 +214,19 @@ fn wait_for_plla_lock(pmc: &PMC) {
 
 fn switch_master_clock_to_plla(pmc: &mut PMC, prescaler: u8) {
     // Set the master clock prescaler
-    pmc.pmc_mckr.modify(|_, w| w.pres().bits(prescaler) );
+    pmc.pmc_mckr.modify(|_, w| w.pres().bits(prescaler));
 
     wait_for_master_clock_ready(pmc);
 
     // Set the master clock source to PLLA
     // BUGBUG: What requires the 'unsafe' on SAM4?  SVD issue?
-    let clock_source : u8 = 2; // 2 = PLLA
+    let clock_source: u8 = 2; // 2 = PLLA
     #[cfg(feature = "atsam4e")]
-    pmc.pmc_mckr.modify(|_, w| unsafe { w.css().bits(clock_source) });
+    pmc.pmc_mckr
+        .modify(|_, w| unsafe { w.css().bits(clock_source) });
 
     #[cfg(feature = "atsam4s")]
-    pmc.pmc_mckr.modify(|_, w| w.css().bits(clock_source) );
+    pmc.pmc_mckr.modify(|_, w| w.css().bits(clock_source));
 
     wait_for_master_clock_ready(pmc);
 }
@@ -300,26 +324,56 @@ macro_rules! peripheral_clocks {
 }
 
 #[cfg(feature = "atsam4e")]
-peripheral_clocks! (
-    UART0Clock, uart_0, 7,
-    StaticMemoryControllerClock, static_memory_controller, 8,
-    ParallelIOControllerAClock, parallel_io_controller_a, 9,
-    ParallelIOControllerBClock, parallel_io_controller_b, 10,
-    ParallelIOControllerCClock, parallel_io_controller_c, 11,
-    ParallelIOControllerDClock, parallel_io_controller_d, 12,
-    ParallelIOControllerEClock, parallel_io_controller_e, 13,
-    GMACClock, gmac, 44,
-    UART1Clock, uart_1, 45,
+peripheral_clocks!(
+    UART0Clock,
+    uart_0,
+    7,
+    StaticMemoryControllerClock,
+    static_memory_controller,
+    8,
+    ParallelIOControllerAClock,
+    parallel_io_controller_a,
+    9,
+    ParallelIOControllerBClock,
+    parallel_io_controller_b,
+    10,
+    ParallelIOControllerCClock,
+    parallel_io_controller_c,
+    11,
+    ParallelIOControllerDClock,
+    parallel_io_controller_d,
+    12,
+    ParallelIOControllerEClock,
+    parallel_io_controller_e,
+    13,
+    GMACClock,
+    gmac,
+    44,
+    UART1Clock,
+    uart_1,
+    45,
 );
 
 #[cfg(feature = "atsam4s")]
-peripheral_clocks! (
-    UART0Clock, uart_0, 8,
-    UART1Clock, uart_1, 9,
-    StaticMemoryControllerClock, static_memory_controller, 10,
-    ParallelIOControllerAClock, parallel_io_controller_a, 11,
-    ParallelIOControllerBClock, parallel_io_controller_b, 12,
-    ParallelIOControllerCClock, parallel_io_controller_c, 13,
+peripheral_clocks!(
+    UART0Clock,
+    uart_0,
+    8,
+    UART1Clock,
+    uart_1,
+    9,
+    StaticMemoryControllerClock,
+    static_memory_controller,
+    10,
+    ParallelIOControllerAClock,
+    parallel_io_controller_a,
+    11,
+    ParallelIOControllerBClock,
+    parallel_io_controller_b,
+    12,
+    ParallelIOControllerCClock,
+    parallel_io_controller_c,
+    13,
 );
 
 #[derive(Default)]

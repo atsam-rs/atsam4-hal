@@ -38,18 +38,18 @@ pub use atsam4sd32c_pac as pac;
 
 pub use eui48::Identifier as MacAddress;
 
-use cortex_m_rt::pre_init;
 use core::mem;
+use cortex_m_rt::pre_init;
 
 pub mod clock;
 pub mod delay;
 pub mod gpio;
-pub mod static_memory_controller;
 pub mod serial;
+pub mod static_memory_controller;
 pub mod time;
 
 #[cfg(all(feature = "atsam4e16e", feature = "unstable"))]
-#[allow(dead_code)]             // TODO: REMOVE WHEN STABLE
+#[allow(dead_code)] // TODO: REMOVE WHEN STABLE
 pub mod ethernet_controller;
 
 // peripheral initialization
@@ -57,9 +57,7 @@ pub mod ethernet_controller;
 unsafe fn pre_init() {
     // Disable the watchdog timer if requested.
     #[cfg(feature = "disable_watchdog_timer")]
-    pac::WDT::borrow_unchecked(|wdt| {
-        wdt.mr.modify(|_, w| w.wddis().set_bit())
-    });
+    pac::WDT::borrow_unchecked(|wdt| wdt.mr.modify(|_, w| w.wddis().set_bit()));
 
     // Clock initialization
     pac::PMC::borrow_unchecked(|pmc| {
@@ -67,7 +65,7 @@ unsafe fn pre_init() {
         pac::EFC::borrow_unchecked(|efc| {
             clock::init(pmc, efc);
         });
-    
+
         #[cfg(feature = "atsam4s")]
         pac::EFC0::borrow_unchecked(|efc0| {
             pac::EFC1::borrow_unchecked(|efc1| {
