@@ -90,7 +90,7 @@ macro_rules! uarts {
                         Self::reset_and_disable(&mut uart);
 
                         let clock_divisor:u32 = (clock.frequency().0 / baud_rate.0) / 16;
-                        if clock_divisor < 1 || clock_divisor > 65535 {
+                        if !(1..=65535).contains(&clock_divisor) {
                             panic!("Unsupported baud_rate specified for serial device (cd = {})", clock_divisor);
                         }
 
