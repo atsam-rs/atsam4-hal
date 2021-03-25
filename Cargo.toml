@@ -17,7 +17,7 @@ version = "0.2.2"
 default-features = false
 
 [dependencies.cortex-m]
-version = "0.6.3"
+version = "0.7.2"
 
 [dependencies.embedded-hal]
 version = "0.2.4"
@@ -64,10 +64,11 @@ version = "0.4.1"
 default = ["atsam4e16e"]
 unstable = []
 disable_watchdog_timer = []
+crystal_12Mhz = [] # Needed for USB support
 
 # atsam4e
 atsam4e = []
-atsam4e16e = ["atsam4e", "atsam4e16e-pac", "atsam4e16e-pac/rt"]
+atsam4e16e = ["atsam4e", "atsam4e16e-pac", "atsam4e16e-pac/rt", "crystal_12Mhz"]
 
 # atsam4s
 atsam4s = []
@@ -76,6 +77,6 @@ atsam4s_b = [] # 64-pin
 atsam4s_c = [] # 100-pin
 atsam4sd = [] # Dual bank flash
 
-atsam4s4b = ["atsam4s", "atsam4s_b", "atsam4s4b-pac", "atsam4s4b-pac/rt"]
-atsam4s8b = ["atsam4s", "atsam4s_b", "atsam4s8b-pac", "atsam4s8b-pac/rt"]
-atsam4sd32c = ["atsam4s", "atsam4sd", "atsam4s_c", "atsam4sd32c-pac", "atsam4sd32c-pac/rt"]
+atsam4s4b = ["atsam4s", "atsam4s_b", "atsam4s4b-pac", "atsam4s4b-pac/rt", "crystal_12Mhz"]
+atsam4s8b = ["atsam4s", "atsam4s_b", "atsam4s8b-pac", "atsam4s8b-pac/rt", "crystal_12Mhz"]
+atsam4sd32c = ["atsam4s", "atsam4sd", "atsam4s_c", "atsam4sd32c-pac", "atsam4sd32c-pac/rt", "crystal_12Mhz"]

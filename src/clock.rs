@@ -19,47 +19,126 @@ lazy_static! {
     static ref MASTER_CLOCK_FREQUENCY: Hertz = calculate_master_clock_frequency_static();
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ClockId {
+    Rc12Mhz,
+    Crystal12Mhz,
+}
+
 // called by pre_init()
 #[cfg(feature = "atsam4e")]
-pub fn init(pmc: &mut PMC, efc: &mut EFC) {
+pub fn init(pmc: &mut PMC, efc: &mut EFC, id: ClockId) {
     set_flash_wait_states_to_maximum(efc);
-    let master_clock_frequency = setup_main_clock(pmc);
+    let master_clock_frequency = setup_main_clock(pmc, id);
     set_flash_wait_states_to_match_frequence(efc, master_clock_frequency);
 }
 
 // called by pre_init()
 #[cfg(feature = "atsam4s")]
-pub fn init(pmc: &mut PMC, efc0: &mut EFC0, #[cfg(feature = "atsam4sd")] efc1: &mut EFC1) {
+pub fn init(
+    pmc: &mut PMC,
+    efc0: &mut EFC0,
+    #[cfg(feature = "atsam4sd")] efc1: &mut EFC1,
+    id: ClockId,
+) {
     set_flash_wait_states_to_maximum(
         efc0,
         #[cfg(feature = "atsam4sd")]
         efc1,
     );
-    let master_clock_frequency = setup_main_clock(pmc);
+    let master_clock_frequency = setup_main_clock(pmc, id.clone());
     set_flash_wait_states_to_match_frequence(
         efc0,
         #[cfg(feature = "atsam4sd")]
         efc1,
         master_clock_frequency,
     );
+
+    // Setup USB clock
+    match id {
+        // TODO (HaaTa): Does USB even work without a crystal oscillator?
+        //               The bootloader requires an external oscillator for USB to work.
+        ClockId::Rc12Mhz => {}
+        ClockId::Crystal12Mhz => {
+            // PLLA
+            // 240 MHz / 5 = 48 MHz
+            // This works for both sam4s and sam4e as sam4e only has 1 pll (sam4s has 2)
+            // However, using plla and pllb, lower current usage can be achieved on sam4s
+            // Per the datasheet ~1 mA
+            #[cfg(feature = "atsam4e")]
+            {
+                let usbdiv = 5;
+                pmc.pmc_usb
+                    .modify(|_, w| unsafe { w.usbdiv().bits(usbdiv) });
+            }
+
+            // Use PLLB for sam4s
+            // 96 MHz / 2 = 48 MHz
+            #[cfg(feature = "atsam4s")]
+            {
+                wait_for_pllb_lock(pmc);
+
+                let usbdiv = 2;
+                pmc.pmc_usb
+                    .modify(|_, w| unsafe { w.usbs().set_bit().usbdiv().bits(usbdiv) });
+            }
+        }
+    }
 }
 
 pub fn get_master_clock_frequency() -> Hertz {
     *MASTER_CLOCK_FREQUENCY
 }
 
-fn setup_main_clock(pmc: &mut PMC) -> Hertz {
-    switch_main_clock_to_fast_rc_12mhz(pmc);
+fn setup_main_clock(pmc: &mut PMC, id: ClockId) -> Hertz {
+    let prescaler = match id {
+        ClockId::Rc12Mhz => {
+            switch_main_clock_to_fast_rc_12mhz(pmc);
 
+            // Set up the PLL for 120Mhz operation (12Mhz RC * (10 / 1) = 120Mhz)
+            let multiplier: u16 = 10;
+            let divider: u8 = 1;
+            enable_plla_clock(pmc, multiplier, divider);
+
+            // 0 = no prescaling
+            0
+        }
+        #[cfg(feature = "atsam4e")]
+        ClockId::Crystal12Mhz => {
+            switch_main_clock_to_external_12mhz(pmc);
+
+            // Set up the PLL for 240Mhz operation (12Mhz * (20 / 1) = 240Mhz)
+            // 240Mhz can be used to generate both master 120MHz clock and USB 48 MHz clock
+            let multiplier: u16 = 20;
+            let divider: u8 = 1;
+            enable_plla_clock(pmc, multiplier, divider);
+
+            // 1 = /2 prescaling
+            1
+        }
+        #[cfg(feature = "atsam4s")]
+        ClockId::Crystal12Mhz => {
+            switch_main_clock_to_external_12mhz(pmc);
+
+            // Setup PLLA for 120 MHz operation (12 MHz * (10 / 1) = 240 MHz)
+            let multiplier: u16 = 10;
+            let divider: u8 = 1;
+            enable_plla_clock(pmc, multiplier, divider);
+
+            // Setup PLLB for 96 MHz operation (12 MHz * (16 / 2) = 96 MHz)
+            // 96 MHz will be /2 to get 48 MHz
+            let multiplier: u16 = 16;
+            let divider: u8 = 2;
+            enable_pllb_clock(pmc, multiplier, divider);
+
+            // 0 = no prescaling
+            0
+        }
+    };
     wait_for_main_clock_ready(&pmc);
 
-    // Set up the PLL for 120Mhz operation (12Mhz RC * (10 / 1) = 120Mhz)
-    let multiplier: u16 = 10;
-    let divider: u8 = 1;
-    enable_plla_clock(pmc, multiplier, divider);
     wait_for_plla_lock(&pmc);
 
-    let prescaler = 0; // 0 = no prescaling.
     switch_master_clock_to_plla(pmc, prescaler);
 
     calculate_master_clock_frequency(&pmc)
@@ -169,6 +248,67 @@ fn set_flash_wait_states_to_match_frequence(
         .modify(|_, w| unsafe { w.fws().bits(wait_state_count).cloe().set_bit() });
 }
 
+fn switch_main_clock_to_external_12mhz(pmc: &mut PMC) {
+    // Activate external oscillator
+    // As we are clocking the core from internal Fast RC, we keep the bit CKGR_MOR_MOSCRCEN.
+    // Main Crystal Oscillator Start-up Time (CKGR_MOR_MOSCXTST) is set to maximum value.
+    // Then, we wait the startup time to be finished by checking PMC_SR_MOSCXTS in PMC_SR.
+    activate_crystal_oscillator(pmc);
+    wait_for_main_crystal_ready(pmc);
+
+    // Switch the MAINCK to the main crystal oscillator
+    // We add the CKGR_MOR_MOSCSEL bit.
+    // Then we wait for the selection to be done by checking PMC_SR_MOSCSELS in PMC_SR.
+    change_main_clock_to_crystal(pmc);
+    wait_for_main_clock_ready(pmc);
+}
+
+fn activate_crystal_oscillator(pmc: &mut PMC) {
+    // ATSAM4S Datasheet 38.5.3
+    // Maximum crystal startup time is 62 ms (worst-case)
+    // Slow clock is 32 kHz
+    // MOSCXTST is the number of slow clocks x8
+    // 62 ms / (1 / 32 kHz) / 8 = 248
+    //let crystal_startup_cycles = 248;
+
+    // From the datasheet 8 MHz and 16 MHz crystals take between 4 and 2.5 ms to start
+    // Using 4 ms for 12 MHz should be sufficient
+    // 4 ms / (1 / 32 kHz) / 8 = 16
+    let crystal_startup_cycles = 16;
+
+    pmc.ckgr_mor.modify(|_, w| unsafe {
+        w.key()
+            .bits(0x37)
+            .moscrcen()
+            .set_bit()
+            .moscxten()
+            .set_bit()
+            .moscxtst()
+            .bits(crystal_startup_cycles)
+    });
+}
+
+fn is_main_crystal_ready(pmc: &PMC) -> bool {
+    pmc.pmc_sr.read().moscxts().bit_is_set()
+}
+
+fn wait_for_main_crystal_ready(pmc: &PMC) {
+    while !is_main_crystal_ready(pmc) {}
+}
+
+fn change_main_clock_to_crystal(pmc: &mut PMC) {
+    // Switch to fast crystal
+    // Disable RC oscillator
+    pmc.ckgr_mor.modify(|_, w| unsafe {
+        w.key()
+            .bits(0x37)
+            .moscrcen()
+            .clear_bit()
+            .moscsel()
+            .set_bit()
+    });
+}
+
 fn switch_main_clock_to_fast_rc_12mhz(pmc: &mut PMC) {
     enable_fast_rc_oscillator(pmc);
     wait_for_fast_rc_oscillator_to_stabilize(pmc);
@@ -207,12 +347,19 @@ fn wait_for_main_clock_ready(pmc: &PMC) {
 fn enable_plla_clock(pmc: &mut PMC, multiplier: u16, divider: u8) {
     disable_plla_clock(pmc);
 
+    // Per ATSAM4S 44.6 and ATSAM4E16 46.5
+    // PLL settling time is between 60 and 150 us
+    // (1 / 32 kHz) = 31.25 us
+    // 60  / (1 / 32 kHz) = 1.92 -> 2
+    // 150 / (1 / 32 kHz) = 4.8 -> 5
+    let settling_cycles = 5;
+
     // NOTE: the datasheet indicates the multplier used it MULA + 1 - hence the subtraction when setting the multiplier.
     pmc.ckgr_pllar.modify(|_, w| unsafe {
         w.one()
             .set_bit()
             .pllacount()
-            .bits(0x3f)
+            .bits(settling_cycles)
             .mula()
             .bits(multiplier - 1)
             .diva()
@@ -258,6 +405,43 @@ fn is_master_clock_ready(pmc: &PMC) -> bool {
 
 fn wait_for_master_clock_ready(pmc: &PMC) {
     while !is_master_clock_ready(pmc) {}
+}
+
+#[cfg(feature = "atsam4s")]
+fn enable_pllb_clock(pmc: &mut PMC, multiplier: u16, divider: u8) {
+    disable_pllb_clock(pmc);
+
+    // Per ATSAM4S 44.6 and ATSAM4E16 46.5
+    // PLL settling time is between 60 and 150 us
+    // (1 / 32 kHz) = 31.25 us
+    // 60  / (1 / 32 kHz) = 1.92 -> 2
+    // 150 / (1 / 32 kHz) = 4.8 -> 5
+    let settling_cycles = 5;
+
+    // NOTE: the datasheet indicates the multplier used it MULB + 1 - hence the subtraction when setting the multiplier.
+    pmc.ckgr_pllbr.modify(|_, w| unsafe {
+        w.pllbcount()
+            .bits(settling_cycles)
+            .mulb()
+            .bits(multiplier - 1)
+            .divb()
+            .bits(divider)
+    });
+}
+
+#[cfg(feature = "atsam4s")]
+fn disable_pllb_clock(pmc: &mut PMC) {
+    pmc.ckgr_pllbr.modify(|_, w| unsafe { w.mulb().bits(0) });
+}
+
+#[cfg(feature = "atsam4s")]
+fn is_pllb_locked(pmc: &PMC) -> bool {
+    pmc.pmc_sr.read().lockb().bit_is_set()
+}
+
+#[cfg(feature = "atsam4s")]
+fn wait_for_pllb_lock(pmc: &PMC) {
+    while !is_pllb_locked(pmc) {}
 }
 
 // Peripheral Clock State

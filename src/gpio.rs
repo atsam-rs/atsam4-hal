@@ -1,7 +1,7 @@
 //! General Purpose Input / Output
 use {
     core::marker::PhantomData,
-    embedded_hal::digital::v2::{InputPin, OutputPin},
+    hal::digital::v2::{InputPin, OutputPin},
 };
 
 #[cfg(feature = "atsam4e")]

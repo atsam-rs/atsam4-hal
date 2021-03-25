@@ -7,7 +7,7 @@ use {
     crate::pac::{UART0, UART1},
     crate::time::Bps,
     core::marker::PhantomData,
-    embedded_hal::{serial::Read, serial::Write},
+    hal::{serial::Read, serial::Write},
     paste::paste,
 };
 
