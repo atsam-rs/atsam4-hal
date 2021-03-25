@@ -27,8 +27,8 @@
 #[macro_use]
 extern crate lazy_static;
 
-pub extern crate embedded_hal;
-pub use embedded_hal::digital::v2::*;
+pub extern crate embedded_hal as hal;
+pub use hal::digital::v2::*;
 
 #[cfg(feature = "net")]
 extern crate smoltcp;
@@ -53,9 +53,11 @@ use cortex_m_rt::pre_init;
 pub mod clock;
 pub mod delay;
 pub mod gpio;
+pub mod prelude;
 pub mod serial;
 pub mod static_memory_controller;
 pub mod time;
+pub mod watchdog;
 
 #[cfg(all(feature = "atsam4e16e", feature = "unstable"))]
 #[allow(dead_code)] // TODO: REMOVE WHEN STABLE
@@ -65,25 +67,32 @@ pub mod ethernet_controller;
 #[pre_init]
 unsafe fn pre_init() {
     // Disable the watchdog timer if requested.
+    // This will not work if a bootloader has configured the watchdog
     #[cfg(feature = "disable_watchdog_timer")]
     pac::WDT::borrow_unchecked(|wdt| wdt.mr.modify(|_, w| w.wddis().set_bit()));
+
+    // Generally a crystal oscillator should be used with atsam4
+    #[cfg(feature = "crystal_12Mhz")]
+    let id = clock::ClockId::Crystal12Mhz;
+    #[cfg(not(feature = "crystal_12Mhz"))]
+    let id = clock::ClockId::Rc12Mhz;
 
     // Clock initialization
     pac::PMC::borrow_unchecked(|pmc| {
         #[cfg(feature = "atsam4e")]
         pac::EFC::borrow_unchecked(|efc| {
-            clock::init(pmc, efc);
+            clock::init(pmc, efc, id);
         });
 
         #[cfg(all(not(feature = "atsam4sd"), feature = "atsam4s"))]
         pac::EFC0::borrow_unchecked(|efc0| {
-            clock::init(pmc, efc0);
+            clock::init(pmc, efc0, id);
         });
 
         #[cfg(feature = "atsam4sd")]
         pac::EFC0::borrow_unchecked(|efc0| {
             pac::EFC1::borrow_unchecked(|efc1| {
-                clock::init(pmc, efc0, efc1);
+                clock::init(pmc, efc0, efc1, id);
             });
         });
     });
