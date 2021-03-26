@@ -852,7 +852,7 @@ impl Channel<ADC> for TempSensor {
 }
 
 // Setup PDC Rx functionality
-pdc_rx! { Adc: adc }
+pdc_rx! { Adc: adc, isr }
 
 impl Adc {
     /// Configures the ADC with PDC in single sequence mode
@@ -1075,7 +1075,13 @@ where
 
         Transfer::w(buffer, self)
     }
+}
 
+impl<B, MODE> ReadDmaPaused<B, u16> for AdcDma<MODE>
+where
+    Self: TransferPayload,
+    B: StaticWriteBuffer<Word = u16>,
+{
     /// Assigns the buffer, prepares PDC but does not enable the PDC
     /// Useful when there is strict timing on when the ADC conversion should start
     ///
