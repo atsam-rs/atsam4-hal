@@ -1,3 +1,5 @@
+#![allow(clippy::upper_case_acronyms)]
+
 #[cfg(feature = "atsam4e")]
 use crate::pac::{pmc, EFC, PMC};
 
