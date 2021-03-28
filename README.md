@@ -4,6 +4,7 @@ This repository holds the Hardware Abstractino Layer Crate for the Microchip/Atm
 
 [![Build Status](https://api.travis-ci.com/atsam4-rs/atsam4-hal.svg?branch=master)](https://api.travis-ci.com/atsam4-rs/atsam4-hal)
 [![Build Status](https://github.com/atsam4-rs/atsam4-hal/workflows/Rust/badge.svg)](https://github.com/atsam4-rs/atsam4-hal/actions)
+[![Docs](https://docs.rs/atsam4-hal/badge.svg)](https://docs.rs/atsam4-hal/latest/)
 
 NOTE: This crate is still under active development.   Currently only the ATSAM4E and ATSAM4S are supported.
 
