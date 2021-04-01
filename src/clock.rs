@@ -1,10 +1,12 @@
 #![allow(clippy::upper_case_acronyms)]
 
+use crate::pac::{pmc, PMC, SUPC};
+
 #[cfg(feature = "atsam4e")]
-use crate::pac::{pmc, EFC, PMC};
+use crate::pac::EFC;
 
 #[cfg(feature = "atsam4s")]
-use crate::pac::{pmc, EFC0, PMC};
+use crate::pac::EFC0;
 
 #[cfg(feature = "atsam4sd")]
 use crate::pac::EFC1;
@@ -19,80 +21,76 @@ lazy_static! {
     static ref MASTER_CLOCK_FREQUENCY: Hertz = calculate_master_clock_frequency_static();
 }
 
+// NOTE: More frequencies and crystals can be added
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ClockId {
-    Rc12Mhz,
-    Crystal12Mhz,
+pub enum MainClock {
+    RcOscillator4Mhz,  // USB Unsupported
+    RcOscillator8Mhz,  // USB Unsupported
+    RcOscillator12Mhz, // USB Unsupported
+    Crystal12Mhz,      // USB Supported
+                       //Crystal11289Khz, // USB Supported - Not implemented
+                       //Crystal16MHz     // USB Supported - Not implemented
+                       //Crystal18432Khz, // USB Supported - Not implemented
 }
 
-// called by pre_init()
-#[cfg(feature = "atsam4e")]
-pub fn init(pmc: &mut PMC, efc: &mut EFC, id: ClockId) {
-    set_flash_wait_states_to_maximum(efc);
-    let master_clock_frequency = setup_main_clock(pmc, id);
-    set_flash_wait_states_to_match_frequence(efc, master_clock_frequency);
-}
-
-// called by pre_init()
-#[cfg(feature = "atsam4s")]
-pub fn init(
-    pmc: &mut PMC,
-    efc0: &mut EFC0,
-    #[cfg(feature = "atsam4sd")] efc1: &mut EFC1,
-    id: ClockId,
-) {
-    set_flash_wait_states_to_maximum(
-        efc0,
-        #[cfg(feature = "atsam4sd")]
-        efc1,
-    );
-    let master_clock_frequency = setup_main_clock(pmc, id.clone());
-    set_flash_wait_states_to_match_frequence(
-        efc0,
-        #[cfg(feature = "atsam4sd")]
-        efc1,
-        master_clock_frequency,
-    );
-
-    // Setup USB clock
-    match id {
-        // TODO (HaaTa): Does USB even work without a crystal oscillator?
-        //               The bootloader requires an external oscillator for USB to work.
-        ClockId::Rc12Mhz => {}
-        ClockId::Crystal12Mhz => {
-            // PLLA
-            // 240 MHz / 5 = 48 MHz
-            // This works for both sam4s and sam4e as sam4e only has 1 pll (sam4s has 2)
-            // However, using plla and pllb, lower current usage can be achieved on sam4s
-            // Per the datasheet ~1 mA
-            #[cfg(feature = "atsam4e")]
-            {
-                let usbdiv = 5;
-                pmc.pmc_usb
-                    .modify(|_, w| unsafe { w.usbdiv().bits(usbdiv) });
-            }
-
-            // Use PLLB for sam4s
-            // 96 MHz / 2 = 48 MHz
-            #[cfg(feature = "atsam4s")]
-            {
-                wait_for_pllb_lock(pmc);
-
-                let usbdiv = 2;
-                pmc.pmc_usb
-                    .modify(|_, w| unsafe { w.usbs().set_bit().usbdiv().bits(usbdiv) });
-            }
-        }
-    }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SlowClock {
+    RcOscillator32Khz,
+    Crystal32Khz,
+    OscillatorBypass32Khz,
 }
 
 pub fn get_master_clock_frequency() -> Hertz {
     *MASTER_CLOCK_FREQUENCY
 }
 
-fn setup_main_clock(pmc: &mut PMC, id: ClockId) -> Hertz {
-    let prescaler = match id {
-        ClockId::Rc12Mhz => {
+fn setup_slow_clock(supc: &SUPC, slow_clock: SlowClock) -> Hertz {
+    match slow_clock {
+        // Nothing to do, defaults to 32 kHz
+        // You cannot set the Slow Clock back to RC until VDDIO is reset
+        SlowClock::RcOscillator32Khz => {}
+        SlowClock::Crystal32Khz => {
+            // Enable crystal oscillator (also disables Slow RC Oscillator)
+            supc.cr
+                .write_with_zero(|w| w.key().passwd().xtalsel().crystal_sel());
+        }
+        SlowClock::OscillatorBypass32Khz => {
+            // Enable bypass mode
+            supc.mr.modify(|_, w| w.key().passwd().oscbypass().bypass());
+            // Enable crystal oscillator (also disables Slow RC Oscillator)
+            supc.cr
+                .write_with_zero(|w| w.key().passwd().xtalsel().crystal_sel());
+        }
+    }
+    // 32.768 kHz
+    Hertz(32768)
+}
+
+fn setup_main_clock(pmc: &PMC, main_clock: MainClock) -> Hertz {
+    let prescaler = match main_clock {
+        MainClock::RcOscillator4Mhz => {
+            switch_main_clock_to_fast_rc_4mhz(pmc);
+
+            // Set up the PLL for 120Mhz operation (4Mhz RC * (30 / 1) = 120Mhz)
+            let multiplier: u16 = 30;
+            let divider: u8 = 1;
+            enable_plla_clock(pmc, multiplier, divider);
+
+            // 0 = no prescaling
+            0
+        }
+        MainClock::RcOscillator8Mhz => {
+            switch_main_clock_to_fast_rc_8mhz(pmc);
+
+            // Set up the PLL for 120Mhz operation (8Mhz RC * (15 / 1) = 120Mhz)
+            let multiplier: u16 = 15;
+            let divider: u8 = 1;
+            enable_plla_clock(pmc, multiplier, divider);
+
+            // 0 = no prescaling
+            0
+        }
+        MainClock::RcOscillator12Mhz => {
             switch_main_clock_to_fast_rc_12mhz(pmc);
 
             // Set up the PLL for 120Mhz operation (12Mhz RC * (10 / 1) = 120Mhz)
@@ -104,7 +102,7 @@ fn setup_main_clock(pmc: &mut PMC, id: ClockId) -> Hertz {
             0
         }
         #[cfg(feature = "atsam4e")]
-        ClockId::Crystal12Mhz => {
+        MainClock::Crystal12Mhz => {
             switch_main_clock_to_external_12mhz(pmc);
 
             // Set up the PLL for 240Mhz operation (12Mhz * (20 / 1) = 240Mhz)
@@ -117,7 +115,7 @@ fn setup_main_clock(pmc: &mut PMC, id: ClockId) -> Hertz {
             1
         }
         #[cfg(feature = "atsam4s")]
-        ClockId::Crystal12Mhz => {
+        MainClock::Crystal12Mhz => {
             switch_main_clock_to_external_12mhz(pmc);
 
             // Setup PLLA for 120 MHz operation (12 MHz * (10 / 1) = 240 MHz)
@@ -206,19 +204,19 @@ fn get_flash_wait_states_for_clock_frequency(clock_frequency: Hertz) -> u8 {
 }
 
 #[cfg(feature = "atsam4e")]
-fn set_flash_wait_states_to_maximum(efc: &mut EFC) {
+fn set_flash_wait_states_to_maximum(efc: &EFC) {
     efc.fmr
         .modify(|_, w| unsafe { w.fws().bits(5).cloe().set_bit() });
 }
 
 #[cfg(all(feature = "atsam4s", not(feature = "atsam4sd")))]
-fn set_flash_wait_states_to_maximum(efc0: &mut EFC0) {
+fn set_flash_wait_states_to_maximum(efc0: &EFC0) {
     efc0.fmr
         .modify(|_, w| unsafe { w.fws().bits(5).cloe().set_bit() });
 }
 
 #[cfg(feature = "atsam4sd")]
-fn set_flash_wait_states_to_maximum(efc0: &mut EFC0, efc1: &mut EFC1) {
+fn set_flash_wait_states_to_maximum(efc0: &EFC0, efc1: &EFC1) {
     efc0.fmr
         .modify(|_, w| unsafe { w.fws().bits(5).cloe().set_bit() });
     efc1.fmr
@@ -226,7 +224,7 @@ fn set_flash_wait_states_to_maximum(efc0: &mut EFC0, efc1: &mut EFC1) {
 }
 
 #[cfg(feature = "atsam4e")]
-fn set_flash_wait_states_to_match_frequence(efc: &mut EFC, clock_frequency: Hertz) {
+fn set_flash_wait_states_to_match_frequence(efc: &EFC, clock_frequency: Hertz) {
     let wait_state_count = get_flash_wait_states_for_clock_frequency(clock_frequency);
 
     efc.fmr
@@ -235,8 +233,8 @@ fn set_flash_wait_states_to_match_frequence(efc: &mut EFC, clock_frequency: Hert
 
 #[cfg(feature = "atsam4s")]
 fn set_flash_wait_states_to_match_frequence(
-    efc0: &mut EFC0,
-    #[cfg(feature = "atsam4sd")] efc1: &mut EFC1,
+    efc0: &EFC0,
+    #[cfg(feature = "atsam4sd")] efc1: &EFC1,
     clock_frequency: Hertz,
 ) {
     let wait_state_count = get_flash_wait_states_for_clock_frequency(clock_frequency);
@@ -248,7 +246,7 @@ fn set_flash_wait_states_to_match_frequence(
         .modify(|_, w| unsafe { w.fws().bits(wait_state_count).cloe().set_bit() });
 }
 
-fn switch_main_clock_to_external_12mhz(pmc: &mut PMC) {
+fn switch_main_clock_to_external_12mhz(pmc: &PMC) {
     // Activate external oscillator
     // As we are clocking the core from internal Fast RC, we keep the bit CKGR_MOR_MOSCRCEN.
     // Main Crystal Oscillator Start-up Time (CKGR_MOR_MOSCXTST) is set to maximum value.
@@ -263,7 +261,7 @@ fn switch_main_clock_to_external_12mhz(pmc: &mut PMC) {
     wait_for_main_clock_ready(pmc);
 }
 
-fn activate_crystal_oscillator(pmc: &mut PMC) {
+fn activate_crystal_oscillator(pmc: &PMC) {
     // ATSAM4S Datasheet 38.5.3
     // Maximum crystal startup time is 62 ms (worst-case)
     // Slow clock is 32 kHz
@@ -278,7 +276,7 @@ fn activate_crystal_oscillator(pmc: &mut PMC) {
 
     pmc.ckgr_mor.modify(|_, w| unsafe {
         w.key()
-            .bits(0x37)
+            .passwd()
             .moscrcen()
             .set_bit()
             .moscxten()
@@ -296,40 +294,60 @@ fn wait_for_main_crystal_ready(pmc: &PMC) {
     while !is_main_crystal_ready(pmc) {}
 }
 
-fn change_main_clock_to_crystal(pmc: &mut PMC) {
+fn change_main_clock_to_crystal(pmc: &PMC) {
     // Switch to fast crystal
     // Disable RC oscillator
-    pmc.ckgr_mor.modify(|_, w| unsafe {
-        w.key()
-            .bits(0x37)
-            .moscrcen()
-            .clear_bit()
-            .moscsel()
-            .set_bit()
-    });
+    pmc.ckgr_mor
+        .modify(|_, w| w.key().passwd().moscrcen().clear_bit().moscsel().set_bit());
 }
 
-fn switch_main_clock_to_fast_rc_12mhz(pmc: &mut PMC) {
+fn switch_main_clock_to_fast_rc_4mhz(pmc: &PMC) {
     enable_fast_rc_oscillator(pmc);
     wait_for_fast_rc_oscillator_to_stabilize(pmc);
-    change_fast_rc_oscillator_to_12_mhz(pmc);
+    change_fast_rc_oscillator_to_4mhz(pmc);
     wait_for_fast_rc_oscillator_to_stabilize(pmc);
     switch_to_fast_rc_oscillator(pmc);
 }
 
-fn enable_fast_rc_oscillator(pmc: &mut PMC) {
-    pmc.ckgr_mor
-        .modify(|_, w| unsafe { w.key().bits(0x37).moscrcen().set_bit() });
+fn switch_main_clock_to_fast_rc_8mhz(pmc: &PMC) {
+    enable_fast_rc_oscillator(pmc);
+    wait_for_fast_rc_oscillator_to_stabilize(pmc);
+    change_fast_rc_oscillator_to_8mhz(pmc);
+    wait_for_fast_rc_oscillator_to_stabilize(pmc);
+    switch_to_fast_rc_oscillator(pmc);
 }
 
-fn change_fast_rc_oscillator_to_12_mhz(pmc: &mut PMC) {
-    pmc.ckgr_mor
-        .modify(|_, w| unsafe { w.key().bits(0x37).moscrcf()._12_mhz() });
+fn switch_main_clock_to_fast_rc_12mhz(pmc: &PMC) {
+    enable_fast_rc_oscillator(pmc);
+    wait_for_fast_rc_oscillator_to_stabilize(pmc);
+    change_fast_rc_oscillator_to_12mhz(pmc);
+    wait_for_fast_rc_oscillator_to_stabilize(pmc);
+    switch_to_fast_rc_oscillator(pmc);
 }
 
-fn switch_to_fast_rc_oscillator(pmc: &mut PMC) {
+fn enable_fast_rc_oscillator(pmc: &PMC) {
     pmc.ckgr_mor
-        .modify(|_, w| unsafe { w.key().bits(0x37).moscsel().clear_bit() });
+        .modify(|_, w| w.key().passwd().moscrcen().set_bit());
+}
+
+fn change_fast_rc_oscillator_to_4mhz(pmc: &PMC) {
+    pmc.ckgr_mor
+        .modify(|_, w| w.key().passwd().moscrcf()._4_mhz());
+}
+
+fn change_fast_rc_oscillator_to_8mhz(pmc: &PMC) {
+    pmc.ckgr_mor
+        .modify(|_, w| w.key().passwd().moscrcf()._8_mhz());
+}
+
+fn change_fast_rc_oscillator_to_12mhz(pmc: &PMC) {
+    pmc.ckgr_mor
+        .modify(|_, w| w.key().passwd().moscrcf()._12_mhz());
+}
+
+fn switch_to_fast_rc_oscillator(pmc: &PMC) {
+    pmc.ckgr_mor
+        .modify(|_, w| w.key().passwd().moscsel().clear_bit());
 }
 
 fn wait_for_fast_rc_oscillator_to_stabilize(pmc: &PMC) {
@@ -344,7 +362,7 @@ fn wait_for_main_clock_ready(pmc: &PMC) {
     while !is_main_clock_ready(pmc) {}
 }
 
-fn enable_plla_clock(pmc: &mut PMC, multiplier: u16, divider: u8) {
+fn enable_plla_clock(pmc: &PMC, multiplier: u16, divider: u8) {
     disable_plla_clock(pmc);
 
     // Per ATSAM4S 44.6 and ATSAM4E16 46.5
@@ -367,7 +385,7 @@ fn enable_plla_clock(pmc: &mut PMC, multiplier: u16, divider: u8) {
     });
 }
 
-fn disable_plla_clock(pmc: &mut PMC) {
+fn disable_plla_clock(pmc: &PMC) {
     pmc.ckgr_pllar
         .modify(|_, w| unsafe { w.one().set_bit().mula().bits(0) });
 }
@@ -380,7 +398,7 @@ fn wait_for_plla_lock(pmc: &PMC) {
     while !is_plla_locked(pmc) {}
 }
 
-fn switch_master_clock_to_plla(pmc: &mut PMC, prescaler: u8) {
+fn switch_master_clock_to_plla(pmc: &PMC, prescaler: u8) {
     // Set the master clock prescaler
     pmc.pmc_mckr.modify(|_, w| w.pres().bits(prescaler));
 
@@ -408,7 +426,7 @@ fn wait_for_master_clock_ready(pmc: &PMC) {
 }
 
 #[cfg(feature = "atsam4s")]
-fn enable_pllb_clock(pmc: &mut PMC, multiplier: u16, divider: u8) {
+fn enable_pllb_clock(pmc: &PMC, multiplier: u16, divider: u8) {
     disable_pllb_clock(pmc);
 
     // Per ATSAM4S 44.6 and ATSAM4E16 46.5
@@ -430,7 +448,7 @@ fn enable_pllb_clock(pmc: &mut PMC, multiplier: u16, divider: u8) {
 }
 
 #[cfg(feature = "atsam4s")]
-fn disable_pllb_clock(pmc: &mut PMC) {
+fn disable_pllb_clock(pmc: &PMC) {
     pmc.ckgr_pllbr.modify(|_, w| unsafe { w.mulb().bits(0) });
 }
 
@@ -530,66 +548,272 @@ macro_rules! peripheral_clocks {
 
 #[cfg(feature = "atsam4e")]
 peripheral_clocks!(
-    UART0Clock,
+    Uart0Clock,
     uart_0,
     7,
-    StaticMemoryControllerClock,
-    static_memory_controller,
+    SmcClock,
+    smc,
     8,
-    ParallelIOControllerAClock,
-    parallel_io_controller_a,
+    PioAClock,
+    pio_a,
     9,
-    ParallelIOControllerBClock,
-    parallel_io_controller_b,
+    PioBClock,
+    pio_b,
     10,
-    ParallelIOControllerCClock,
-    parallel_io_controller_c,
+    PioCClock,
+    pio_c,
     11,
-    ParallelIOControllerDClock,
-    parallel_io_controller_d,
+    PioDClock,
+    pio_d,
     12,
-    ParallelIOControllerEClock,
-    parallel_io_controller_e,
+    PioEClock,
+    pio_e,
     13,
-    GMACClock,
+    Usart0Clock,
+    usart_0,
+    14,
+    Usart1Clock,
+    usart_1,
+    15,
+    HsmciClock,
+    hsmci,
+    16,
+    Twi0Clock,
+    twi_0,
+    17,
+    Twi1Clock,
+    twi_1,
+    18,
+    SpiClock,
+    spi,
+    19,
+    DmacClock,
+    dmac,
+    20,
+    Tc0Clock,
+    tc_0,
+    21,
+    Tc1Clock,
+    tc_1,
+    22,
+    Tc2Clock,
+    tc_2,
+    23,
+    Tc3Clock,
+    tc_3,
+    24,
+    Tc4Clock,
+    tc_4,
+    25,
+    Tc5Clock,
+    tc_5,
+    26,
+    Tc6Clock,
+    tc_6,
+    27,
+    Tc7Clock,
+    tc_7,
+    28,
+    Tc8Clock,
+    tc_8,
+    29,
+    Afec0Clock,
+    afec_0,
+    30,
+    Afec1Clock,
+    afec_1,
+    31,
+    DaccClock,
+    dacc,
+    32,
+    AccClock,
+    acc,
+    33,
+    UdpClock,
+    udp,
+    35,
+    PwmClock,
+    pwm,
+    36,
+    Can0Clock,
+    can_0,
+    37,
+    Can1Clock,
+    can_1,
+    38,
+    AesClock,
+    aes,
+    39,
+    GmacClock,
     gmac,
     44,
-    UART1Clock,
+    Uart1Clock,
     uart_1,
     45,
 );
 
 #[cfg(feature = "atsam4s")]
 peripheral_clocks!(
-    UART0Clock,
+    Uart0Clock,
     uart_0,
     8,
-    UART1Clock,
+    Uart1Clock,
     uart_1,
     9,
-    StaticMemoryControllerClock,
-    static_memory_controller,
+    SmcClock,
+    smc,
     10,
-    ParallelIOControllerAClock,
-    parallel_io_controller_a,
+    PioAClock,
+    pio_a,
     11,
-    ParallelIOControllerBClock,
-    parallel_io_controller_b,
+    PioBClock,
+    pio_b,
     12,
-    ParallelIOControllerCClock,
-    parallel_io_controller_c,
+    PioCClock,
+    pio_c,
     13,
+    Usart0Clock,
+    usart_0,
+    14,
+    Usart1Clock,
+    usart_1,
+    15,
+    HsmciClock,
+    hsmci,
+    18,
+    Twi0Clock,
+    twi_0,
+    19,
+    Twi1Clock,
+    twi_1,
+    20,
+    SpiClock,
+    spi,
+    21,
+    SscClock,
+    ssc,
+    22,
+    Tc0Clock,
+    tc_0,
+    23,
+    Tc1Clock,
+    tc_1,
+    24,
+    Tc2Clock,
+    tc_2,
+    25,
+    Tc3Clock,
+    tc_3,
+    26,
+    Tc4Clock,
+    tc_4,
+    27,
+    Tc5Clock,
+    tc_5,
+    28,
+    AdcClock,
+    adc,
+    29,
+    DaccClock,
+    dacc,
+    30,
+    PwmClock,
+    pwm,
+    31,
+    CrccuClock,
+    crccu,
+    32,
+    AccClock,
+    acc,
+    33,
+    UdpClock,
+    udp,
+    34,
 );
 
-#[derive(Default)]
 pub struct ClockController {
     pub peripheral_clocks: PeripheralClocks,
+    pub pmc: PMC,
+    master_clock: Hertz,
+    slow_clock: Hertz,
 }
 
 impl ClockController {
-    pub fn new() -> Self {
+    pub fn new(
+        pmc: PMC,
+        supc: &SUPC,
+        #[cfg(feature = "atsam4e")] efc: &EFC,
+        #[cfg(feature = "atsam4s")] efc0: &EFC0,
+        #[cfg(feature = "atsam4sd")] efc1: &EFC1,
+        main_clock: MainClock,
+        slow_clock: SlowClock,
+    ) -> Self {
+        set_flash_wait_states_to_maximum(
+            #[cfg(feature = "atsam4e")]
+            efc,
+            #[cfg(feature = "atsam4s")]
+            efc0,
+            #[cfg(feature = "atsam4sd")]
+            efc1,
+        );
+        let slow_clock_frequency = setup_slow_clock(supc, slow_clock);
+        let master_clock_frequency = setup_main_clock(&pmc, main_clock);
+        set_flash_wait_states_to_match_frequence(
+            #[cfg(feature = "atsam4e")]
+            efc,
+            #[cfg(feature = "atsam4s")]
+            efc0,
+            #[cfg(feature = "atsam4sd")]
+            efc1,
+            master_clock_frequency,
+        );
+
+        // Setup USB clock
+        match main_clock {
+            // TODO (HaaTa): Does USB even work without a crystal oscillator?
+            //               The bootloader requires an external oscillator for USB to work.
+            MainClock::RcOscillator4Mhz => {}
+            MainClock::RcOscillator8Mhz => {}
+            MainClock::RcOscillator12Mhz => {}
+            MainClock::Crystal12Mhz => {
+                // PLLA
+                // 240 MHz / 5 = 48 MHz
+                // This works for both sam4s and sam4e as sam4e only has 1 pll (sam4s has 2)
+                // However, using plla and pllb, lower current usage can be achieved on sam4s
+                // Per the datasheet ~1 mA
+                #[cfg(feature = "atsam4e")]
+                {
+                    let usbdiv = 5;
+                    &pmc.pmc_usb
+                        .modify(|_, w| unsafe { w.usbdiv().bits(usbdiv) });
+                }
+
+                // Use PLLB for sam4s
+                // 96 MHz / 2 = 48 MHz
+                #[cfg(feature = "atsam4s")]
+                {
+                    wait_for_pllb_lock(&pmc);
+
+                    let usbdiv = 2;
+                    pmc.pmc_usb
+                        .modify(|_, w| unsafe { w.usbs().set_bit().usbdiv().bits(usbdiv) });
+                }
+            }
+        }
+
         ClockController {
             peripheral_clocks: PeripheralClocks::new(),
+            pmc,
+            master_clock: master_clock_frequency,
+            slow_clock: slow_clock_frequency,
         }
+    }
+
+    pub fn master_clock(self) -> Hertz {
+        self.master_clock
+    }
+
+    pub fn slow_clock(self) -> Hertz {
+        self.slow_clock
     }
 }

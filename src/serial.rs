@@ -2,7 +2,7 @@ extern crate nb;
 
 // device crate
 use {
-    crate::clock::{Enabled, UART0Clock, UART1Clock},
+    crate::clock::{Enabled, Uart0Clock, Uart1Clock},
     crate::gpio::{Pa10, Pa9, PfA},
     crate::pac::{UART0, UART1},
     crate::time::Bps,
@@ -51,6 +51,7 @@ macro_rules! uarts {
     (
         $($PortType:ident: (
             $UART:ident,
+            $Uart:ident,
             $uart:ident,
             $pin_rx:ty,
             $pin_tx:ty
@@ -60,7 +61,7 @@ macro_rules! uarts {
             $(
                 pub struct $PortType {
                     uart: $UART,
-                    clock: PhantomData<[<$UART Clock>]<Enabled>>,
+                    clock: PhantomData<[<$Uart Clock>]<Enabled>>,
                     rx_pin: PhantomData<$pin_rx>,
                     tx_pin: PhantomData<$pin_tx>,
                 }
@@ -68,7 +69,7 @@ macro_rules! uarts {
                 impl $PortType {
                     pub fn new (
                         mut uart: $UART,
-                        clock: [<$UART Clock>]<Enabled>,
+                        clock: [<$Uart Clock>]<Enabled>,
                         _rx_pin: $pin_rx,
                         _tx_pin: $pin_tx,
                         baud_rate: Bps,
@@ -188,14 +189,14 @@ macro_rules! uarts {
 
 #[cfg(feature = "atsam4s")]
 uarts!(
-    Uart0: (UART0, uart0, Pa9<PfA>, Pa10<PfA>),
-    Uart1: (UART1, uart1, Pb2<PfA>, Pb3<PfA>),
+    Uart0: (UART0, Uart0, uart0, Pa9<PfA>, Pa10<PfA>),
+    Uart1: (UART1, Uart1, uart1, Pb2<PfA>, Pb3<PfA>),
 );
 
 #[cfg(feature = "atsam4e")]
 uarts!(
-    Uart0: (UART0, uart0, Pa9<PfA>, Pa10<PfA>),
-    Uart1: (UART1, uart1, Pa5<PfC>, Pa6<PfC>),
+    Uart0: (UART0, Uart0, uart0, Pa9<PfA>, Pa10<PfA>),
+    Uart1: (UART1, Uart1, uart1, Pa5<PfC>, Pa6<PfC>),
 );
 
 pub type Serial0 = Uart0;

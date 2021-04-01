@@ -48,7 +48,6 @@ pub use atsam4sd32c_pac as pac;
 pub use eui48::Identifier as MacAddress;
 
 use core::mem;
-use cortex_m_rt::pre_init;
 
 pub mod clock;
 pub mod delay;
@@ -62,41 +61,6 @@ pub mod watchdog;
 #[cfg(all(feature = "atsam4e16e", feature = "unstable"))]
 #[allow(dead_code)] // TODO: REMOVE WHEN STABLE
 pub mod ethernet_controller;
-
-// peripheral initialization
-#[pre_init]
-unsafe fn pre_init() {
-    // Disable the watchdog timer if requested.
-    // This will not work if a bootloader has configured the watchdog
-    #[cfg(feature = "disable_watchdog_timer")]
-    pac::WDT::borrow_unchecked(|wdt| wdt.mr.modify(|_, w| w.wddis().set_bit()));
-
-    // Generally a crystal oscillator should be used with atsam4
-    #[cfg(feature = "crystal_12Mhz")]
-    let id = clock::ClockId::Crystal12Mhz;
-    #[cfg(not(feature = "crystal_12Mhz"))]
-    let id = clock::ClockId::Rc12Mhz;
-
-    // Clock initialization
-    pac::PMC::borrow_unchecked(|pmc| {
-        #[cfg(feature = "atsam4e")]
-        pac::EFC::borrow_unchecked(|efc| {
-            clock::init(pmc, efc, id);
-        });
-
-        #[cfg(all(not(feature = "atsam4sd"), feature = "atsam4s"))]
-        pac::EFC0::borrow_unchecked(|efc0| {
-            clock::init(pmc, efc0, id);
-        });
-
-        #[cfg(feature = "atsam4sd")]
-        pac::EFC0::borrow_unchecked(|efc0| {
-            pac::EFC1::borrow_unchecked(|efc1| {
-                clock::init(pmc, efc0, efc1, id);
-            });
-        });
-    });
-}
 
 /// Borrows a peripheral without checking if it has already been taken
 unsafe trait BorrowUnchecked {
@@ -116,11 +80,4 @@ macro_rules! borrow_unchecked {
     }
 }
 
-#[cfg(feature = "atsam4e")]
-borrow_unchecked!(WDT, PMC, EFC);
-
-#[cfg(feature = "atsam4s")]
-borrow_unchecked!(WDT, PMC, EFC0);
-
-#[cfg(feature = "atsam4sd")]
-borrow_unchecked!(EFC1);
+borrow_unchecked!(PMC);

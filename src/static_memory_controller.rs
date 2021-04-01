@@ -2,7 +2,7 @@
 #![cfg(any(feature = "atsam4_c", feature = "atsam4e"))]
 
 use {
-    crate::clock::{Enabled, StaticMemoryControllerClock},
+    crate::clock::{Enabled, SmcClock},
     crate::gpio::*,
     crate::pac::{smc, SMC},
     core::marker::PhantomData,
@@ -167,7 +167,7 @@ chip_select!(ChipSelect1, 1);
 chip_select!(ChipSelect2, 2);
 chip_select!(ChipSelect3, 3);
 
-pub struct StaticMemoryController {
+pub struct Smc {
     pub chip_select0: ChipSelect0<Uninitialized>,
     pub chip_select1: ChipSelect1<Uninitialized>,
     pub chip_select2: ChipSelect2<Uninitialized>,
@@ -226,9 +226,9 @@ type AddressLines = (
     Pa25<PfC>,
 );
 
-impl StaticMemoryController {
+impl Smc {
     pub fn new(
-        _clock: StaticMemoryControllerClock<Enabled>,
+        _clock: SmcClock<Enabled>,
 
         _ncs1: NCS1,
         _ncs3: NCS3,
@@ -239,7 +239,7 @@ impl StaticMemoryController {
         _data_lines: DataLines,
         _address_lines: AddressLines,
     ) -> Self {
-        StaticMemoryController {
+        Smc {
             chip_select0: ChipSelect0::<Uninitialized> { _mode: PhantomData },
             chip_select1: ChipSelect1::<Uninitialized> { _mode: PhantomData },
             chip_select2: ChipSelect2::<Uninitialized> { _mode: PhantomData },
