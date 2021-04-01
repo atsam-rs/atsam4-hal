@@ -6,22 +6,19 @@ use {
 
 #[cfg(feature = "atsam4e")]
 use {
-    crate::clock::{
-        Enabled, ParallelIOControllerAClock, ParallelIOControllerBClock,
-        ParallelIOControllerCClock, ParallelIOControllerDClock, ParallelIOControllerEClock,
-    },
+    crate::clock::{Enabled, PioAClock, PioBClock, PioCClock, PioDClock, PioEClock},
     crate::pac::{pioa, piob, pioc, piod, pioe, PIOA, PIOB, PIOC, PIOD, PIOE},
 };
 
 #[cfg(feature = "atsam4s")]
 use {
-    crate::clock::{Enabled, ParallelIOControllerAClock, ParallelIOControllerBClock},
+    crate::clock::{Enabled, PioAClock, PioBClock},
     crate::pac::{pioa, piob, PIOA, PIOB},
 };
 
 #[cfg(feature = "atsam4s_c")]
 use {
-    crate::clock::ParallelIOControllerCClock,
+    crate::clock::PioCClock,
     crate::pac::{pioc, PIOC},
 };
 
@@ -34,26 +31,23 @@ pub trait GpioExt {
     fn split(self) -> Self::Parts;
 }
 pub struct Ports {
-    pioa: PhantomData<(PIOA, ParallelIOControllerAClock<Enabled>)>,
-    piob: PhantomData<(PIOB, ParallelIOControllerBClock<Enabled>)>,
+    pioa: PhantomData<(PIOA, PioAClock<Enabled>)>,
+    piob: PhantomData<(PIOB, PioBClock<Enabled>)>,
     #[cfg(any(feature = "atsam4s_c", feature = "atsam4e"))]
-    pioc: PhantomData<(PIOC, ParallelIOControllerCClock<Enabled>)>,
+    pioc: PhantomData<(PIOC, PioCClock<Enabled>)>,
     #[cfg(feature = "atsam4e")]
-    piod: PhantomData<(PIOD, ParallelIOControllerDClock<Enabled>)>,
+    piod: PhantomData<(PIOD, PioDClock<Enabled>)>,
     #[cfg(feature = "atsam4e")]
-    pioe: PhantomData<(PIOE, ParallelIOControllerEClock<Enabled>)>,
+    pioe: PhantomData<(PIOE, PioEClock<Enabled>)>,
 }
 
 impl Ports {
     pub fn new(
-        _pioa: (PIOA, ParallelIOControllerAClock<Enabled>),
-        _piob: (PIOB, ParallelIOControllerBClock<Enabled>),
-        #[cfg(any(feature = "atsam4s_c", feature = "atsam4e"))] _pioc: (
-            PIOC,
-            ParallelIOControllerCClock<Enabled>,
-        ),
-        #[cfg(feature = "atsam4e")] _piod: (PIOD, ParallelIOControllerDClock<Enabled>),
-        #[cfg(feature = "atsam4e")] _pioe: (PIOE, ParallelIOControllerEClock<Enabled>),
+        _pioa: (PIOA, PioAClock<Enabled>),
+        _piob: (PIOB, PioBClock<Enabled>),
+        #[cfg(any(feature = "atsam4s_c", feature = "atsam4e"))] _pioc: (PIOC, PioCClock<Enabled>),
+        #[cfg(feature = "atsam4e")] _piod: (PIOD, PioDClock<Enabled>),
+        #[cfg(feature = "atsam4e")] _pioe: (PIOE, PioEClock<Enabled>),
     ) -> Self {
         // The above arguments are consumed here...never to be seen again.
         Ports {
