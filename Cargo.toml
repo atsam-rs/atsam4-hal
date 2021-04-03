@@ -30,7 +30,7 @@ version = "0.6.13"
 version = "0.1.0"
 
 [dependencies.atsam4e16e-pac]
-version = "0.1.2"
+version = "0.1.4"
 optional = true
 
 [dependencies.atsam4s4b-pac]
