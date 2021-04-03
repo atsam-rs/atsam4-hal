@@ -784,7 +784,7 @@ impl ClockController {
                 #[cfg(feature = "atsam4e")]
                 {
                     let usbdiv = 5;
-                    &pmc.pmc_usb
+                    pmc.pmc_usb
                         .modify(|_, w| unsafe { w.usbdiv().bits(usbdiv) });
                 }
 
