@@ -64,6 +64,9 @@ version = "0.4.1"
 default = ["atsam4e16e"]
 unstable = []
 
+# Enable USB clock support
+usb = []
+
 # atsam4e
 atsam4e = []
 atsam4e16e = ["atsam4e", "atsam4e16e-pac", "atsam4e16e-pac/rt"]
