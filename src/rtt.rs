@@ -137,7 +137,11 @@ impl RealTimeTimer {
     /// while !rtt.wait().is_ok() {}
     /// ```
     pub fn new(rtt: RTT, prescaler: u16, rtc1hz: bool) -> Self {
-        // TODO: Panic if prescaler set to 1 or 2
+        // Panic if prescaler set to 1 or 2
+        match prescaler {
+            1 | 2 => panic!("RTT prescaler cannot be set to 1 or 2"),
+            _ => {}
+        }
 
         // Disable timer while reconfiguring and prescaler interrupt before setting RTPRES
         rtt.mr
