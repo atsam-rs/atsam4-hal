@@ -105,29 +105,47 @@ fn setup_main_clock(pmc: &PMC, main_clock: MainClock) -> Hertz {
         MainClock::Crystal12Mhz => {
             switch_main_clock_to_external_12mhz(pmc);
 
-            // Set up the PLL for 240Mhz operation (12Mhz * (20 / 1) = 240Mhz)
-            // 240Mhz can be used to generate both master 120MHz clock and USB 48 MHz clock
-            let multiplier: u16 = 20;
-            let divider: u8 = 1;
-            enable_plla_clock(pmc, multiplier, divider);
+            #[cfg(feature = "usb")]
+            {
+                // Set up the PLL for 240 MHz operation (12 MHz * (20 / 1) = 240 MHz)
+                // 240 MHz can be used to generate both master 120 MHz clock and USB 48 MHz clock
+                let multiplier: u16 = 20;
+                let divider: u8 = 1;
+                enable_plla_clock(pmc, multiplier, divider);
 
-            // 1 = /2 prescaling
-            1
+                // 1 = /2 prescaling
+                1
+            }
+
+            #[cfg(not(feature = "usb"))]
+            {
+                // Set up the PLL for 120 MHz operation (12 MHz * (10 / 1) = 120 MHz)
+                // Uses less power than running the PLL at 240 MHz
+                let multiplier: u16 = 10;
+                let divider: u8 = 1;
+                enable_plla_clock(pmc, multiplier, divider);
+
+                // 0 = no prescaling
+                0
+            }
         }
         #[cfg(feature = "atsam4s")]
         MainClock::Crystal12Mhz => {
             switch_main_clock_to_external_12mhz(pmc);
 
-            // Setup PLLA for 120 MHz operation (12 MHz * (10 / 1) = 240 MHz)
+            // Setup PLLA for 120 MHz operation (12 MHz * (10 / 1) = 120 MHz)
             let multiplier: u16 = 10;
             let divider: u8 = 1;
             enable_plla_clock(pmc, multiplier, divider);
 
-            // Setup PLLB for 96 MHz operation (12 MHz * (16 / 2) = 96 MHz)
-            // 96 MHz will be /2 to get 48 MHz
-            let multiplier: u16 = 16;
-            let divider: u8 = 2;
-            enable_pllb_clock(pmc, multiplier, divider);
+            #[cfg(feature = "usb")]
+            {
+                // Setup PLLB for 96 MHz operation (12 MHz * (16 / 2) = 96 MHz)
+                // 96 MHz will be /2 to get 48 MHz
+                let multiplier: u16 = 16;
+                let divider: u8 = 2;
+                enable_pllb_clock(pmc, multiplier, divider);
+            }
 
             // 0 = no prescaling
             0
@@ -425,7 +443,7 @@ fn wait_for_master_clock_ready(pmc: &PMC) {
     while !is_master_clock_ready(pmc) {}
 }
 
-#[cfg(feature = "atsam4s")]
+#[cfg(all(feature = "atsam4s", feature = "usb"))]
 fn enable_pllb_clock(pmc: &PMC, multiplier: u16, divider: u8) {
     disable_pllb_clock(pmc);
 
@@ -447,17 +465,17 @@ fn enable_pllb_clock(pmc: &PMC, multiplier: u16, divider: u8) {
     });
 }
 
-#[cfg(feature = "atsam4s")]
+#[cfg(all(feature = "atsam4s", feature = "usb"))]
 fn disable_pllb_clock(pmc: &PMC) {
     pmc.ckgr_pllbr.modify(|_, w| unsafe { w.mulb().bits(0) });
 }
 
-#[cfg(feature = "atsam4s")]
+#[cfg(all(feature = "atsam4s", feature = "usb"))]
 fn is_pllb_locked(pmc: &PMC) -> bool {
     pmc.pmc_sr.read().lockb().bit_is_set()
 }
 
-#[cfg(feature = "atsam4s")]
+#[cfg(all(feature = "atsam4s", feature = "usb"))]
 fn wait_for_pllb_lock(pmc: &PMC) {
     while !is_pllb_locked(pmc) {}
 }
@@ -769,6 +787,7 @@ impl ClockController {
         );
 
         // Setup USB clock
+        #[cfg(feature = "usb")]
         match main_clock {
             // TODO (HaaTa): Does USB even work without a crystal oscillator?
             //               The bootloader requires an external oscillator for USB to work.
