@@ -1,3 +1,5 @@
+// NOTE: This file was copied from the atsamd-rs project: https://github.com/atsamd-rs/atsamd/blob/master/hal/src/common/time.rs
+
 //! Time units
 
 // Frequency based

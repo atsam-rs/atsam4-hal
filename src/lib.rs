@@ -30,9 +30,6 @@ extern crate lazy_static;
 pub extern crate embedded_hal as hal;
 pub use hal::digital::v2::*;
 
-#[cfg(feature = "net")]
-extern crate smoltcp;
-
 #[cfg(feature = "atsam4e16e")]
 pub use atsam4e16e_pac as pac;
 
@@ -45,8 +42,6 @@ pub use atsam4s8b_pac as pac;
 #[cfg(feature = "atsam4sd32c")]
 pub use atsam4sd32c_pac as pac;
 
-pub use eui48::Identifier as MacAddress;
-
 use core::mem;
 
 pub mod clock;
@@ -57,10 +52,6 @@ pub mod serial;
 pub mod static_memory_controller;
 pub mod time;
 pub mod watchdog;
-
-#[cfg(all(feature = "atsam4e16e", feature = "unstable"))]
-#[allow(dead_code)] // TODO: REMOVE WHEN STABLE
-pub mod ethernet_controller;
 
 /// Borrows a peripheral without checking if it has already been taken
 unsafe trait BorrowUnchecked {

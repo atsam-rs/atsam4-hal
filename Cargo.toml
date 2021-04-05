@@ -29,8 +29,20 @@ version = "0.6.13"
 [dependencies.nb]
 version = "0.1.0"
 
+[dependencies.atsam4e8c-pac]
+version = "0.1.6"
+optional = true
+
+[dependencies.atsam4e8e-pac]
+version = "0.1.6"
+optional = true
+
+[dependencies.atsam4e16c-pac]
+version = "0.1.6"
+optional = true
+
 [dependencies.atsam4e16e-pac]
-version = "0.1.4"
+version = "0.1.6"
 optional = true
 
 [dependencies.atsam4s4b-pac]
@@ -65,6 +77,9 @@ usb = []
 
 # atsam4e
 atsam4e = []
+atsam4e8c = ["atsam4e", "atsam4e8c-pac", "atsam4e8c-pac/rt"]
+atsam4e8e = ["atsam4e", "atsam4e8e-pac", "atsam4e8e-pac/rt"]
+atsam4e16c = ["atsam4e", "atsam4e16c-pac", "atsam4e16c-pac/rt"]
 atsam4e16e = ["atsam4e", "atsam4e16e-pac", "atsam4e16e-pac/rt"]
 
 # atsam4s
