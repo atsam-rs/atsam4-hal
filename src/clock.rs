@@ -160,7 +160,7 @@ fn calculate_master_clock_frequency(pmc: &PMC) -> Hertz {
                     0 => 4000000,
                     1 => 8000000,
                     2 => 12000000,
-                    _ => panic!("Unexpected value detected ready from pmc.ckgr_mor.moscrcf"),
+                    _ => panic!("Unexpected value detected read from pmc.ckgr_mor.moscrcf"),
                 },
             };
 
@@ -224,7 +224,7 @@ fn set_flash_wait_states_to_maximum(efc0: &EFC0, efc1: &EFC1) {
 }
 
 #[cfg(feature = "atsam4e")]
-fn set_flash_wait_states_to_match_frequence(efc: &EFC, clock_frequency: Hertz) {
+fn set_flash_wait_states_to_match_frequency(efc: &EFC, clock_frequency: Hertz) {
     let wait_state_count = get_flash_wait_states_for_clock_frequency(clock_frequency);
 
     efc.fmr
@@ -232,7 +232,7 @@ fn set_flash_wait_states_to_match_frequence(efc: &EFC, clock_frequency: Hertz) {
 }
 
 #[cfg(feature = "atsam4s")]
-fn set_flash_wait_states_to_match_frequence(
+fn set_flash_wait_states_to_match_frequency(
     efc0: &EFC0,
     #[cfg(feature = "atsam4sd")] efc1: &EFC1,
     clock_frequency: Hertz,
@@ -758,7 +758,7 @@ impl ClockController {
         );
         let slow_clock_frequency = setup_slow_clock(supc, slow_clock);
         let master_clock_frequency = setup_main_clock(&pmc, main_clock);
-        set_flash_wait_states_to_match_frequence(
+        set_flash_wait_states_to_match_frequency(
             #[cfg(feature = "atsam4e")]
             efc,
             #[cfg(feature = "atsam4s")]
