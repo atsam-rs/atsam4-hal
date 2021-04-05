@@ -1,9 +1,6 @@
 use crate::pac::WDT;
 use hal::watchdog;
-pub use hal::watchdog::{
-    WatchdogDisable,
-    WatchdogEnable,
-};
+pub use hal::watchdog::{WatchdogDisable, WatchdogEnable};
 
 pub struct Watchdog {
     wdt: WDT,
