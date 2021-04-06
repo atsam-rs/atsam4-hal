@@ -6,8 +6,14 @@ use {
 
 #[cfg(feature = "atsam4e")]
 use {
-    crate::clock::{Enabled, PioAClock, PioBClock, PioCClock, PioDClock, PioEClock},
-    crate::pac::{pioa, piob, pioc, piod, pioe, PIOA, PIOB, PIOC, PIOD, PIOE},
+    crate::clock::{Enabled, PioAClock, PioBClock, PioDClock},
+    crate::pac::{pioa, piob, piod, PIOA, PIOB, PIOD},
+};
+
+#[cfg(feature = "atsam4e_e")]
+use {
+    crate::clock::{PioCClock, PioEClock},
+    crate::pac::{pioc, pioe, PIOC, PIOE},
 };
 
 #[cfg(feature = "atsam4s")]
@@ -33,11 +39,11 @@ pub trait GpioExt {
 pub struct Ports {
     pioa: PhantomData<(PIOA, PioAClock<Enabled>)>,
     piob: PhantomData<(PIOB, PioBClock<Enabled>)>,
-    #[cfg(any(feature = "atsam4s_c", feature = "atsam4e"))]
+    #[cfg(any(feature = "atsam4s_c", feature = "atsam4e_e"))]
     pioc: PhantomData<(PIOC, PioCClock<Enabled>)>,
     #[cfg(feature = "atsam4e")]
     piod: PhantomData<(PIOD, PioDClock<Enabled>)>,
-    #[cfg(feature = "atsam4e")]
+    #[cfg(feature = "atsam4e_e")]
     pioe: PhantomData<(PIOE, PioEClock<Enabled>)>,
 }
 
@@ -45,19 +51,19 @@ impl Ports {
     pub fn new(
         _pioa: (PIOA, PioAClock<Enabled>),
         _piob: (PIOB, PioBClock<Enabled>),
-        #[cfg(any(feature = "atsam4s_c", feature = "atsam4e"))] _pioc: (PIOC, PioCClock<Enabled>),
+        #[cfg(any(feature = "atsam4s_c", feature = "atsam4e_e"))] _pioc: (PIOC, PioCClock<Enabled>),
         #[cfg(feature = "atsam4e")] _piod: (PIOD, PioDClock<Enabled>),
-        #[cfg(feature = "atsam4e")] _pioe: (PIOE, PioEClock<Enabled>),
+        #[cfg(feature = "atsam4e_e")] _pioe: (PIOE, PioEClock<Enabled>),
     ) -> Self {
         // The above arguments are consumed here...never to be seen again.
         Ports {
             pioa: PhantomData,
             piob: PhantomData,
-            #[cfg(any(feature = "atsam4s_c", feature = "atsam4e"))]
+            #[cfg(any(feature = "atsam4s_c", feature = "atsam4e_e"))]
             pioc: PhantomData,
             #[cfg(feature = "atsam4e")]
             piod: PhantomData,
-            #[cfg(feature = "atsam4e")]
+            #[cfg(feature = "atsam4e_e")]
             pioe: PhantomData,
         }
     }
@@ -122,7 +128,7 @@ macro_rules! pins {
             )+
             $(
                 /// Pin $pin_identC
-                #[cfg(any(feature = "atsam4s_c", feature = "atsam4e"))]
+                #[cfg(any(feature = "atsam4s_c", feature = "atsam4e_e"))]
                 pub $pin_identC: $PinTypeC<Input<Floating>>,
             )+
             $(
@@ -132,7 +138,7 @@ macro_rules! pins {
             )+
             $(
                 /// Pin $pin_identE
-                #[cfg(feature = "atsam4e")]
+                #[cfg(feature = "atsam4e_e")]
                 pub $pin_identE: $PinTypeE<Input<Floating>>,
             )+
         }
@@ -150,7 +156,7 @@ macro_rules! pins {
                         $pin_identB: $PinTypeB { _mode: PhantomData },
                     )+
                     $(
-                        #[cfg(any(feature = "atsam4s_c", feature = "atsam4e"))]
+                        #[cfg(any(feature = "atsam4s_c", feature = "atsam4e_e"))]
                         $pin_identC: $PinTypeC { _mode: PhantomData },
                     )+
                     $(
@@ -158,7 +164,7 @@ macro_rules! pins {
                         $pin_identD: $PinTypeD { _mode: PhantomData },
                     )+
                     $(
-                        #[cfg(feature = "atsam4e")]
+                        #[cfg(feature = "atsam4e_e")]
                         $pin_identE: $PinTypeE { _mode: PhantomData },
                     )+
                 }
@@ -172,7 +178,7 @@ macro_rules! pins {
             pin!($PinTypeB, $pin_identB, $pin_noB, PIOB, piob);
         )+
         $(
-            #[cfg(any(feature = "atsam4s_c", feature = "atsam4e"))]
+            #[cfg(any(feature = "atsam4s_c", feature = "atsam4e_e"))]
             pin!($PinTypeC, $pin_identC, $pin_noC, PIOC, pioc);
         )+
         $(
@@ -180,7 +186,7 @@ macro_rules! pins {
             pin!($PinTypeD, $pin_identD, $pin_noD, PIOD, piod);
         )+
         $(
-            #[cfg(feature = "atsam4e")]
+            #[cfg(feature = "atsam4e_e")]
             pin!($PinTypeE, $pin_identE, $pin_noE, PIOE, pioe);
         )+
     };

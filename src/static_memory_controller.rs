@@ -1,5 +1,5 @@
 #![allow(clippy::upper_case_acronyms)]
-#![cfg(any(feature = "atsam4_c", feature = "atsam4e"))]
+#![cfg(any(feature = "atsam4_c", feature = "atsam4e_e"))]
 
 use {
     crate::clock::{Enabled, SmcClock},
