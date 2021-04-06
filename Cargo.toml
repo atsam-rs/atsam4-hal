@@ -51,10 +51,13 @@ usb = []
 
 # atsam4e
 atsam4e = []
-atsam4e8c = ["atsam4e", "atsam4e8c-pac", "atsam4e8c-pac/rt"]
-atsam4e8e = ["atsam4e", "atsam4e8e-pac", "atsam4e8e-pac/rt"]
-atsam4e16c = ["atsam4e", "atsam4e16c-pac", "atsam4e16c-pac/rt"]
-atsam4e16e = ["atsam4e", "atsam4e16e-pac", "atsam4e16e-pac/rt"]
+atsam4e_c = [] # 100-pin
+atsam4e_e = [] # 144-pin
+
+atsam4e8c = ["atsam4e", "atsam4e_c", "atsam4e8c-pac", "atsam4e8c-pac/rt"]
+atsam4e8e = ["atsam4e", "atsam4e_e", "atsam4e8e-pac", "atsam4e8e-pac/rt"]
+atsam4e16c = ["atsam4e", "atsam4e_c", "atsam4e16c-pac", "atsam4e16c-pac/rt"]
+atsam4e16e = ["atsam4e", "atsam4e_e", "atsam4e16e-pac", "atsam4e16e-pac/rt"]
 
 # atsam4s
 atsam4s = []
