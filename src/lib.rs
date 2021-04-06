@@ -30,15 +30,41 @@ extern crate lazy_static;
 pub extern crate embedded_hal as hal;
 pub use hal::digital::v2::*;
 
+#[cfg(feature = "atsam4e16c")]
+pub use atsam4e16c_pac as pac;
 #[cfg(feature = "atsam4e16e")]
 pub use atsam4e16e_pac as pac;
+#[cfg(feature = "atsam4e8c")]
+pub use atsam4e8c_pac as pac;
+#[cfg(feature = "atsam4e8e")]
+pub use atsam4e8e_pac as pac;
 
+#[cfg(feature = "atsam4s2a")]
+pub use atsam4s2a_pac as pac;
+#[cfg(feature = "atsam4s2b")]
+pub use atsam4s2b_pac as pac;
+#[cfg(feature = "atsam4s2c")]
+pub use atsam4s2c_pac as pac;
+#[cfg(feature = "atsam4s4a")]
+pub use atsam4s4a_pac as pac;
 #[cfg(feature = "atsam4s4b")]
 pub use atsam4s4b_pac as pac;
-
+#[cfg(feature = "atsam4s4c")]
+pub use atsam4s4c_pac as pac;
 #[cfg(feature = "atsam4s8b")]
 pub use atsam4s8b_pac as pac;
-
+#[cfg(feature = "atsam4s8c")]
+pub use atsam4s8c_pac as pac;
+#[cfg(feature = "atsam4sa16b")]
+pub use atsam4sa16b_pac as pac;
+#[cfg(feature = "atsam4sa16c")]
+pub use atsam4sa16c_pac as pac;
+#[cfg(feature = "atsam4sd16b")]
+pub use atsam4sd16b_pac as pac;
+#[cfg(feature = "atsam4sd16c")]
+pub use atsam4sd16c_pac as pac;
+#[cfg(feature = "atsam4sd32b")]
+pub use atsam4sd32b_pac as pac;
 #[cfg(feature = "atsam4sd32c")]
 pub use atsam4sd32c_pac as pac;
 
