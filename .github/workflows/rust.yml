@@ -8,7 +8,17 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        mcu: [atsam4e16e, atsam4s4b, atsam4s8b, atsam4sd32c]
+        mcu: [
+          # atsam4e
+          atsam4e8c, atsam4e8e, atsam4e16c, atsam4e16e,
+          # atsam4s
+          atsam4s2a, atsam4s2b, atsam4s2c,
+          atsam4s4a, atsam4s4b, atsam4s4c,
+          atsam4s8b, atsam4s8c,
+          atsam4sa16b, atsam4sa16c,
+          atsam4sd16b, atsam4sd16c,
+          atsam4sd32b, atsam4sd32c,
+        ]
 
     steps:
       - uses: actions/checkout@v1
@@ -25,10 +35,6 @@ jobs:
           target: thumbv7em-none-eabi
           toolchain: stable
           override: true
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-arm-none-eabi
       - uses: actions-rs/cargo@v1
         if: ${{ contains(matrix.mcu, 'atsam4e') }}
         with:

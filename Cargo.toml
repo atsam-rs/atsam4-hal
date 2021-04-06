@@ -10,63 +10,37 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/atsam4-rs/atsam4-hal"
 
 [dependencies]
+cast = { version = "0.2.2", default-features = false }
+cortex-m = "0.7.2"
+cortex-m-rt = "0.6.13"
+embedded-hal = { version = "0.2.4", features = ["unproven"] }
+lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
+nb = "0.1.0"
 paste = "1.0"
+void = { version = "1.0.2", default-features = false }
+volatile = "0.4.1"
 
-[dependencies.cast]
-version = "0.2.2"
-default-features = false
+# atsam4e
+atsam4e8c-pac = { version = "0.1.7", optional = true }
+atsam4e8e-pac = { version = "0.1.7", optional = true }
+atsam4e16c-pac = { version = "0.1.7", optional = true }
+atsam4e16e-pac = { version = "0.1.7", optional = true }
 
-[dependencies.cortex-m]
-version = "0.7.2"
-
-[dependencies.embedded-hal]
-version = "0.2.4"
-features = ["unproven"]
-
-[dependencies.cortex-m-rt]
-version = "0.6.13"
-
-[dependencies.nb]
-version = "0.1.0"
-
-[dependencies.atsam4e8c-pac]
-version = "0.1.6"
-optional = true
-
-[dependencies.atsam4e8e-pac]
-version = "0.1.6"
-optional = true
-
-[dependencies.atsam4e16c-pac]
-version = "0.1.6"
-optional = true
-
-[dependencies.atsam4e16e-pac]
-version = "0.1.6"
-optional = true
-
-[dependencies.atsam4s4b-pac]
-version = "0.1.1"
-optional = true
-
-[dependencies.atsam4s8b-pac]
-version = "0.1.1"
-optional = true
-
-[dependencies.atsam4sd32c-pac]
-version = "0.1.1"
-optional = true
-
-[dependencies.void]
-version = "1.0.2"
-default-features = false
-
-[dependencies.lazy_static]
-version = "1.4.0"
-features = ["spin_no_std"]
-
-[dependencies.volatile]
-version = "0.4.1"
+# atsam4s
+atsam4s2a-pac = { version = "0.1.2", optional = true }
+atsam4s2b-pac = { version = "0.1.2", optional = true }
+atsam4s2c-pac = { version = "0.1.2", optional = true }
+atsam4s4a-pac = { version = "0.1.2", optional = true }
+atsam4s4b-pac = { version = "0.1.2", optional = true }
+atsam4s4c-pac = { version = "0.1.2", optional = true }
+atsam4s8b-pac = { version = "0.1.2", optional = true }
+atsam4s8c-pac = { version = "0.1.2", optional = true }
+atsam4sa16b-pac = { version = "0.1.2", optional = true }
+atsam4sa16c-pac = { version = "0.1.2", optional = true }
+atsam4sd16b-pac = { version = "0.1.2", optional = true }
+atsam4sd16c-pac = { version = "0.1.2", optional = true }
+atsam4sd32b-pac = { version = "0.1.2", optional = true }
+atsam4sd32c-pac = { version = "0.1.2", optional = true }
 
 [features]
 default = ["atsam4e16e"]
@@ -87,8 +61,20 @@ atsam4s = []
 atsam4s_a = [] # 48-pin
 atsam4s_b = [] # 64-pin
 atsam4s_c = [] # 100-pin
-atsam4sd = [] # Dual bank flash
+atsam4sa = [] # Cache (CMCC)
+atsam4sd = [] # Dual bank flash and cache (CMCC)
 
+atsam4s2a = ["atsam4s", "atsam4s_a", "atsam4s2a-pac", "atsam4s2a-pac/rt"]
+atsam4s2b = ["atsam4s", "atsam4s_b", "atsam4s2b-pac", "atsam4s2b-pac/rt"]
+atsam4s2c = ["atsam4s", "atsam4s_c", "atsam4s2c-pac", "atsam4s2c-pac/rt"]
+atsam4s4a = ["atsam4s", "atsam4s_a", "atsam4s4a-pac", "atsam4s4a-pac/rt"]
 atsam4s4b = ["atsam4s", "atsam4s_b", "atsam4s4b-pac", "atsam4s4b-pac/rt"]
+atsam4s4c = ["atsam4s", "atsam4s_c", "atsam4s4c-pac", "atsam4s4c-pac/rt"]
 atsam4s8b = ["atsam4s", "atsam4s_b", "atsam4s8b-pac", "atsam4s8b-pac/rt"]
+atsam4s8c = ["atsam4s", "atsam4s_c", "atsam4s8c-pac", "atsam4s8c-pac/rt"]
+atsam4sa16b = ["atsam4s", "atsam4sa", "atsam4s_b", "atsam4sa16b-pac", "atsam4sa16b-pac/rt"]
+atsam4sa16c = ["atsam4s", "atsam4sa", "atsam4s_c", "atsam4sa16c-pac", "atsam4sa16c-pac/rt"]
+atsam4sd16b = ["atsam4s", "atsam4sd", "atsam4s_b", "atsam4sd16b-pac", "atsam4sd16b-pac/rt"]
+atsam4sd16c = ["atsam4s", "atsam4sd", "atsam4s_c", "atsam4sd16c-pac", "atsam4sd16c-pac/rt"]
+atsam4sd32b = ["atsam4s", "atsam4sd", "atsam4s_b", "atsam4sd32b-pac", "atsam4sd32b-pac/rt"]
 atsam4sd32c = ["atsam4s", "atsam4sd", "atsam4s_c", "atsam4sd32c-pac", "atsam4sd32c-pac/rt"]
