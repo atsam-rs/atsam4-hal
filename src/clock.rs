@@ -11,11 +11,11 @@ use crate::pac::EFC0;
 #[cfg(feature = "atsam4sd")]
 use crate::pac::EFC1;
 
-use crate::time::Hertz;
 use crate::BorrowUnchecked;
 
 use core::marker::PhantomData;
 use cortex_m::interrupt;
+use embedded_time::rate::Hertz;
 
 lazy_static! {
     static ref MASTER_CLOCK_FREQUENCY: Hertz = calculate_master_clock_frequency_static();

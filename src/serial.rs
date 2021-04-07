@@ -5,8 +5,8 @@ use {
     crate::clock::{Enabled, Uart0Clock, Uart1Clock},
     crate::gpio::{Pa10, Pa9, PfA},
     crate::pac::{UART0, UART1},
-    crate::time::Bps,
     core::marker::PhantomData,
+    embedded_time::rate::BitsPerSecond,
     hal::{serial::Read, serial::Write},
     paste::paste,
 };
@@ -72,7 +72,7 @@ macro_rules! uarts {
                         clock: [<$Uart Clock>]<Enabled>,
                         _rx_pin: $pin_rx,
                         _tx_pin: $pin_tx,
-                        baud_rate: Bps,
+                        baud_rate: BitsPerSecond,
                         parity: Option<Parity>,
                     ) -> Self {
                         Self::reset_and_disable(&mut uart);

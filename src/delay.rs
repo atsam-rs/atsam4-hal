@@ -2,8 +2,7 @@
 
 use cortex_m::peripheral::syst::SystClkSource;
 use cortex_m::peripheral::SYST;
-
-use crate::time::Hertz;
+use embedded_time::rate::Hertz;
 pub use hal::blocking::delay::{DelayMs, DelayUs};
 
 use crate::clock::*;
