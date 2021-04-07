@@ -1,6 +1,6 @@
 [package]
 name = "atsam4-hal"
-version = "0.1.7"
+version = "0.1.8"
 authors = ["John W. Terrell <john@coolpeoplenetworks.com>"]
 edition = "2018"
 description = "HAL for the ATSAM4 microcontrollers"
@@ -14,6 +14,7 @@ cast = { version = "0.2.2", default-features = false }
 cortex-m = "0.7.2"
 cortex-m-rt = "0.6.13"
 embedded-hal = { version = "0.2.4", features = ["unproven"] }
+embedded-time = "0.10.1"
 lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
 nb = "0.1.0"
 paste = "1.0"
