@@ -1,4 +1,4 @@
-use crate::pac::{CHIPID};
+use crate::pac::CHIPID;
 
 #[derive(Debug)]
 pub enum EmbeddedProcessor {
@@ -113,6 +113,6 @@ impl ChipId {
             12 => Some(1024 * 1024),
             14 => Some(2048 * 1024),
             _ => None,
-        }        
+        }
     }
 }
