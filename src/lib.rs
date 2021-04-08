@@ -74,6 +74,7 @@ pub mod clock;
 pub mod delay;
 pub mod gpio;
 pub mod prelude;
+pub mod rtt;
 pub mod serial;
 pub mod static_memory_controller;
 pub mod watchdog;
