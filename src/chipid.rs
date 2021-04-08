@@ -17,6 +17,8 @@ pub enum Architecture {
     AtSam4SxA,
     AtSam4SxB,
     AtSam4SxC,
+    AtSam4SDxB,
+    AtSam4SDxC,
 }
 
 #[derive(Debug)]
@@ -79,6 +81,8 @@ impl ChipId {
             0x88 => Some(Architecture::AtSam4SxA),
             0x89 => Some(Architecture::AtSam4SxB),
             0x8A => Some(Architecture::AtSam4SxC),
+            0x99 => Some(Architecture::AtSam4SDxB),
+            0x9A => Some(Architecture::AtSam4SDxC),
             _ => None,
         };
         let flash_memory_type = match cidr.nvptyp().bits() {
