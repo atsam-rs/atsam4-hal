@@ -70,6 +70,7 @@ pub use atsam4sd32c_pac as pac;
 
 use core::mem;
 
+pub mod chipid;
 pub mod clock;
 pub mod delay;
 pub mod gpio;
