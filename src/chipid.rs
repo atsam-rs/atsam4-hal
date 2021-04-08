@@ -12,13 +12,28 @@ pub enum EmbeddedProcessor {
 }
 
 #[derive(Debug)]
-pub enum Architecture {
-    AtSam4E,
-    AtSam4SxA,
-    AtSam4SxB,
-    AtSam4SxC,
-    AtSam4SDxB,
-    AtSam4SDxC,
+pub enum Family {
+    AtSam4e,
+    AtSam4s,
+}
+
+#[derive(Debug)]
+pub enum Model {
+    AtSam4e8c,
+    AtSam4e8e,
+    AtSam4e16c,
+    AtSam4e16e,
+
+    AtSam4s8b,
+    AtSam4s8c,
+    AtSam4s16b,
+    AtSam4s16c,
+    AtSam4sa16b,
+    AtSam4sa16c,
+    AtSam4sd16b,
+    AtSam4sd16c,
+    AtSam4sd32b,
+    AtSam4sd32c,
 }
 
 #[derive(Debug)]
@@ -37,7 +52,8 @@ pub struct ChipId {
     pub flash1_byte_size: Option<usize>,
     pub flash2_byte_size: Option<usize>,
     pub internal_sram_byte_size: Option<usize>,
-    pub architecture: Option<Architecture>,
+    pub family: Option<Family>,
+    pub model: Option<Model>,
     pub flash_memory_type: Option<FlashMemoryType>,
 }
 
@@ -76,15 +92,7 @@ impl ChipId {
             15 => Some(512 * 1024),
             _ => None,
         };
-        let architecture = match cidr.arch().bits() {
-            0x3C => Some(Architecture::AtSam4E),
-            0x88 => Some(Architecture::AtSam4SxA),
-            0x89 => Some(Architecture::AtSam4SxB),
-            0x8A => Some(Architecture::AtSam4SxC),
-            0x99 => Some(Architecture::AtSam4SDxB),
-            0x9A => Some(Architecture::AtSam4SDxC),
-            _ => None,
-        };
+        let (family, model) = Self::get_family_and_model(&chip_id);
         let flash_memory_type = match cidr.nvptyp().bits() {
             0 => Some(FlashMemoryType::Rom),
             1 => Some(FlashMemoryType::Romless),
@@ -100,7 +108,8 @@ impl ChipId {
             flash1_byte_size,
             flash2_byte_size,
             internal_sram_byte_size,
-            architecture,
+            family,
+            model,
             flash_memory_type,
         }
     }
@@ -117,6 +126,36 @@ impl ChipId {
             12 => Some(1024 * 1024),
             14 => Some(2048 * 1024),
             _ => None,
+        }
+    }
+
+    fn get_family_and_model(chip_id: &CHIPID) -> (Option<Family>, Option<Model>) {
+        match chip_id.cidr.read().bits() {
+            0x289C_0AE0 => (Some(Family::AtSam4s), Some(Model::AtSam4s8b)),
+            0x28AC_0AE0 => (Some(Family::AtSam4s), Some(Model::AtSam4s8c)),
+
+            0x289C_0CE0 => (Some(Family::AtSam4s), Some(Model::AtSam4s16b)),
+            0x28AC_0CE0 => (Some(Family::AtSam4s), Some(Model::AtSam4s16c)),
+
+            0x2897_0CE0 => (Some(Family::AtSam4s), Some(Model::AtSam4sa16b)),
+            0x28A7_0CE0 => (Some(Family::AtSam4s), Some(Model::AtSam4sa16c)),
+
+            0x2997_0CE0 => (Some(Family::AtSam4s), Some(Model::AtSam4sd16b)),
+            0x29A7_0CE0 => (Some(Family::AtSam4s), Some(Model::AtSam4sd16c)),
+
+            0x2997_0EE0 => (Some(Family::AtSam4s), Some(Model::AtSam4sd32b)),
+            0x29A7_0EE0 => (Some(Family::AtSam4s), Some(Model::AtSam4sd32c)),
+
+            0xA3CC_0CE0 => match chip_id.exid.read().bits() {
+                0x0012_0209 => (Some(Family::AtSam4e), Some(Model::AtSam4e8c)),
+                0x0012_0208 => (Some(Family::AtSam4e), Some(Model::AtSam4e8e)),
+
+                0x0012_0201 => (Some(Family::AtSam4e), Some(Model::AtSam4e16c)),
+                0x0012_0200 => (Some(Family::AtSam4e), Some(Model::AtSam4e16e)),
+                _ => (Some(Family::AtSam4e), None),
+            },
+
+            _ => (None, None),
         }
     }
 }
