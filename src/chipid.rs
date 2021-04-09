@@ -141,7 +141,7 @@ impl ChipId {
     pub fn get_model(&self) -> Option<Model> {
         self.model
     }
-    
+
     pub fn get_flash_memory_type(&self) -> Option<FlashMemoryType> {
         self.flash_memory_type
     }
