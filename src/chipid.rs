@@ -1,6 +1,6 @@
 use crate::pac::CHIPID;
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum EmbeddedProcessor {
     Arm946Es,
     Arm7Tdmi,
@@ -11,13 +11,13 @@ pub enum EmbeddedProcessor {
     CortexM4,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum Family {
     AtSam4e,
     AtSam4s,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum Model {
     AtSam4e8c,
     AtSam4e8e,
@@ -36,7 +36,7 @@ pub enum Model {
     AtSam4sd32c,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum FlashMemoryType {
     Rom,
     Romless,
@@ -47,14 +47,14 @@ pub enum FlashMemoryType {
 
 #[derive(Debug)]
 pub struct ChipId {
-    pub version: u8,
-    pub embedded_processor: Option<EmbeddedProcessor>,
-    pub flash1_byte_size: Option<usize>,
-    pub flash2_byte_size: Option<usize>,
-    pub internal_sram_byte_size: Option<usize>,
-    pub family: Option<Family>,
-    pub model: Option<Model>,
-    pub flash_memory_type: Option<FlashMemoryType>,
+    version: u8,
+    embedded_processor: Option<EmbeddedProcessor>,
+    flash1_byte_size: Option<usize>,
+    flash2_byte_size: Option<usize>,
+    internal_sram_byte_size: Option<usize>,
+    family: Option<Family>,
+    model: Option<Model>,
+    flash_memory_type: Option<FlashMemoryType>,
 }
 
 impl ChipId {
@@ -71,8 +71,8 @@ impl ChipId {
             7 => Some(EmbeddedProcessor::CortexM4),
             _ => None,
         };
-        let flash1_byte_size = Self::get_flash_size_from_register(cidr.nvpsiz().bits());
-        let flash2_byte_size = Self::get_flash_size_from_register(cidr.nvpsiz2().bits());
+        let flash1_byte_size = Self::decode_flash_size_from_register(cidr.nvpsiz().bits());
+        let flash2_byte_size = Self::decode_flash_size_from_register(cidr.nvpsiz2().bits());
         let internal_sram_byte_size = match cidr.sramsiz().bits() {
             0 => Some(48 * 1024),
             1 => Some(192 * 1024),
@@ -92,7 +92,7 @@ impl ChipId {
             15 => Some(512 * 1024),
             _ => None,
         };
-        let (family, model) = Self::get_family_and_model(&chip_id);
+        let (family, model) = Self::decode_family_and_model(&chip_id);
         let flash_memory_type = match cidr.nvptyp().bits() {
             0 => Some(FlashMemoryType::Rom),
             1 => Some(FlashMemoryType::Romless),
@@ -114,7 +114,39 @@ impl ChipId {
         }
     }
 
-    fn get_flash_size_from_register(register_value: u8) -> Option<usize> {
+    pub fn get_version(&self) -> u8 {
+        self.version
+    }
+
+    pub fn get_embedded_processor(&self) -> Option<EmbeddedProcessor> {
+        self.embedded_processor
+    }
+
+    pub fn get_flash1_byte_size(&self) -> Option<usize> {
+        self.flash1_byte_size
+    }
+
+    pub fn get_flash2_byte_size(&self) -> Option<usize> {
+        self.flash2_byte_size
+    }
+
+    pub fn get_internal_sram_size(&self) -> Option<usize> {
+        self.internal_sram_byte_size
+    }
+
+    pub fn get_family(&self) -> Option<Family> {
+        self.family
+    }
+
+    pub fn get_model(&self) -> Option<Model> {
+        self.model
+    }
+    
+    pub fn get_flash_memory_type(&self) -> Option<FlashMemoryType> {
+        self.flash_memory_type
+    }
+
+    fn decode_flash_size_from_register(register_value: u8) -> Option<usize> {
         match register_value {
             1 => Some(8 * 1024),
             2 => Some(16 * 1024),
@@ -129,7 +161,7 @@ impl ChipId {
         }
     }
 
-    fn get_family_and_model(chip_id: &CHIPID) -> (Option<Family>, Option<Model>) {
+    fn decode_family_and_model(chip_id: &CHIPID) -> (Option<Family>, Option<Model>) {
         match chip_id.cidr.read().bits() {
             0x289C_0AE0 => (Some(Family::AtSam4s), Some(Model::AtSam4s8b)),
             0x28AC_0AE0 => (Some(Family::AtSam4s), Some(Model::AtSam4s8c)),
