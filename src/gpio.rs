@@ -33,7 +33,7 @@ use {
 pub trait GpioExt {
     type Parts;
 
-    /// Consume and split the device into its constitent parts
+    /// Consume and split the device into its constituent parts
     fn split(self) -> Self::Parts;
 }
 pub struct Ports {
