@@ -16,13 +16,6 @@ impl watchdog::Watchdog for Watchdog {
     /// Feeds an existing watchdog to ensure the processor isn't reset.
     /// Sometimes commonly referred to as "kicking" or "refreshing".
     fn feed(&mut self) {
-        // TODO Bug in atsam4e16e pac (atsam4s includes passwd() set option)
-        #[cfg(feature = "atsam4e")]
-        self.wdt
-            .cr
-            .write_with_zero(|w| unsafe { w.key().bits(0xA5).wdrstt().set_bit() });
-
-        #[cfg(feature = "atsam4s")]
         self.wdt
             .cr
             .write_with_zero(|w| w.key().passwd().wdrstt().set_bit());
