@@ -114,35 +114,35 @@ impl ChipId {
         }
     }
 
-    pub fn get_version(&self) -> u8 {
+    pub fn version(&self) -> u8 {
         self.version
     }
 
-    pub fn get_embedded_processor(&self) -> Option<EmbeddedProcessor> {
+    pub fn embedded_processor(&self) -> Option<EmbeddedProcessor> {
         self.embedded_processor
     }
 
-    pub fn get_flash1_byte_size(&self) -> Option<usize> {
+    pub fn flash1_byte_size(&self) -> Option<usize> {
         self.flash1_byte_size
     }
 
-    pub fn get_flash2_byte_size(&self) -> Option<usize> {
+    pub fn flash2_byte_size(&self) -> Option<usize> {
         self.flash2_byte_size
     }
 
-    pub fn get_internal_sram_size(&self) -> Option<usize> {
+    pub fn internal_sram_size(&self) -> Option<usize> {
         self.internal_sram_byte_size
     }
 
-    pub fn get_family(&self) -> Option<Family> {
+    pub fn family(&self) -> Option<Family> {
         self.family
     }
 
-    pub fn get_model(&self) -> Option<Model> {
+    pub fn model(&self) -> Option<Model> {
         self.model
     }
 
-    pub fn get_flash_memory_type(&self) -> Option<FlashMemoryType> {
+    pub fn flash_memory_type(&self) -> Option<FlashMemoryType> {
         self.flash_memory_type
     }
 
