@@ -24,6 +24,12 @@ pub enum Model {
     AtSam4e16c,
     AtSam4e16e,
 
+    AtSam4s2a,
+    AtSam4s2b,
+    AtSam4s2c,
+    AtSam4s4a,
+    AtSam4s4b,
+    AtSam4s4c,
     AtSam4s8b,
     AtSam4s8c,
     AtSam4s16b,
@@ -163,6 +169,14 @@ impl ChipId {
 
     fn decode_family_and_model(chip_id: &CHIPID) -> (Option<Family>, Option<Model>) {
         match chip_id.cidr.read().bits() {
+            0x288B_07E0 => (Some(Family::AtSam4s), Some(Model::AtSam4s2a)),
+            0x289B_07E0 => (Some(Family::AtSam4s), Some(Model::AtSam4s2b)),
+            0x28AB_07E0 => (Some(Family::AtSam4s), Some(Model::AtSam4s2c)),
+
+            0x288B_09E0 => (Some(Family::AtSam4s), Some(Model::AtSam4s4a)),
+            0x289B_09E0 => (Some(Family::AtSam4s), Some(Model::AtSam4s4b)),
+            0x28AB_09E0 => (Some(Family::AtSam4s), Some(Model::AtSam4s4c)),
+
             0x289C_0AE0 => (Some(Family::AtSam4s), Some(Model::AtSam4s8b)),
             0x28AC_0AE0 => (Some(Family::AtSam4s), Some(Model::AtSam4s8c)),
 
