@@ -36,9 +36,7 @@ pub enum SlowClock {
 }
 
 pub fn get_master_clock_frequency() -> Hertz {
-    unsafe {
-        MASTER_CLOCK_FREQUENCY
-    }
+    unsafe { MASTER_CLOCK_FREQUENCY }
 }
 
 fn setup_slow_clock(supc: &SUPC, slow_clock: SlowClock) -> Hertz {
@@ -233,7 +231,7 @@ fn calculate_master_clock_frequency(pmc: &PMC) -> Hertz {
                     } else {
                         panic!("Unexpected value detected read from pmc.ckgr_mor.moscrcf")
                     }
-                },
+                }
             };
 
             let plla_clock_source: u8 = 2; // 2 = PLLA

@@ -57,7 +57,10 @@ impl Ports {
     pub fn new(
         _pioa: (PIOA, PioAClock<Enabled>),
         _piob: (PIOB, PioBClock<Enabled>),
-        #[cfg(any(feature = "atsam4n", feature = "atsam4s_c", feature = "atsam4e_e"))] _pioc: (PIOC, PioCClock<Enabled>),
+        #[cfg(any(feature = "atsam4n", feature = "atsam4s_c", feature = "atsam4e_e"))] _pioc: (
+            PIOC,
+            PioCClock<Enabled>,
+        ),
         #[cfg(feature = "atsam4e")] _piod: (PIOD, PioDClock<Enabled>),
         #[cfg(feature = "atsam4e_e")] _pioe: (PIOE, PioEClock<Enabled>),
     ) -> Self {

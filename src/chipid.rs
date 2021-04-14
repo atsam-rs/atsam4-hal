@@ -198,7 +198,7 @@ impl ChipId {
 
             0x2997_0EE0 => (Some(Family::AtSam4s), Some(Model::AtSam4sd32b)),
             0x29A7_0EE0 => (Some(Family::AtSam4s), Some(Model::AtSam4sd32c)),
-            
+
             0x293B_0AE0 => (Some(Family::AtSam4n), Some(Model::AtSam4n8a)),
             0x294B_0AE0 => (Some(Family::AtSam4n), Some(Model::AtSam4n8b)),
             0x295B_0AE0 => (Some(Family::AtSam4n), Some(Model::AtSam4n8c)),

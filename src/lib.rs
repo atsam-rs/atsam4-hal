@@ -36,16 +36,16 @@ pub use atsam4e8c_pac as pac;
 #[cfg(feature = "atsam4e8e")]
 pub use atsam4e8e_pac as pac;
 
+#[cfg(feature = "atsam4n16b")]
+pub use atsam4n16b_pac as pac;
+#[cfg(feature = "atsam4n16c")]
+pub use atsam4n16c_pac as pac;
 #[cfg(feature = "atsam4n8a")]
 pub use atsam4n8a_pac as pac;
 #[cfg(feature = "atsam4n8b")]
 pub use atsam4n8b_pac as pac;
 #[cfg(feature = "atsam4n8c")]
 pub use atsam4n8c_pac as pac;
-#[cfg(feature = "atsam4n16b")]
-pub use atsam4n16b_pac as pac;
-#[cfg(feature = "atsam4n16c")]
-pub use atsam4n16c_pac as pac;
 
 #[cfg(feature = "atsam4s2a")]
 pub use atsam4s2a_pac as pac;
