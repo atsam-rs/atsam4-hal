@@ -19,6 +19,7 @@ static mut MASTER_CLOCK_FREQUENCY: Hertz = Hertz(0);
 // NOTE: More frequencies and crystals can be added
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MainClock {
+    #[cfg(not(feature = "atsam4n"))]
     RcOscillator4Mhz,  // USB Unsupported
     RcOscillator8Mhz,  // USB Unsupported
     RcOscillator12Mhz, // USB Unsupported
@@ -69,18 +70,6 @@ fn setup_main_clock(pmc: &PMC, main_clock: MainClock) -> Hertz {
 
             // Set up the PLL for 120Mhz operation (4Mhz RC * (30 / 1) = 120Mhz)
             let multiplier: u16 = 30;
-            let divider: u8 = 1;
-            enable_plla_clock(pmc, multiplier, divider);
-
-            // 0 = no prescaling
-            0
-        }
-        #[cfg(feature = "atsam4n")]
-        MainClock::RcOscillator4Mhz => {
-            switch_main_clock_to_fast_rc_4mhz(pmc);
-
-            // Set up the PLL for 100Mhz operation (4Mhz RC * (25 / 1) = 100Mhz)
-            let multiplier: u16 = 25;
             let divider: u8 = 1;
             enable_plla_clock(pmc, multiplier, divider);
 
@@ -367,6 +356,7 @@ fn change_main_clock_to_crystal(pmc: &PMC) {
         .modify(|_, w| w.key().passwd().moscrcen().clear_bit().moscsel().set_bit());
 }
 
+#[cfg(not(feature = "atsam4n"))]
 fn switch_main_clock_to_fast_rc_4mhz(pmc: &PMC) {
     enable_fast_rc_oscillator(pmc);
     wait_for_fast_rc_oscillator_to_stabilize(pmc);
@@ -396,6 +386,7 @@ fn enable_fast_rc_oscillator(pmc: &PMC) {
         .modify(|_, w| w.key().passwd().moscrcen().set_bit());
 }
 
+#[cfg(not(feature = "atsam4n"))]
 fn change_fast_rc_oscillator_to_4mhz(pmc: &PMC) {
     pmc.ckgr_mor
         .modify(|_, w| w.key().passwd().moscrcf()._4_mhz());
