@@ -76,6 +76,8 @@ pub use atsam4sd32b_pac as pac;
 #[cfg(feature = "atsam4sd32c")]
 pub use atsam4sd32c_pac as pac;
 
+pub use embedded_time as time;
+
 use core::mem;
 
 pub mod chipid;
