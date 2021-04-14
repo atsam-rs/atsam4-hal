@@ -103,9 +103,9 @@ fn setup_main_clock(pmc: &PMC, main_clock: MainClock) -> Hertz {
         MainClock::RcOscillator8Mhz => {
             switch_main_clock_to_fast_rc_8mhz(pmc);
 
-            // Set up the PLL for 80Mhz operation (8Mhz RC * (12 / 1) = 96Mhz)
-            let multiplier: u16 = 12;
-            let divider: u8 = 1;
+            // Set up the PLL for 100Mhz operation (8Mhz RC * (25 / 2) = 100Mhz)
+            let multiplier: u16 = 25;
+            let divider: u8 = 2;
             enable_plla_clock(pmc, multiplier, divider);
 
             // 0 = no prescaling
@@ -127,9 +127,9 @@ fn setup_main_clock(pmc: &PMC, main_clock: MainClock) -> Hertz {
         MainClock::RcOscillator12Mhz => {
             switch_main_clock_to_fast_rc_12mhz(pmc);
 
-            // Set up the PLL for 96Mhz operation (12Mhz RC * (8 / 1) = 96Mhz)
-            let multiplier: u16 = 8;
-            let divider: u8 = 1;
+            // Set up the PLL for 100Mhz operation (12Mhz RC * (25 / 3) = 100Mhz)
+            let multiplier: u16 = 25;
+            let divider: u8 = 3;
             enable_plla_clock(pmc, multiplier, divider);
 
             // 0 = no prescaling
