@@ -16,6 +16,12 @@ use {
     crate::pac::{pioc, pioe, PIOC, PIOE},
 };
 
+#[cfg(feature = "atsam4n")]
+use {
+    crate::clock::{Enabled, PioAClock, PioBClock, PioCClock},
+    crate::pac::{pioa, piob, pioc, PIOA, PIOB, PIOC},
+};
+
 #[cfg(feature = "atsam4s")]
 use {
     crate::clock::{Enabled, PioAClock, PioBClock},
@@ -39,7 +45,7 @@ pub trait GpioExt {
 pub struct Ports {
     pioa: PhantomData<(PIOA, PioAClock<Enabled>)>,
     piob: PhantomData<(PIOB, PioBClock<Enabled>)>,
-    #[cfg(any(feature = "atsam4s_c", feature = "atsam4e_e"))]
+    #[cfg(any(feature = "atsam4n", feature = "atsam4s_c", feature = "atsam4e_e"))]
     pioc: PhantomData<(PIOC, PioCClock<Enabled>)>,
     #[cfg(feature = "atsam4e")]
     piod: PhantomData<(PIOD, PioDClock<Enabled>)>,
@@ -51,7 +57,7 @@ impl Ports {
     pub fn new(
         _pioa: (PIOA, PioAClock<Enabled>),
         _piob: (PIOB, PioBClock<Enabled>),
-        #[cfg(any(feature = "atsam4s_c", feature = "atsam4e_e"))] _pioc: (PIOC, PioCClock<Enabled>),
+        #[cfg(any(feature = "atsam4n", feature = "atsam4s_c", feature = "atsam4e_e"))] _pioc: (PIOC, PioCClock<Enabled>),
         #[cfg(feature = "atsam4e")] _piod: (PIOD, PioDClock<Enabled>),
         #[cfg(feature = "atsam4e_e")] _pioe: (PIOE, PioEClock<Enabled>),
     ) -> Self {
@@ -59,7 +65,7 @@ impl Ports {
         Ports {
             pioa: PhantomData,
             piob: PhantomData,
-            #[cfg(any(feature = "atsam4s_c", feature = "atsam4e_e"))]
+            #[cfg(any(feature = "atsam4n", feature = "atsam4s_c", feature = "atsam4e_e"))]
             pioc: PhantomData,
             #[cfg(feature = "atsam4e")]
             piod: PhantomData,
@@ -128,7 +134,7 @@ macro_rules! pins {
             )+
             $(
                 /// Pin $pin_identC
-                #[cfg(any(feature = "atsam4s_c", feature = "atsam4e_e"))]
+                #[cfg(any(feature = "atsam4n", feature = "atsam4s_c", feature = "atsam4e_e"))]
                 pub $pin_identC: $PinTypeC<Input<Floating>>,
             )+
             $(
@@ -156,7 +162,7 @@ macro_rules! pins {
                         $pin_identB: $PinTypeB { _mode: PhantomData },
                     )+
                     $(
-                        #[cfg(any(feature = "atsam4s_c", feature = "atsam4e_e"))]
+                        #[cfg(any(feature = "atsam4n", feature = "atsam4s_c", feature = "atsam4e_e"))]
                         $pin_identC: $PinTypeC { _mode: PhantomData },
                     )+
                     $(
@@ -178,7 +184,7 @@ macro_rules! pins {
             pin!($PinTypeB, $pin_identB, $pin_noB, PIOB, piob);
         )+
         $(
-            #[cfg(any(feature = "atsam4s_c", feature = "atsam4e_e"))]
+            #[cfg(any(feature = "atsam4n", feature = "atsam4s_c", feature = "atsam4e_e"))]
             pin!($PinTypeC, $pin_identC, $pin_noC, PIOC, pioc);
         )+
         $(
