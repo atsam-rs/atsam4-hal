@@ -167,9 +167,9 @@ fn setup_main_clock(pmc: &PMC, main_clock: MainClock) -> Hertz {
         MainClock::Crystal12Mhz => {
             switch_main_clock_to_external_12mhz(pmc);
 
-            // Set up the PLL for 96MHz operation (12 MHz * (8 / 1) = 96 MHz)
-            let multiplier: u16 = 8;
-            let divider: u8 = 1;
+            // Set up the PLL for 100MHz operation (12 MHz * (25 / 3) = 100 MHz)
+            let multiplier: u16 = 25;
+            let divider: u8 = 3;
             enable_plla_clock(pmc, multiplier, divider);
 
             // 0 = no prescaling
