@@ -20,7 +20,7 @@ static mut MASTER_CLOCK_FREQUENCY: Hertz = Hertz(0);
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MainClock {
     #[cfg(not(feature = "atsam4n"))]
-    RcOscillator4Mhz,  // USB Unsupported
+    RcOscillator4Mhz, // USB Unsupported
     RcOscillator8Mhz,  // USB Unsupported
     RcOscillator12Mhz, // USB Unsupported
     Crystal12Mhz,      // USB Supported
