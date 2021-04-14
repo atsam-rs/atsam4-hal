@@ -11,6 +11,9 @@ jobs:
         mcu: [
           # atsam4e
           atsam4e8c, atsam4e8e, atsam4e16c, atsam4e16e,
+          # atsam4n
+          atsam4n8a, atsam4n8b, atsam4n8c,
+          atsam4n16b, atsam4n16c,
           # atsam4s
           atsam4s2a, atsam4s2b, atsam4s2c,
           atsam4s4a, atsam4s4b, atsam4s4c,
@@ -30,7 +33,7 @@ jobs:
           toolchain: stable
           override: true
       - uses: actions-rs/toolchain@v1
-        if: ${{ contains(matrix.mcu, 'atsam4s') }}
+        if: ${{ contains(matrix.mcu, 'atsam4s') || contains(matrix.mcu, 'atsam4n') }}
         with:
           target: thumbv7em-none-eabi
           toolchain: stable

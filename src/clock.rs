@@ -2,7 +2,7 @@
 
 use crate::pac::{pmc, PMC, SUPC};
 
-#[cfg(feature = "atsam4e")]
+#[cfg(any(feature = "atsam4e", feature = "atsam4n"))]
 use crate::pac::EFC;
 
 #[cfg(feature = "atsam4s")]
@@ -11,15 +11,10 @@ use crate::pac::EFC0;
 #[cfg(feature = "atsam4sd")]
 use crate::pac::EFC1;
 
-use crate::BorrowUnchecked;
-
 use core::marker::PhantomData;
-use cortex_m::interrupt;
 use embedded_time::rate::Hertz;
 
-lazy_static! {
-    static ref MASTER_CLOCK_FREQUENCY: Hertz = calculate_master_clock_frequency_static();
-}
+static mut MASTER_CLOCK_FREQUENCY: Hertz = Hertz(0);
 
 // NOTE: More frequencies and crystals can be added
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -28,9 +23,9 @@ pub enum MainClock {
     RcOscillator8Mhz,  // USB Unsupported
     RcOscillator12Mhz, // USB Unsupported
     Crystal12Mhz,      // USB Supported
-                       //Crystal11289Khz, // USB Supported - Not implemented
-                       //Crystal16MHz     // USB Supported - Not implemented
-                       //Crystal18432Khz, // USB Supported - Not implemented
+                       // Crystal11289Khz, // USB Supported - Not implemented
+                       // Crystal16MHz     // USB Supported - Not implemented
+                       // Crystal18432Khz, // USB Supported - Not implemented
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -41,7 +36,9 @@ pub enum SlowClock {
 }
 
 pub fn get_master_clock_frequency() -> Hertz {
-    *MASTER_CLOCK_FREQUENCY
+    unsafe {
+        MASTER_CLOCK_FREQUENCY
+    }
 }
 
 fn setup_slow_clock(supc: &SUPC, slow_clock: SlowClock) -> Hertz {
@@ -68,6 +65,7 @@ fn setup_slow_clock(supc: &SUPC, slow_clock: SlowClock) -> Hertz {
 
 fn setup_main_clock(pmc: &PMC, main_clock: MainClock) -> Hertz {
     let prescaler = match main_clock {
+        #[cfg(not(feature = "atsam4n"))]
         MainClock::RcOscillator4Mhz => {
             switch_main_clock_to_fast_rc_4mhz(pmc);
 
@@ -79,6 +77,19 @@ fn setup_main_clock(pmc: &PMC, main_clock: MainClock) -> Hertz {
             // 0 = no prescaling
             0
         }
+        #[cfg(feature = "atsam4n")]
+        MainClock::RcOscillator4Mhz => {
+            switch_main_clock_to_fast_rc_4mhz(pmc);
+
+            // Set up the PLL for 100Mhz operation (4Mhz RC * (25 / 1) = 100Mhz)
+            let multiplier: u16 = 25;
+            let divider: u8 = 1;
+            enable_plla_clock(pmc, multiplier, divider);
+
+            // 0 = no prescaling
+            0
+        }
+        #[cfg(not(feature = "atsam4n"))]
         MainClock::RcOscillator8Mhz => {
             switch_main_clock_to_fast_rc_8mhz(pmc);
 
@@ -90,11 +101,36 @@ fn setup_main_clock(pmc: &PMC, main_clock: MainClock) -> Hertz {
             // 0 = no prescaling
             0
         }
+        #[cfg(feature = "atsam4n")]
+        MainClock::RcOscillator8Mhz => {
+            switch_main_clock_to_fast_rc_8mhz(pmc);
+
+            // Set up the PLL for 80Mhz operation (8Mhz RC * (12 / 1) = 96Mhz)
+            let multiplier: u16 = 12;
+            let divider: u8 = 1;
+            enable_plla_clock(pmc, multiplier, divider);
+
+            // 0 = no prescaling
+            0
+        }
+        #[cfg(not(feature = "atsam4n"))]
         MainClock::RcOscillator12Mhz => {
             switch_main_clock_to_fast_rc_12mhz(pmc);
 
             // Set up the PLL for 120Mhz operation (12Mhz RC * (10 / 1) = 120Mhz)
             let multiplier: u16 = 10;
+            let divider: u8 = 1;
+            enable_plla_clock(pmc, multiplier, divider);
+
+            // 0 = no prescaling
+            0
+        }
+        #[cfg(feature = "atsam4n")]
+        MainClock::RcOscillator12Mhz => {
+            switch_main_clock_to_fast_rc_12mhz(pmc);
+
+            // Set up the PLL for 96Mhz operation (12Mhz RC * (8 / 1) = 96Mhz)
+            let multiplier: u16 = 8;
             let divider: u8 = 1;
             enable_plla_clock(pmc, multiplier, divider);
 
@@ -107,7 +143,7 @@ fn setup_main_clock(pmc: &PMC, main_clock: MainClock) -> Hertz {
 
             #[cfg(feature = "usb")]
             {
-                // Set up the PLL for 240 MHz operation (12 MHz * (20 / 1) = 240 MHz)
+                // Set up the PLL for 240MHz operation (12 MHz * (20 / 1) = 240 MHz)
                 // 240 MHz can be used to generate both master 120 MHz clock and USB 48 MHz clock
                 let multiplier: u16 = 20;
                 let divider: u8 = 1;
@@ -119,7 +155,7 @@ fn setup_main_clock(pmc: &PMC, main_clock: MainClock) -> Hertz {
 
             #[cfg(not(feature = "usb"))]
             {
-                // Set up the PLL for 120 MHz operation (12 MHz * (10 / 1) = 120 MHz)
+                // Set up the PLL for 120MHz operation (12 MHz * (10 / 1) = 120 MHz)
                 // Uses less power than running the PLL at 240 MHz
                 let multiplier: u16 = 10;
                 let divider: u8 = 1;
@@ -129,6 +165,19 @@ fn setup_main_clock(pmc: &PMC, main_clock: MainClock) -> Hertz {
                 0
             }
         }
+        #[cfg(feature = "atsam4n")]
+        MainClock::Crystal12Mhz => {
+            switch_main_clock_to_external_12mhz(pmc);
+
+            // Set up the PLL for 96MHz operation (12 MHz * (8 / 1) = 96 MHz)
+            let multiplier: u16 = 8;
+            let divider: u8 = 1;
+            enable_plla_clock(pmc, multiplier, divider);
+
+            // 0 = no prescaling
+            0
+        }
+
         #[cfg(feature = "atsam4s")]
         MainClock::Crystal12Mhz => {
             switch_main_clock_to_external_12mhz(pmc);
@@ -174,11 +223,16 @@ fn calculate_master_clock_frequency(pmc: &PMC) -> Hertz {
             // PLL
             let mut mclk_freq: u32 = match pmc.ckgr_mor.read().moscsel().bit_is_set() {
                 true => 12000000,
-                false => match pmc.ckgr_mor.read().moscrcf().bits() {
-                    0 => 4000000,
-                    1 => 8000000,
-                    2 => 12000000,
-                    _ => panic!("Unexpected value detected read from pmc.ckgr_mor.moscrcf"),
+                false => {
+                    if pmc.ckgr_mor.read().moscrcf().is_12_mhz() {
+                        12000000
+                    } else if pmc.ckgr_mor.read().moscrcf().is_8_mhz() {
+                        8000000
+                    } else if pmc.ckgr_mor.read().moscrcf().is_4_mhz() {
+                        4000000
+                    } else {
+                        panic!("Unexpected value detected read from pmc.ckgr_mor.moscrcf")
+                    }
                 },
             };
 
@@ -202,10 +256,6 @@ fn calculate_master_clock_frequency(pmc: &PMC) -> Hertz {
     Hertz(mclk_freq)
 }
 
-fn calculate_master_clock_frequency_static() -> Hertz {
-    interrupt::free(|_| PMC::borrow_unchecked(|pmc| calculate_master_clock_frequency(&pmc)))
-}
-
 fn get_flash_wait_states_for_clock_frequency(clock_frequency: Hertz) -> u8 {
     match clock_frequency {
         c if c.0 < 20000000 => 0,
@@ -221,7 +271,7 @@ fn get_flash_wait_states_for_clock_frequency(clock_frequency: Hertz) -> u8 {
     }
 }
 
-#[cfg(feature = "atsam4e")]
+#[cfg(any(feature = "atsam4e", feature = "atsam4n"))]
 fn set_flash_wait_states_to_maximum(efc: &EFC) {
     efc.fmr
         .modify(|_, w| unsafe { w.fws().bits(5).cloe().set_bit() });
@@ -241,7 +291,7 @@ fn set_flash_wait_states_to_maximum(efc0: &EFC0, efc1: &EFC1) {
         .modify(|_, w| unsafe { w.fws().bits(5).cloe().set_bit() });
 }
 
-#[cfg(feature = "atsam4e")]
+#[cfg(any(feature = "atsam4n", feature = "atsam4e"))]
 fn set_flash_wait_states_to_match_frequency(efc: &EFC, clock_frequency: Hertz) {
     let wait_state_count = get_flash_wait_states_for_clock_frequency(clock_frequency);
 
@@ -425,7 +475,7 @@ fn switch_master_clock_to_plla(pmc: &PMC, prescaler: u8) {
     // Set the master clock source to PLLA
     // BUGBUG: What requires the 'unsafe' on SAM4?  SVD issue?
     let clock_source: u8 = 2; // 2 = PLLA
-    #[cfg(feature = "atsam4e")]
+    #[cfg(any(feature = "atsam4e", feature = "atsam4n"))]
     pmc.pmc_mckr
         .modify(|_, w| unsafe { w.css().bits(clock_source) });
 
@@ -524,6 +574,7 @@ macro_rules! peripheral_clocks {
                     unsafe { &(*PMC::ptr()).pmc_pcer0 }
                 }
 
+                #[cfg(not(feature = "atsam4n"))]
                 pub(crate) fn pcer1(&mut self) -> &pmc::PMC_PCER1 {
                     unsafe { &(*PMC::ptr()).pmc_pcer1 }
                 }
@@ -532,6 +583,7 @@ macro_rules! peripheral_clocks {
                     unsafe { &(*PMC::ptr()).pmc_pcdr0 }
                 }
 
+                #[cfg(not(feature = "atsam4n"))]
                 pub fn into_enabled_clock(mut self) -> $PeripheralType<Enabled> {
                     if $i <= 31 {
                         let shift = $i;
@@ -544,6 +596,14 @@ macro_rules! peripheral_clocks {
                     $PeripheralType { _state: PhantomData }
                 }
 
+                #[cfg(feature = "atsam4n")]
+                pub fn into_enabled_clock(mut self) -> $PeripheralType<Enabled> {
+                    let shift = $i;
+                    self.pcer0().write_with_zero(|w| unsafe { w.bits(1 << shift) });
+                    $PeripheralType { _state: PhantomData }
+                }
+
+                #[cfg(not(feature = "atsam4n"))]
                 pub fn into_disabled_clock(mut self) -> $PeripheralType<Disabled> {
                     if $i <= 31 {
                         let shift = $i;
@@ -553,6 +613,13 @@ macro_rules! peripheral_clocks {
                         let shift = ($i - 32);
                         self.pcdr0().write_with_zero(|w| unsafe { w.bits(1 << shift) });
                     }
+                    $PeripheralType { _state: PhantomData }
+                }
+
+                #[cfg(feature = "atsam4n")]
+                pub fn into_disabled_clock(mut self) -> $PeripheralType<Disabled> {
+                    let shift = $i;
+                    self.pcdr0().write_with_zero(|w| unsafe { w.bits(1 << shift) });
                     $PeripheralType { _state: PhantomData }
                 }
 
@@ -670,6 +737,79 @@ peripheral_clocks!(
     45,
 );
 
+#[cfg(feature = "atsam4n")]
+peripheral_clocks!(
+    Uart0Clock,
+    uart_0,
+    8,
+    Uart1Clock,
+    uart_1,
+    9,
+    Uart2Clock,
+    uart_2,
+    10,
+    PioAClock,
+    pio_a,
+    11,
+    PioBClock,
+    pio_b,
+    12,
+    PioCClock,
+    pio_c,
+    13,
+    Usart0Clock,
+    usart_0,
+    14,
+    Usart1Clock,
+    usart_1,
+    15,
+    Uart3Clock,
+    uart_3,
+    16,
+    Usart2Clock,
+    usart_2,
+    17,
+    Twi0Clock,
+    twi_0,
+    19,
+    Twi1Clock,
+    twi_1,
+    20,
+    SpiClock,
+    spi,
+    21,
+    Twi2Clock,
+    twi_2,
+    22,
+    Tc0Clock,
+    tc_0,
+    23,
+    Tc1Clock,
+    tc_1,
+    24,
+    Tc2Clock,
+    tc_2,
+    25,
+    Tc3Clock,
+    tc_3,
+    26,
+    Tc4Clock,
+    tc_4,
+    27,
+    Tc5Clock,
+    tc_5,
+    28,
+    AdcClock,
+    adc,
+    29,
+    DaccClock,
+    dacc,
+    30,
+    PwmClock,
+    pwm,
+    31,
+);
+
 #[cfg(feature = "atsam4s")]
 peripheral_clocks!(
     Uart0Clock,
@@ -760,14 +900,14 @@ impl ClockController {
     pub fn new(
         pmc: PMC,
         supc: &SUPC,
-        #[cfg(feature = "atsam4e")] efc: &EFC,
+        #[cfg(any(feature = "atsam4e", feature = "atsam4n"))] efc: &EFC,
         #[cfg(feature = "atsam4s")] efc0: &EFC0,
         #[cfg(feature = "atsam4sd")] efc1: &EFC1,
         main_clock: MainClock,
         slow_clock: SlowClock,
     ) -> Self {
         set_flash_wait_states_to_maximum(
-            #[cfg(feature = "atsam4e")]
+            #[cfg(any(feature = "atsam4e", feature = "atsam4n"))]
             efc,
             #[cfg(feature = "atsam4s")]
             efc0,
@@ -777,7 +917,7 @@ impl ClockController {
         let slow_clock_frequency = setup_slow_clock(supc, slow_clock);
         let master_clock_frequency = setup_main_clock(&pmc, main_clock);
         set_flash_wait_states_to_match_frequency(
-            #[cfg(feature = "atsam4e")]
+            #[cfg(any(feature = "atsam4e", feature = "atsam4n"))]
             efc,
             #[cfg(feature = "atsam4s")]
             efc0,
@@ -818,6 +958,10 @@ impl ClockController {
                         .modify(|_, w| unsafe { w.usbs().set_bit().usbdiv().bits(usbdiv) });
                 }
             }
+        }
+
+        unsafe {
+            MASTER_CLOCK_FREQUENCY = master_clock_frequency;
         }
 
         ClockController {

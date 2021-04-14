@@ -14,6 +14,7 @@ pub enum EmbeddedProcessor {
 #[derive(Clone, Copy, Debug)]
 pub enum Family {
     AtSam4e,
+    AtSam4n,
     AtSam4s,
 }
 
@@ -23,6 +24,12 @@ pub enum Model {
     AtSam4e8e,
     AtSam4e16c,
     AtSam4e16e,
+
+    AtSam4n8a,
+    AtSam4n8b,
+    AtSam4n8c,
+    AtSam4n16b,
+    AtSam4n16c,
 
     AtSam4s2a,
     AtSam4s2b,
@@ -191,6 +198,13 @@ impl ChipId {
 
             0x2997_0EE0 => (Some(Family::AtSam4s), Some(Model::AtSam4sd32b)),
             0x29A7_0EE0 => (Some(Family::AtSam4s), Some(Model::AtSam4sd32c)),
+            
+            0x293B_0AE0 => (Some(Family::AtSam4n), Some(Model::AtSam4n8a)),
+            0x294B_0AE0 => (Some(Family::AtSam4n), Some(Model::AtSam4n8b)),
+            0x295B_0AE0 => (Some(Family::AtSam4n), Some(Model::AtSam4n8c)),
+
+            0x2946_0CE0 => (Some(Family::AtSam4n), Some(Model::AtSam4n16b)),
+            0x2956_0CE0 => (Some(Family::AtSam4n), Some(Model::AtSam4n16c)),
 
             0xA3CC_0CE0 => match chip_id.exid.read().bits() {
                 0x0012_0209 => (Some(Family::AtSam4e), Some(Model::AtSam4e8c)),

@@ -14,7 +14,7 @@ use {
 #[cfg(feature = "atsam4s")]
 use crate::gpio::{Pb2, Pb3};
 
-#[cfg(feature = "atsam4e")]
+#[cfg(any(feature = "atsam4e", feature = "atsam4n"))]
 use crate::gpio::{Pa5, Pa6, PfC};
 
 #[derive(Debug)]
@@ -187,16 +187,16 @@ macro_rules! uarts {
     }
 }
 
+#[cfg(any(feature = "atsam4e", feature = "atsam4n"))]
+uarts!(
+    Uart0: (UART0, Uart0, uart0, Pa9<PfA>, Pa10<PfA>),
+    Uart1: (UART1, Uart1, uart1, Pa5<PfC>, Pa6<PfC>),
+);
+
 #[cfg(feature = "atsam4s")]
 uarts!(
     Uart0: (UART0, Uart0, uart0, Pa9<PfA>, Pa10<PfA>),
     Uart1: (UART1, Uart1, uart1, Pb2<PfA>, Pb3<PfA>),
-);
-
-#[cfg(feature = "atsam4e")]
-uarts!(
-    Uart0: (UART0, Uart0, uart0, Pa9<PfA>, Pa10<PfA>),
-    Uart1: (UART1, Uart1, uart1, Pa5<PfC>, Pa6<PfC>),
 );
 
 pub type Serial0 = Uart0;

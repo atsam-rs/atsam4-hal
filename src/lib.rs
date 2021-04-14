@@ -24,9 +24,6 @@
 // These errors seem to have been removed in nightly, so I suspect they may not stay.
 #![allow(clippy::upper_case_acronyms)]
 
-#[macro_use]
-extern crate lazy_static;
-
 pub extern crate embedded_hal as hal;
 pub use hal::digital::v2::*;
 
@@ -38,6 +35,17 @@ pub use atsam4e16e_pac as pac;
 pub use atsam4e8c_pac as pac;
 #[cfg(feature = "atsam4e8e")]
 pub use atsam4e8e_pac as pac;
+
+#[cfg(feature = "atsam4n8a")]
+pub use atsam4n8a_pac as pac;
+#[cfg(feature = "atsam4n8b")]
+pub use atsam4n8b_pac as pac;
+#[cfg(feature = "atsam4n8c")]
+pub use atsam4n8c_pac as pac;
+#[cfg(feature = "atsam4n16b")]
+pub use atsam4n16b_pac as pac;
+#[cfg(feature = "atsam4n16c")]
+pub use atsam4n16c_pac as pac;
 
 #[cfg(feature = "atsam4s2a")]
 pub use atsam4s2a_pac as pac;
