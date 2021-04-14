@@ -53,11 +53,12 @@ atsam4sd32b-pac = { version = "0.1.2", optional = true }
 atsam4sd32c-pac = { version = "0.1.2", optional = true }
 
 [features]
-default = ["atsam4e16e"]
+default = ["atsam4e16e", "ethernet"]
 unstable = []
 
 # Enable USB clock support
 usb = ["usb-device"]
+ethernet = []
 
 # atsam4e
 atsam4e = []
