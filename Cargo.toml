@@ -56,8 +56,11 @@ unstable = []
 # Enable USB clock support
 usb = []
 
+# atsam4
+atsam4 = []
+
 # atsam4e
-atsam4e = []
+atsam4e = ["atsam4"]
 atsam4e_c = [] # 100-pin
 atsam4e_e = [] # 144-pin
 
@@ -67,7 +70,7 @@ atsam4e16c = ["atsam4e", "atsam4e_c", "atsam4e16c-pac", "atsam4e16c-pac/rt"]
 atsam4e16e = ["atsam4e", "atsam4e_e", "atsam4e16e-pac", "atsam4e16e-pac/rt"]
 
 # atsam4n
-atsam4n = []
+atsam4n = ["atsam4"]
 atsam4n8a = ["atsam4n", "atsam4n8a-pac", "atsam4n8a-pac/rt"]
 atsam4n8b = ["atsam4n", "atsam4n8b-pac", "atsam4n8b-pac/rt"]
 atsam4n8c = ["atsam4n", "atsam4n8c-pac", "atsam4n8c-pac/rt"]
@@ -75,7 +78,7 @@ atsam4n16b = ["atsam4n", "atsam4n16b-pac", "atsam4n16b-pac/rt"]
 atsam4n16c = ["atsam4n", "atsam4n16c-pac", "atsam4n16c-pac/rt"]
 
 # atsam4s
-atsam4s = []
+atsam4s = ["atsam4"]
 atsam4s_a = [] # 48-pin
 atsam4s_b = [] # 64-pin
 atsam4s_c = [] # 100-pin

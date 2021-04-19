@@ -4,6 +4,8 @@ use {
     hal::digital::v2::{InputPin, OutputPin},
 };
 
+use super::{Input, Output};
+
 #[cfg(feature = "atsam4e")]
 use {
     crate::clock::{Enabled, PioAClock, PioBClock, PioDClock},
@@ -76,20 +78,6 @@ impl Ports {
             pioe: PhantomData,
         }
     }
-}
-
-/// Represents a pin configured for input.
-/// The MODE type is typically one of `Floating`, `PullDown` or
-/// `PullUp`.
-pub struct Input<MODE> {
-    _mode: PhantomData<MODE>,
-}
-
-/// Represents a pin configured for output.
-/// The MODE type is typically one of `PushPull`, or
-/// `OpenDrain`.
-pub struct Output<MODE> {
-    _mode: PhantomData<MODE>,
 }
 
 /// Peripheral Function A
