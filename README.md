@@ -1,6 +1,6 @@
 # Microchip/Atmel ATSAM4 HAL for Rust
 
-This repository holds the Hardware Abstractino Layer Crate for the Microchip/Atmel `ATSAM4` microcontroller family.
+This repository holds the Hardware Abstraction Layer Crate for the Microchip/Atmel `ATSAM4` microcontroller family.
 
 [![Build Status](https://github.com/atsam4-rs/atsam4-hal/workflows/Rust/badge.svg)](https://github.com/atsam4-rs/atsam4-hal/actions)
 [![Docs](https://docs.rs/atsam4-hal/badge.svg)](https://docs.rs/atsam4-hal/latest/)

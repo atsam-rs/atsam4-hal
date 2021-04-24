@@ -76,9 +76,10 @@ pub use atsam4sd32b_pac as pac;
 #[cfg(feature = "atsam4sd32c")]
 pub use atsam4sd32c_pac as pac;
 
-pub use embedded_time as time;
-
+#[cfg(all(feature = "usb", any(feature = "atsam4e", feature = "atsam4s")))]
 use core::mem;
+
+pub use embedded_time as time;
 
 pub mod chipid;
 pub mod clock;
@@ -88,6 +89,8 @@ pub mod prelude;
 pub mod rtt;
 pub mod serial;
 pub mod static_memory_controller;
+#[cfg(all(feature = "usb", any(feature = "atsam4e", feature = "atsam4s")))]
+pub mod udp;
 pub mod watchdog;
 
 /// Borrows a peripheral without checking if it has already been taken
@@ -95,6 +98,7 @@ unsafe trait BorrowUnchecked {
     fn borrow_unchecked<T>(f: impl FnOnce(&mut Self) -> T) -> T;
 }
 
+#[cfg(all(feature = "usb", any(feature = "atsam4e", feature = "atsam4s")))]
 macro_rules! borrow_unchecked {
     ($($peripheral:ident),*) => {
         $(
@@ -108,4 +112,5 @@ macro_rules! borrow_unchecked {
     }
 }
 
-borrow_unchecked!(PMC);
+#[cfg(all(feature = "usb", any(feature = "atsam4e", feature = "atsam4s")))]
+borrow_unchecked!(UDP, PMC);

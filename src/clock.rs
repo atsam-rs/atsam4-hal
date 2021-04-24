@@ -16,6 +16,9 @@ use embedded_time::rate::Hertz;
 
 static mut MASTER_CLOCK_FREQUENCY: Hertz = Hertz(0);
 
+#[cfg(all(feature = "atsam4s", feature = "usb"))]
+static mut PLLB_MULTIPLIER: u16 = 0;
+
 // NOTE: More frequencies and crystals can be added
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MainClock {
@@ -181,6 +184,8 @@ fn setup_main_clock(pmc: &PMC, main_clock: MainClock) -> Hertz {
                 let multiplier: u16 = 16;
                 let divider: u8 = 2;
                 enable_pllb_clock(pmc, multiplier, divider);
+
+                unsafe { PLLB_MULTIPLIER = multiplier }; // Save for reenable_pllb_clock
             }
 
             // 0 = no prescaling
@@ -504,8 +509,16 @@ fn enable_pllb_clock(pmc: &PMC, multiplier: u16, divider: u8) {
     });
 }
 
+/// Used to re-enable pllb clock if disabled later at runtime
+/// For use with UDP suspend
 #[cfg(all(feature = "atsam4s", feature = "usb"))]
-fn disable_pllb_clock(pmc: &PMC) {
+pub fn reenable_pllb_clock(pmc: &PMC) {
+    pmc.ckgr_pllbr
+        .modify(|_, w| unsafe { w.mulb().bits(PLLB_MULTIPLIER) });
+}
+
+#[cfg(all(feature = "atsam4s", feature = "usb"))]
+pub fn disable_pllb_clock(pmc: &PMC) {
     pmc.ckgr_pllbr.modify(|_, w| unsafe { w.mulb().bits(0) });
 }
 
@@ -515,7 +528,7 @@ fn is_pllb_locked(pmc: &PMC) -> bool {
 }
 
 #[cfg(all(feature = "atsam4s", feature = "usb"))]
-fn wait_for_pllb_lock(pmc: &PMC) {
+pub fn wait_for_pllb_lock(pmc: &PMC) {
     while !is_pllb_locked(pmc) {}
 }
 
@@ -573,6 +586,11 @@ macro_rules! peripheral_clocks {
                 }
 
                 #[cfg(not(feature = "atsam4n"))]
+                pub(crate) fn pcdr1(&mut self) -> &pmc::PMC_PCDR1 {
+                    unsafe { &(*PMC::ptr()).pmc_pcdr1 }
+                }
+
+                #[cfg(not(feature = "atsam4n"))]
                 pub fn into_enabled_clock(mut self) -> $PeripheralType<Enabled> {
                     if $i <= 31 {
                         let shift = $i;
@@ -600,7 +618,7 @@ macro_rules! peripheral_clocks {
                     }
                     else {
                         let shift = ($i - 32);
-                        self.pcdr0().write_with_zero(|w| unsafe { w.bits(1 << shift) });
+                        self.pcdr1().write_with_zero(|w| unsafe { w.bits(1 << shift) });
                     }
                     $PeripheralType { _state: PhantomData }
                 }
@@ -942,7 +960,7 @@ impl ClockController {
                 {
                     wait_for_pllb_lock(&pmc);
 
-                    let usbdiv = 2;
+                    let usbdiv = 1;
                     pmc.pmc_usb
                         .modify(|_, w| unsafe { w.usbs().set_bit().usbdiv().bits(usbdiv) });
                 }

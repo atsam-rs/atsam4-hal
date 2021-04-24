@@ -44,10 +44,20 @@ jobs:
           command: check
           args: --target thumbv7em-none-eabihf --no-default-features --features ${{ matrix.mcu }}
       - uses: actions-rs/cargo@v1
-        if: ${{ contains(matrix.mcu, 'atsam4s') }}
+        if: ${{ contains(matrix.mcu, 'atsam4e') }}
+        with:
+          command: check
+          args: --target thumbv7em-none-eabihf --no-default-features --features ${{ matrix.mcu }},usb
+      - uses: actions-rs/cargo@v1
+        if: ${{ contains(matrix.mcu, 'atsam4s') || contains(matrix.mcu, 'atsam4n') }}
         with:
           command: check
           args: --target thumbv7em-none-eabi --no-default-features --features ${{ matrix.mcu }}
+      - uses: actions-rs/cargo@v1
+        if: ${{ contains(matrix.mcu, 'atsam4s') }}
+        with:
+          command: check
+          args: --target thumbv7em-none-eabi --no-default-features --features ${{ matrix.mcu }},usb
 
   build:
     name: Build
@@ -58,10 +68,16 @@ jobs:
         with:
           toolchain: stable
           override: true
+      # Default build
       - uses: actions-rs/cargo@v1
         with:
           command: build
           args: --target x86_64-unknown-linux-gnu
+      # USB build
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --target x86_64-unknown-linux-gnu --feature usb
 
   fmt:
     name: Rustfmt
@@ -92,6 +108,16 @@ jobs:
         with:
           command: clippy
           args: --target x86_64-unknown-linux-gnu -- -D warnings
+      # Test USB + atsam4e
+      - uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --target x86_64-unknown-linux-gnu --features usb -- -D warnings
+      # Test USB + atsam4s
+      - uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --target x86_64-unknown-linux-gnu --no-default-features --features atsam4sd32c,usb -- -D warnings
 
   doc:
     name: Doc Check
