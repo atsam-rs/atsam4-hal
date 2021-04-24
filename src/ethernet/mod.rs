@@ -5,26 +5,22 @@ use crate::{
 use core::marker::PhantomData;
 use paste::paste;
 
+mod descriptor_block;
+use descriptor_block::*;
+
 mod eui48;
 use eui48::Identifier as MacAddress;
 
-mod mii;
-use mii::*;
+mod phy;
+use phy::*;
 
-mod rxbufdescblock;
-use rxbufdescblock::*;
+mod rx;
+pub use rx::*;
 
-mod txbufdescblock;
-use txbufdescblock::*;
+mod tx;
+pub use tx::*;
 
-// Module static definitions
-const TX_BUFFER_COUNT: usize = 16;
-const RX_BUFFER_COUNT: usize = 16;
-
-lazy_static! {
-    static ref RX_DESC_BLOCK: RxBufDescBlock<RX_BUFFER_COUNT> = RxBufDescBlock::new();
-    static ref TX_DESC_BLOCK: TxBufDescBlock<TX_BUFFER_COUNT> = TxBufDescBlock::new();
-}
+const MTU: usize = 1522;
 
 pub struct EthernetOptions {
     pub copy_all_frames: bool,
@@ -78,7 +74,10 @@ pub struct EthernetController {
 }
 
 impl EthernetController {
-    pub fn new(gmac: (GMAC, GmacClock<Enabled>), options: EthernetOptions) -> Self {
+    fn new(
+        gmac: (GMAC, GmacClock<Enabled>), 
+        options: EthernetOptions
+    ) -> Self {
         let mut e = EthernetController {
             gmac: gmac.0,
             clock: PhantomData,

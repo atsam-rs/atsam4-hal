@@ -85,7 +85,7 @@ pub mod chipid;
 pub mod clock;
 pub mod delay;
 #[cfg(feature = "ethernet")]
-pub mod ethernet_controller;
+pub mod ethernet;
 pub mod gpio;
 pub mod prelude;
 pub mod rtt;
