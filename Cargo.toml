@@ -21,8 +21,8 @@ nb = "0.1.0"
 paste = "1.0"
 usb-device = { git = "https://github.com/haata/usb-device.git", optional = true }
 #usb-device = { version = "0.2", optional = true }
+vcell = "0.1"
 void = { version = "1.0.2", default-features = false }
-volatile = "0.4.1"
 
 # atsam4e
 atsam4e8c-pac = { version = "0.1.7", optional = true }

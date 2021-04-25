@@ -6,19 +6,12 @@ use core::marker::PhantomData;
 use paste::paste;
 
 mod descriptor_block;
-use descriptor_block::*;
-
 mod eui48;
 use eui48::Identifier as MacAddress;
 
 mod phy;
-use phy::*;
-
 mod rx;
-pub use rx::*;
-
 mod tx;
-pub use tx::*;
 
 const MTU: usize = 1522;
 
@@ -74,7 +67,7 @@ pub struct EthernetController {
 }
 
 impl EthernetController {
-    fn new(
+    pub fn new(
         gmac: (GMAC, GmacClock<Enabled>), 
         options: EthernetOptions
     ) -> Self {

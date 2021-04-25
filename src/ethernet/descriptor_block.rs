@@ -4,7 +4,7 @@ pub trait DescriptorEntry {
 }
 
 #[repr(C)]
-struct DescriptorBlock<T:Copy + Default + DescriptorEntry, const COUNT: usize, const MTU: usize> {
+pub struct DescriptorBlock<T:Copy + Default + DescriptorEntry, const COUNT: usize, const MTU: usize> {
     descriptors: [T; COUNT],
     buffers: [[u8; MTU]; COUNT],
 }
