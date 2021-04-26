@@ -19,6 +19,7 @@ embedded-time = "0.10.1"
 log = "0.4"
 nb = "0.1.0"
 paste = "1.0"
+smoltcp = { version = "0.7.1", default-features = false, features = ["ethernet", "proto-ipv4", "proto-dhcpv4", "socket-udp", "socket-tcp", "socket-icmp"], optional = true }
 usb-device = { git = "https://github.com/haata/usb-device.git", optional = true }
 #usb-device = { version = "0.2", optional = true }
 vcell = "0.1"
@@ -59,7 +60,7 @@ unstable = []
 
 # Enable USB clock support
 usb = ["usb-device"]
-ethernet = []
+ethernet = ["smoltcp"]
 
 # atsam4e
 atsam4e = []

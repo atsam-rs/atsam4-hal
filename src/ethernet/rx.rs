@@ -1,5 +1,5 @@
-use vcell::VolatileCell;
-use super::descriptor_block::DescriptorEntry;
+use super::descriptor_block::{DescriptorBlock, DescriptorEntry};
+use super::VolatileReadWrite;
 
 pub struct RxDescriptorReader(u32, u32);
 impl RxDescriptorReader {
@@ -13,7 +13,7 @@ impl RxDescriptorReader {
     }
 
     // Word 1 bits
-    pub fn frame_length_in_bytes(&self) -> u16 {
+    pub fn buffer_length(&self) -> u16 {
         //!todo - If jumbo frames are enabled, this needs to take into account the 13th bit as well.
         (self.1 & 0x0000_0FFF) as u16
     }
@@ -54,39 +54,81 @@ impl RxDescriptorWriter {
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub struct RxDescriptor {
-    word0: VolatileCell<u32>,
-    word1: VolatileCell<u32>,
+    // NOTE: Only read or write these fields using volatile operations
+    word0: u32,
+    word1: u32,
 }
 
 impl RxDescriptor {
     pub fn read(&self) -> RxDescriptorReader {
-        RxDescriptorReader(self.word0.get(), self.word1.get())
+        RxDescriptorReader(self.word0.read_volatile(), self.word1.read_volatile())
     }
 
     pub fn modify<F: FnOnce(RxDescriptorWriter) -> RxDescriptorWriter>(&mut self, f: F) {
-        let w = RxDescriptorWriter(self.word0.get(), self.word1.get());
+        let w = RxDescriptorWriter(self.word0.read_volatile(), self.word1.read_volatile());
         let result = f(w);
-        self.word0.set(result.0);
-        self.word1.set(result.1);
+        self.word0.write_volatile(result.0);
+        self.word1.write_volatile(result.1);
     }
 }
 
 impl Default for RxDescriptor {
     fn default() -> Self {
         RxDescriptor {
-            word0: VolatileCell::new(0),
-            word1: VolatileCell::new(0),
+            word0: 0,
+            word1: 0,
         }
     }
 }
 
 impl DescriptorEntry for RxDescriptor {
+    fn initialize(&mut self, address: *const u8) {
+        self.modify(|w| w.set_address(address));
+    }
+
     fn set_wrap(&mut self) {
         self.modify(|w| w.set_wrap());
     }
+}
 
-    fn set_address(&mut self, address: *const u8) {
-        self.modify(|w| w.set_address(address));
+pub enum RxError {
+    WouldBlock,
+}
+
+trait RxDescriptorBlockExt {
+    fn setup_dma() -> Result<(), RxError>;
+    fn receive<F: FnOnce(&mut [u8], u16)>(&mut self, f: F) -> Result<(), RxError>;
+}
+
+impl<const COUNT: usize, const MTU: usize> RxDescriptorBlockExt for DescriptorBlock<RxDescriptor, COUNT, MTU> {
+    fn setup_dma() -> Result<(), RxError> {
+        Ok(())
+    }
+
+    fn receive<F: FnOnce(&mut [u8], u16)>(&mut self, f: F) -> Result<(), RxError> {
+        // Check if the next entry is still being used by the GMAC...if so, 
+        // indicate there's no more entries and the client has to wait for one to
+        // become available.
+        let (next_descriptor, next_buffer) = self.next_mut();
+        let descriptor_properties = next_descriptor.read();
+        if !descriptor_properties.is_owned() {
+            return Err(RxError::WouldBlock);
+        }
+
+        let length = descriptor_properties.buffer_length();
+
+        // Call the closure to copy data out of the buffer
+        f(next_buffer, length);
+
+        // Indicate that the descriptor is no longer owned by software and is available
+        // for the GMAC to write into.
+        next_descriptor.modify(|w| w.clear_owned());
+
+        // This entry has been consumed, indicate this.
+        self.increment_next_entry();
+
+        Ok(())
     }
 }

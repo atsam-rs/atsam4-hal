@@ -13,7 +13,29 @@ mod phy;
 mod rx;
 mod tx;
 
+#[cfg(feature = "smoltcp")]
+mod smoltcp;
+
 const MTU: usize = 1522;
+
+trait VolatileReadWrite<T> {
+    fn read_volatile(&self) -> T;
+    fn write_volatile(&mut self, new_value: T);
+}
+
+impl VolatileReadWrite<u32> for u32 {
+    fn read_volatile(&self) -> u32 {
+        unsafe {
+            core::ptr::read_volatile(self)
+        }
+    }
+
+    fn write_volatile(&mut self, new_value: u32) {
+        unsafe {
+            core::ptr::write_volatile(self, new_value);
+        }
+    }
+}
 
 pub struct EthernetOptions {
     pub copy_all_frames: bool,
