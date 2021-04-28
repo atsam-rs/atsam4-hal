@@ -1,7 +1,7 @@
 //! General Purpose Input / Output
 use {
     core::marker::PhantomData,
-    hal::digital::v2::{InputPin, OutputPin},
+    hal::digital::v2::{toggleable, InputPin, OutputPin, StatefulOutputPin},
 };
 
 #[cfg(feature = "atsam4e")]
@@ -282,6 +282,14 @@ macro_rules! pin {
                 unsafe { &(*$PIO::ptr()).ifscdr }
             }
 
+            pub(crate) fn odsr(&self) -> &$pio::ODSR {
+                unsafe { &(*$PIO::ptr()).odsr }
+            }
+
+            pub(crate) fn pdsr(&self) -> &$pio::PDSR {
+                unsafe { &(*$PIO::ptr()).pdsr }
+            }
+
             fn enable_pin(&mut self) {
                 self.per().write_with_zero(|w| unsafe { w.bits(1 << $i) });
             }
@@ -408,13 +416,11 @@ macro_rules! pin {
             type Error = ();
 
             fn is_high(&self) -> Result<bool, Self::Error> {
-                Ok(false)
-                //                Ok(unsafe { (((*PORT::ptr()).$in.read().bits()) & (1 << $pin_no)) != 0 })
+                Ok(self.pdsr().read().bits() & (1 << $i) != 0)
             }
 
             fn is_low(&self) -> Result<bool, Self::Error> {
-                Ok(false)
-                //                Ok(unsafe { (((*PORT::ptr()).$in.read().bits()) & (1 << $pin_no)) == 0 })
+                Ok(self.pdsr().read().bits() & (1 << $i) == 0)
             }
         }
 
@@ -431,6 +437,19 @@ macro_rules! pin {
                 Ok(())
             }
         }
+
+        impl<MODE> StatefulOutputPin for $PinType<Output<MODE>> {
+            fn is_set_high(&self) -> Result<bool, Self::Error> {
+                Ok(self.odsr().read().bits() & (1 << $i) != 0)
+            }
+
+            fn is_set_low(&self) -> Result<bool, Self::Error> {
+                Ok(self.odsr().read().bits() & (1 << $i) == 0)
+            }
+        }
+
+        /// Software toggle (uses StatefulOutputPin and OutputPin)
+        impl<MODE> toggleable::Default for $PinType<Output<MODE>> {}
     };
 }
 

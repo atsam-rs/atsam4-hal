@@ -188,4 +188,13 @@ impl RealTimeTimer {
     pub fn disable_prescaler_interrupt(&mut self) {
         self.rtt.mr.modify(|_, w| w.rttincien().clear_bit());
     }
+
+    /// Clear interrupt status
+    /// This will clear both prescaler and alarm interrupts
+    pub fn clear_interrupt_flags(&mut self) {
+        let _rtt_sr = self.rtt.sr.read();
+
+        // Reset the timer (to ensure we're periodic)
+        self.rtt.mr.modify(|_, w| w.rttrst().set_bit());
+    }
 }
