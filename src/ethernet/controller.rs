@@ -5,9 +5,11 @@ use crate::{
 use super::{
     builder::Builder,
     eui48::Identifier as EthernetAddress,
-    phy::{Phy, Register},
+    phy::{Phy, Register, Reader as PhyReader},
+    descriptor_block::DescriptorBlock,
+    rx::RxDescriptor,
+    tx::TxDescriptor,
 };
-use embedded_time::rate::*;
 use core::marker::PhantomData;
 use paste::paste;
 
@@ -39,16 +41,20 @@ macro_rules! define_ethernet_address_function {
     };
 }
 
-pub struct Controller {
+pub struct Controller<const RXCOUNT: usize, const TXCOUNT: usize> {
     gmac: GMAC,
     clock: PhantomData<GmacClock<Enabled>>,
+    rx: DescriptorBlock<RxDescriptor, RXCOUNT, 1522>,
+    tx: DescriptorBlock<TxDescriptor, TXCOUNT, 1522>,
 }
 
-impl Controller {
+impl<const RXCOUNT: usize, const TXCOUNT: usize>  Controller<RXCOUNT, TXCOUNT> {
     pub(super) fn new(gmac: GMAC, _: GmacClock<Enabled>, builder: Builder) -> Self {
         let mut e = Controller {
             gmac,
             clock: PhantomData,
+            rx: DescriptorBlock::new(),
+            tx: DescriptorBlock::new(),
         };
 
         // Reset the GMAC to its reset state.
@@ -80,6 +86,10 @@ impl Controller {
 
     pub fn send<F: FnOnce([&mut u8])>(&self, _size: usize, _f: F) {
         unimplemented!()
+    }
+
+    pub fn status(&self) -> PhyReader {
+        self.read()
     }
 
     fn reset(&mut self) {
@@ -185,7 +195,7 @@ impl Controller {
     }
 }
 
-impl Phy for Controller {
+impl<const RXCOUNT: usize, const TXCOUNT: usize> Phy for Controller<RXCOUNT, TXCOUNT> {
     fn read_register(&self, register: Register) -> u16 {
         self.wait_for_idle();
         self.gmac.man.modify(|r, w| unsafe { w.

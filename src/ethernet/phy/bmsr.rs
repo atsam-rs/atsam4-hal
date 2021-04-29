@@ -16,8 +16,8 @@ enum BitNumbers {
 
 pub struct Bmsr(u16);
 impl Bmsr {
-    pub fn new(value: u16) -> Self {
-        Bmsr(value)
+    pub fn new(initial_value: u16) -> Self {
+        Bmsr(initial_value)
     }
 
     pub fn has_extended_capability(&self) -> bool {

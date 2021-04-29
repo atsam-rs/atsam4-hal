@@ -62,7 +62,7 @@ impl Builder {
         self.disable_broadcast
     }
 
-    pub fn freeze(self, gmac: GMAC, clock: GmacClock<Enabled>) -> Controller {
+    pub fn freeze<const RXCOUNT: usize, const TXCOUNT: usize>(self, gmac: GMAC, clock: GmacClock<Enabled>) -> Controller<RXCOUNT, TXCOUNT> {
         Controller::new(gmac, clock, self)
     }
 }
