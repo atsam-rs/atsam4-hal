@@ -1,5 +1,5 @@
+#[derive(Clone, Copy)]
 pub struct Identifier([u8; 6]);
-
 impl Identifier {
     pub fn new(identifier: [u8; 6]) -> Self {
         Identifier(identifier)
