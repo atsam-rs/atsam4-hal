@@ -2,11 +2,13 @@
 use {
     core::marker::PhantomData,
     hal::digital::v2::{toggleable, InputPin, OutputPin, StatefulOutputPin},
+    paste::paste,
 };
 
 #[cfg(feature = "atsam4e")]
 use {
     crate::clock::{Enabled, PioAClock, PioBClock, PioDClock},
+    crate::pac::MATRIX,
     crate::pac::{pioa, piob, piod, PIOA, PIOB, PIOD},
 };
 
@@ -19,12 +21,14 @@ use {
 #[cfg(feature = "atsam4n")]
 use {
     crate::clock::{Enabled, PioAClock, PioBClock, PioCClock},
+    crate::pac::MATRIX,
     crate::pac::{pioa, piob, pioc, PIOA, PIOB, PIOC},
 };
 
 #[cfg(feature = "atsam4s")]
 use {
     crate::clock::{Enabled, PioAClock, PioBClock},
+    crate::pac::MATRIX,
     crate::pac::{pioa, piob, PIOA, PIOB},
 };
 
@@ -100,6 +104,8 @@ pub struct PfB;
 pub struct PfC;
 /// Peripheral Function D
 pub struct PfD;
+/// System Function
+pub struct SysFn;
 
 /// Floating Input
 pub struct Floating;
@@ -117,7 +123,7 @@ macro_rules! pins {
     ([
         $($PinTypeA:ident: ($pin_identA:ident, $pin_noA:expr),)+
     ],[
-        $($PinTypeB:ident: ($pin_identB:ident, $pin_noB:expr),)+
+        $($PinTypeB:ident: ($pin_identB:ident, $pin_noB:expr, $sysioB:ident),)+
     ],[
         $($PinTypeC:ident: ($pin_identC:ident, $pin_noC:expr),)+
     ],[
@@ -182,22 +188,291 @@ macro_rules! pins {
 
         $(
             pin!($PinTypeA, $pin_identA, $pin_noA, PIOA, pioa);
+            pin_sysio!($PinTypeA, $pin_noA, false);
         )+
         $(
             pin!($PinTypeB, $pin_identB, $pin_noB, PIOB, piob);
+            pin_sysio!($PinTypeB, $pin_noB, $sysioB);
         )+
         $(
             #[cfg(any(feature = "atsam4n", feature = "atsam4s_c", feature = "atsam4e_e"))]
             pin!($PinTypeC, $pin_identC, $pin_noC, PIOC, pioc);
+            #[cfg(any(feature = "atsam4n", feature = "atsam4s_c", feature = "atsam4e_e"))]
+            pin_sysio!($PinTypeC, $pin_noC, false);
         )+
         $(
             #[cfg(feature = "atsam4e")]
             pin!($PinTypeD, $pin_identD, $pin_noD, PIOD, piod);
+            #[cfg(feature = "atsam4e")]
+            pin_sysio!($PinTypeD, $pin_noD, false);
         )+
         $(
             #[cfg(feature = "atsam4e_e")]
             pin!($PinTypeE, $pin_identE, $pin_noE, PIOE, pioe);
+            #[cfg(feature = "atsam4e_e")]
+            pin_sysio!($PinTypeE, $pin_noE, false);
         )+
+    };
+}
+
+/// System I/O Configuration setup
+/// Some IO pins have an extra configuration used to disable some special default peripheral config
+/// This must be set in order to use those pins as GPIO (or other peripherals).
+/// The macro here adds the necessary register calls to make this happen for those pins.
+macro_rules! pin_sysio {
+    (
+        $PinType:ident,
+        $i:expr,
+        false
+    ) => {
+        impl<MODE> $PinType<MODE> {
+            fn prepare_pin_for_function_use(&mut self) {
+                self.pudr().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Disable Pullup
+                self.ppddr().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Disable Pulldown
+                self.mddr().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Disable Multi-drive (open drain)
+                self.ifscdr()
+                    .write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Disable Glitch filter (Debounce)
+            }
+
+            fn prepare_pin_for_input_use(&mut self) {
+                self.disable_pin_interrupt(); // Disable interrupt
+                self.mddr().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Disable open-drain/multi-drive
+                self.odr().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Disable output mode
+            }
+
+            pub fn into_peripheral_function_a(mut self, _matrix: &MATRIX) -> $PinType<PfA> {
+                self.prepare_pin_for_function_use();
+                self.abcdsr1()
+                    .modify(|r, w| unsafe { w.bits(r.bits() & !(1 << $i)) });
+                self.abcdsr2()
+                    .modify(|r, w| unsafe { w.bits(r.bits() & !(1 << $i)) });
+                self.disable_pin();
+
+                $PinType { _mode: PhantomData }
+            }
+
+            pub fn into_peripheral_function_b(mut self, _matrix: &MATRIX) -> $PinType<PfB> {
+                self.prepare_pin_for_function_use();
+                self.abcdsr1()
+                    .modify(|r, w| unsafe { w.bits(r.bits() | (1 << $i)) }); // Set up peripheral function
+                self.abcdsr2()
+                    .modify(|r, w| unsafe { w.bits(r.bits() & !(1 << $i)) });
+                self.disable_pin();
+
+                $PinType { _mode: PhantomData }
+            }
+
+            pub fn into_peripheral_function_c(mut self, _matrix: &MATRIX) -> $PinType<PfC> {
+                self.prepare_pin_for_function_use();
+                self.abcdsr1()
+                    .modify(|r, w| unsafe { w.bits(r.bits() & !(1 << $i)) }); // Set up peripheral function
+                self.abcdsr2()
+                    .modify(|r, w| unsafe { w.bits(r.bits() | (1 << $i)) });
+                self.disable_pin();
+
+                $PinType { _mode: PhantomData }
+            }
+
+            pub fn into_peripheral_function_d(mut self, _matrix: &MATRIX) -> $PinType<PfD> {
+                self.prepare_pin_for_function_use();
+                self.abcdsr1()
+                    .modify(|r, w| unsafe { w.bits(r.bits() | (1 << $i)) }); // Set up peripheral function
+                self.abcdsr2()
+                    .modify(|r, w| unsafe { w.bits(r.bits() | (1 << $i)) });
+                self.disable_pin();
+
+                $PinType { _mode: PhantomData }
+            }
+
+            pub fn into_floating_input(mut self, _matrix: &MATRIX) -> $PinType<Input<Floating>> {
+                self.prepare_pin_for_input_use();
+                self.pudr().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Disable pull-up
+                self.ppddr().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Disable pull-down
+                self.enable_pin();
+
+                $PinType { _mode: PhantomData }
+            }
+
+            pub fn into_pull_down_input(mut self, _matrix: &MATRIX) -> $PinType<Input<PullDown>> {
+                self.prepare_pin_for_input_use();
+                self.pudr().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Disable pull-up (this must happen first when enabling pull-down resistors)
+                self.ppder().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Enable pull-down
+                self.enable_pin();
+
+                $PinType { _mode: PhantomData }
+            }
+
+            pub fn into_pull_up_input(mut self, _matrix: &MATRIX) -> $PinType<Input<PullUp>> {
+                self.prepare_pin_for_input_use();
+                self.ppddr().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Disable pull-down
+                self.puer().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Enable pull-up
+                self.enable_pin();
+
+                $PinType { _mode: PhantomData }
+            }
+
+            /// Configures the pin to operate as an open drain output
+            pub fn into_open_drain_output(
+                mut self,
+                _matrix: &MATRIX,
+            ) -> $PinType<Output<OpenDrain>> {
+                self.disable_pin_interrupt();
+                self.mder().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Enable open-drain/multi-drive
+                self.oer().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Enable output mode
+                self.enable_pin(); // Enable pio mode (disables peripheral control of pin)
+
+                $PinType { _mode: PhantomData }
+            }
+
+            /// Configures the pin to operate as a push-pull output
+            pub fn into_push_pull_output(mut self, _matrix: &MATRIX) -> $PinType<Output<PushPull>> {
+                self.disable_pin_interrupt();
+                self.mddr().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Disable open-drain/multi-drive
+                self.oer().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Enable output mode
+                self.per().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Enable pio mode (disables peripheral control of pin)
+
+                $PinType { _mode: PhantomData }
+            }
+        }
+    };
+
+    (
+        $PinType:ident,
+        $i:expr,
+        true
+    ) => {
+        impl<MODE> $PinType<MODE> {
+            paste! {
+                /// Clears bit to enable system function
+                pub fn into_system_function(self, matrix: &MATRIX) -> $PinType<SysFn> {
+                    matrix.ccfg_sysio.modify(|_, w| w.[<sysio $i>]().clear_bit());
+
+                    $PinType { _mode: PhantomData }
+                }
+
+                /// Sets bit to disable system function
+                fn disable_system_function(&self, matrix: &MATRIX) {
+                    matrix.ccfg_sysio.modify(|_, w| w.[<sysio $i>]().set_bit());
+                }
+            }
+
+            fn prepare_pin_for_function_use(&mut self) {
+                self.pudr().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Disable Pullup
+                self.ppddr().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Disable Pulldown
+                self.mddr().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Disable Multi-drive (open drain)
+                self.ifscdr()
+                    .write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Disable Glitch filter (Debounce)
+            }
+
+            fn prepare_pin_for_input_use(&mut self) {
+                self.disable_pin_interrupt(); // Disable interrupt
+                self.mddr().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Disable open-drain/multi-drive
+                self.odr().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Disable output mode
+            }
+
+            pub fn into_peripheral_function_a(mut self, matrix: &MATRIX) -> $PinType<PfA> {
+                self.prepare_pin_for_function_use();
+                self.disable_system_function(matrix);
+                self.abcdsr1()
+                    .modify(|r, w| unsafe { w.bits(r.bits() & !(1 << $i)) });
+                self.abcdsr2()
+                    .modify(|r, w| unsafe { w.bits(r.bits() & !(1 << $i)) });
+                self.disable_pin();
+
+                $PinType { _mode: PhantomData }
+            }
+
+            pub fn into_peripheral_function_b(mut self, matrix: &MATRIX) -> $PinType<PfB> {
+                self.prepare_pin_for_function_use();
+                self.disable_system_function(matrix);
+                self.abcdsr1()
+                    .modify(|r, w| unsafe { w.bits(r.bits() | (1 << $i)) }); // Set up peripheral function
+                self.abcdsr2()
+                    .modify(|r, w| unsafe { w.bits(r.bits() & !(1 << $i)) });
+                self.disable_pin();
+
+                $PinType { _mode: PhantomData }
+            }
+
+            pub fn into_peripheral_function_c(mut self, matrix: &MATRIX) -> $PinType<PfC> {
+                self.prepare_pin_for_function_use();
+                self.disable_system_function(matrix);
+                self.abcdsr1()
+                    .modify(|r, w| unsafe { w.bits(r.bits() & !(1 << $i)) }); // Set up peripheral function
+                self.abcdsr2()
+                    .modify(|r, w| unsafe { w.bits(r.bits() | (1 << $i)) });
+                self.disable_pin();
+
+                $PinType { _mode: PhantomData }
+            }
+
+            pub fn into_peripheral_function_d(mut self, matrix: &MATRIX) -> $PinType<PfD> {
+                self.prepare_pin_for_function_use();
+                self.disable_system_function(matrix);
+                self.abcdsr1()
+                    .modify(|r, w| unsafe { w.bits(r.bits() | (1 << $i)) }); // Set up peripheral function
+                self.abcdsr2()
+                    .modify(|r, w| unsafe { w.bits(r.bits() | (1 << $i)) });
+                self.disable_pin();
+
+                $PinType { _mode: PhantomData }
+            }
+
+            pub fn into_floating_input(mut self, matrix: &MATRIX) -> $PinType<Input<Floating>> {
+                self.prepare_pin_for_input_use();
+                self.disable_system_function(matrix);
+                self.pudr().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Disable pull-up
+                self.ppddr().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Disable pull-down
+                self.enable_pin();
+
+                $PinType { _mode: PhantomData }
+            }
+
+            pub fn into_pull_down_input(mut self, matrix: &MATRIX) -> $PinType<Input<PullDown>> {
+                self.prepare_pin_for_input_use();
+                self.disable_system_function(matrix);
+                self.pudr().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Disable pull-up (this must happen first when enabling pull-down resistors)
+                self.ppder().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Enable pull-down
+                self.enable_pin();
+
+                $PinType { _mode: PhantomData }
+            }
+
+            pub fn into_pull_up_input(mut self, matrix: &MATRIX) -> $PinType<Input<PullUp>> {
+                self.prepare_pin_for_input_use();
+                self.disable_system_function(matrix);
+                self.ppddr().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Disable pull-down
+                self.puer().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Enable pull-up
+                self.enable_pin();
+
+                $PinType { _mode: PhantomData }
+            }
+
+            /// Configures the pin to operate as an open drain output
+            pub fn into_open_drain_output(
+                mut self,
+                matrix: &MATRIX,
+            ) -> $PinType<Output<OpenDrain>> {
+                self.disable_pin_interrupt();
+                self.disable_system_function(matrix);
+                self.mder().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Enable open-drain/multi-drive
+                self.oer().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Enable output mode
+                self.enable_pin(); // Enable pio mode (disables peripheral control of pin)
+
+                $PinType { _mode: PhantomData }
+            }
+
+            /// Configures the pin to operate as a push-pull output
+            pub fn into_push_pull_output(mut self, matrix: &MATRIX) -> $PinType<Output<PushPull>> {
+                self.disable_pin_interrupt();
+                self.disable_system_function(matrix);
+                self.mddr().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Disable open-drain/multi-drive
+                self.oer().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Enable output mode
+                self.per().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Enable pio mode (disables peripheral control of pin)
+
+                $PinType { _mode: PhantomData }
+            }
+        }
     };
 }
 
@@ -305,111 +580,6 @@ macro_rules! pin {
             fn disable_pin_interrupt(&mut self) {
                 self.idr().write_with_zero(|w| unsafe { w.bits(1 << $i) });
             }
-
-            fn prepare_pin_for_function_use(&mut self) {
-                self.pudr().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Disable Pullup
-                self.ppddr().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Disable Pulldown
-                self.mddr().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Disable Multi-drive (open drain)
-                self.ifscdr()
-                    .write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Disable Glitch filter (Debounce)
-            }
-
-            fn prepare_pin_for_input_use(&mut self) {
-                self.disable_pin_interrupt(); // Disable interrupt
-                self.mddr().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Disable open-drain/multi-drive
-                self.odr().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Disable output mode
-            }
-
-            pub fn into_peripheral_function_a(mut self) -> $PinType<PfA> {
-                self.prepare_pin_for_function_use();
-                self.abcdsr1()
-                    .modify(|r, w| unsafe { w.bits(r.bits() & !(1 << $i)) });
-                self.abcdsr2()
-                    .modify(|r, w| unsafe { w.bits(r.bits() & !(1 << $i)) });
-                self.disable_pin();
-
-                $PinType { _mode: PhantomData }
-            }
-
-            pub fn into_peripheral_function_b(mut self) -> $PinType<PfB> {
-                self.prepare_pin_for_function_use();
-                self.abcdsr1()
-                    .modify(|r, w| unsafe { w.bits(r.bits() | (1 << $i)) }); // Set up peripheral function
-                self.abcdsr2()
-                    .modify(|r, w| unsafe { w.bits(r.bits() & !(1 << $i)) });
-                self.disable_pin();
-
-                $PinType { _mode: PhantomData }
-            }
-
-            pub fn into_peripheral_function_c(mut self) -> $PinType<PfC> {
-                self.prepare_pin_for_function_use();
-                self.abcdsr1()
-                    .modify(|r, w| unsafe { w.bits(r.bits() & !(1 << $i)) }); // Set up peripheral function
-                self.abcdsr2()
-                    .modify(|r, w| unsafe { w.bits(r.bits() | (1 << $i)) });
-                self.disable_pin();
-
-                $PinType { _mode: PhantomData }
-            }
-
-            pub fn into_peripheral_function_d(mut self) -> $PinType<PfD> {
-                self.prepare_pin_for_function_use();
-                self.abcdsr1()
-                    .modify(|r, w| unsafe { w.bits(r.bits() | (1 << $i)) }); // Set up peripheral function
-                self.abcdsr2()
-                    .modify(|r, w| unsafe { w.bits(r.bits() | (1 << $i)) });
-                self.disable_pin();
-
-                $PinType { _mode: PhantomData }
-            }
-
-            pub fn into_floating_input(mut self) -> $PinType<Input<Floating>> {
-                self.prepare_pin_for_input_use();
-                self.pudr().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Disable pull-up
-                self.ppddr().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Disable pull-down
-                self.enable_pin();
-
-                $PinType { _mode: PhantomData }
-            }
-
-            pub fn into_pull_down_input(mut self) -> $PinType<Input<PullDown>> {
-                self.prepare_pin_for_input_use();
-                self.pudr().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Disable pull-up (this must happen first when enabling pull-down resistors)
-                self.ppder().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Enable pull-down
-                self.enable_pin();
-
-                $PinType { _mode: PhantomData }
-            }
-
-            pub fn into_pull_up_input(mut self) -> $PinType<Input<PullUp>> {
-                self.prepare_pin_for_input_use();
-                self.ppddr().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Disable pull-down
-                self.puer().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Enable pull-up
-                self.enable_pin();
-
-                $PinType { _mode: PhantomData }
-            }
-
-            /// Configures the pin to operate as an open drain output
-            pub fn into_open_drain_output(mut self) -> $PinType<Output<OpenDrain>> {
-                self.disable_pin_interrupt();
-                self.mder().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Enable open-drain/multi-drive
-                self.oer().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Enable output mode
-                self.enable_pin(); // Enable pio mode (disables peripheral control of pin)
-
-                $PinType { _mode: PhantomData }
-            }
-
-            /// Configures the pin to operate as a push-pull output
-            pub fn into_push_pull_output(mut self) -> $PinType<Output<PushPull>> {
-                self.disable_pin_interrupt();
-                self.mddr().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Disable open-drain/multi-drive
-                self.oer().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Enable output mode
-                self.per().write_with_zero(|w| unsafe { w.bits(1 << $i) }); // Enable pio mode (disables peripheral control of pin)
-
-                $PinType { _mode: PhantomData }
-            }
         }
 
         impl<MODE> InputPin for $PinType<Input<MODE>> {
@@ -487,21 +657,21 @@ pins!([
     Pa30: (pa30, 30),
     Pa31: (pa31, 31),
 ],[
-    Pb0: (pb0, 0),
-    Pb1: (pb1, 1),
-    Pb2: (pb2, 2),
-    Pb3: (pb3, 3),
-    Pb4: (pb4, 4),
-    Pb5: (pb5, 5),
-    Pb6: (pb6, 6),
-    Pb7: (pb7, 7),
-    Pb8: (pb8, 8),
-    Pb9: (pb9, 9),
-    Pb10: (pb10, 10),
-    Pb11: (pb11, 11),
-    Pb12: (pb12, 12),
-    Pb13: (pb13, 13),
-    Pb14: (pb14, 14),
+    Pb0: (pb0, 0, false),
+    Pb1: (pb1, 1, false),
+    Pb2: (pb2, 2, false),
+    Pb3: (pb3, 3, false),
+    Pb4: (pb4, 4, true), // SYSIO4 - TDI
+    Pb5: (pb5, 5, true), // SYSIO5 - TDO/TRACESWO
+    Pb6: (pb6, 6, true), // SYSIO6 - TMS/SWDIO
+    Pb7: (pb7, 7, true), // SYSIO7 - TCK/SWCLK
+    Pb8: (pb8, 8, false),
+    Pb9: (pb9, 9, false),
+    Pb10: (pb10, 10, true), // SYSIO10 - DDM
+    Pb11: (pb11, 11, true), // SYSIO11 - DDP
+    Pb12: (pb12, 12, true), // SYSIO12 - ERASE
+    Pb13: (pb13, 13, false),
+    Pb14: (pb14, 14, false),
 
     // PB15-31 do not exist.
 ],
@@ -602,12 +772,12 @@ macro_rules! define_pin_map {
         impl $Type {
             /// Returns the pins for the device
             paste! {
-                pub fn new(ports: Ports) -> Self {
+                pub fn new(ports: Ports, matrix: &MATRIX) -> Self {
                     let pins = ports.split();
                     // Create local pins with the correct type so we can put them into the
                     // pin structure below.
                     $(
-                        let [<new_pin $pin_ident>] = pins.[<p $pin_ident>].$into_method();
+                        let [<new_pin $pin_ident>] = pins.[<p $pin_ident>].$into_method(matrix);
                     )+
                     $Type {
                         $(
