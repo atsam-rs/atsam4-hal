@@ -11,6 +11,7 @@ enum BitNumber {
     Reset = 15,
 }
 
+#[derive(Clone, Copy)]
 pub struct Bmcr(pub(super) u16);
 impl Bmcr {
     pub fn new(initial_value: u16) -> Self {

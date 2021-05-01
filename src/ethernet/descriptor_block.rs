@@ -39,4 +39,13 @@ impl<T:Copy + Default + DescriptorEntry, const COUNT: usize, const MTU: usize> D
             self.next_entry += 1;
         }
     }
+
+    pub fn descriptor_table_address(&self) -> u32 {
+        let address:*const T = &self.descriptors[0];
+        let a = address as u32;
+        if a & 0x0000_0003 != 0 {
+            panic!("Unaligned buffer address in descriptor table")
+        }
+        a
+    }
 }

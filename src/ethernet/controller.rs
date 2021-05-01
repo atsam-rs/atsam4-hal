@@ -7,8 +7,8 @@ use super::{
     eui48::Identifier as EthernetAddress,
     phy::{Phy, Register, Reader as PhyReader},
     descriptor_block::DescriptorBlock,
-    rx::RxDescriptor,
-    tx::TxDescriptor,
+    rx::{RxDescriptor, RxDescriptorBlockExt},
+    tx::{TxDescriptor, TxDescriptorBlockExt},
 };
 use core::marker::PhantomData;
 use paste::paste;
@@ -44,8 +44,8 @@ macro_rules! define_ethernet_address_function {
 pub struct Controller<const RXCOUNT: usize, const TXCOUNT: usize> {
     gmac: GMAC,
     clock: PhantomData<GmacClock<Enabled>>,
-    rx: DescriptorBlock<RxDescriptor, RXCOUNT, 1522>,
-    tx: DescriptorBlock<TxDescriptor, TXCOUNT, 1522>,
+    rx: DescriptorBlock<RxDescriptor, RXCOUNT, 1500>,
+    tx: DescriptorBlock<TxDescriptor, TXCOUNT, 1500>,
 }
 
 impl<const RXCOUNT: usize, const TXCOUNT: usize>  Controller<RXCOUNT, TXCOUNT> {
@@ -81,6 +81,20 @@ impl<const RXCOUNT: usize, const TXCOUNT: usize>  Controller<RXCOUNT, TXCOUNT> {
                 _ => panic!("unexpected alternate mac address offset in 3 element array"),
             }
         }
+
+        // Initialize the GMAC's DMA controller for each buffer descriptor table.
+        e.rx.setup_dma(&e.gmac);
+        e.tx.setup_dma(&e.gmac);
+
+        // Enable receive and transmit circuits
+        e.enable_receive();
+        e.enable_transmit();
+
+        // Set up interrupt handlers
+
+        // Enable all interupts
+        unimplemented!();
+
         e
     }
 
@@ -215,6 +229,17 @@ impl<const RXCOUNT: usize, const TXCOUNT: usize> Phy for Controller<RXCOUNT, TXC
     }
 
     fn write_register(&mut self, register: Register, new_value: u16) {
+        self.wait_for_idle();
+        self.gmac.man.modify(|_, w| unsafe { w.
+            data().bits(new_value).
+            wtn().bits(0b10).                   // must always be binary 10 (0x02)
+            rega().bits(register as u8).        // phy register to read
+            phya().bits(0x0).                   // phy address
+            op().bits(0b10).                    // read = 0b01, write = 0b10
+            cltto().clear_bit().
+            wzo().clear_bit()                   // must be set to zero
+        });
+        self.wait_for_idle();
     }
 
     fn wait_for_idle(&self) {

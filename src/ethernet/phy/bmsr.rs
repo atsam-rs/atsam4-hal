@@ -14,6 +14,7 @@ enum BitNumbers {
     FullDuplex100BaseTXCapable = 14,
 }
 
+#[derive(Clone, Copy)]
 pub struct Bmsr(u16);
 impl Bmsr {
     pub fn new(initial_value: u16) -> Self {

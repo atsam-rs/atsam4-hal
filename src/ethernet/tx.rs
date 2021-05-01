@@ -1,5 +1,6 @@
 use super::descriptor_block::{DescriptorBlock, DescriptorEntry};
 use super::VolatileReadWrite;
+use crate::pac::GMAC;
 
 pub struct TxDescriptorReader(u32, u32);
 impl TxDescriptorReader {
@@ -115,14 +116,14 @@ pub enum TxError {
     WouldBlock,
 }
 
-trait TxDescriptorBlockExt {
-    fn setup_dma() -> Result<(), TxError>;
+pub trait TxDescriptorBlockExt {
+    fn setup_dma(&self, gmac: &GMAC);
     fn send<F: FnOnce(&mut [u8], u16)>(&mut self, length: u16, f: F) -> Result<(), TxError>;
 }
 
 impl<const COUNT: usize, const MTU: usize> TxDescriptorBlockExt for DescriptorBlock<TxDescriptor, COUNT, MTU> {
-    fn setup_dma() -> Result<(), TxError> {
-        Ok(())
+    fn setup_dma(&self, gmac: &GMAC) {
+        gmac.tbqb.write(|w| unsafe { w.bits(self.descriptor_table_address()) });
     }
 
     fn send<F: FnOnce(&mut [u8], u16)>(&mut self, length: u16, f: F) -> Result<(), TxError> {

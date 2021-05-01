@@ -1,5 +1,6 @@
 use super::descriptor_block::{DescriptorBlock, DescriptorEntry};
 use super::VolatileReadWrite;
+use crate::pac::GMAC;
 
 pub struct RxDescriptorReader(u32, u32);
 impl RxDescriptorReader {
@@ -97,14 +98,14 @@ pub enum RxError {
     WouldBlock,
 }
 
-trait RxDescriptorBlockExt {
-    fn setup_dma() -> Result<(), RxError>;
+pub trait RxDescriptorBlockExt {
+    fn setup_dma(&self, gmac: &GMAC);
     fn receive<F: FnOnce(&mut [u8], u16)>(&mut self, f: F) -> Result<(), RxError>;
 }
 
 impl<const COUNT: usize, const MTU: usize> RxDescriptorBlockExt for DescriptorBlock<RxDescriptor, COUNT, MTU> {
-    fn setup_dma() -> Result<(), RxError> {
-        Ok(())
+    fn setup_dma(&self, gmac: &GMAC) {
+        gmac.rbqb.write(|w| unsafe { w.bits(self.descriptor_table_address()) });
     }
 
     fn receive<F: FnOnce(&mut [u8], u16)>(&mut self, f: F) -> Result<(), RxError> {
