@@ -7,9 +7,8 @@ use {
 
 #[cfg(feature = "atsam4e")]
 use {
-    crate::clock::{Enabled, PioAClock, PioBClock, PioDClock},
-    crate::pac::MATRIX,
-    crate::pac::{pioa, piob, piod, PIOA, PIOB, PIOD},
+    crate::clock::PioDClock,
+    crate::pac::{piod, PIOD},
 };
 
 #[cfg(feature = "atsam4e_e")]
@@ -18,21 +17,14 @@ use {
     crate::pac::{pioc, pioe, PIOC, PIOE},
 };
 
-#[cfg(feature = "atsam4n")]
-use {
-    crate::clock::{Enabled, PioAClock, PioBClock, PioCClock},
-    crate::pac::MATRIX,
-    crate::pac::{pioa, piob, pioc, PIOA, PIOB, PIOC},
-};
-
-#[cfg(feature = "atsam4s")]
+#[cfg(any(feature = "atsam4e", feature = "atsam4n", feature = "atsam4s"))]
 use {
     crate::clock::{Enabled, PioAClock, PioBClock},
     crate::pac::MATRIX,
     crate::pac::{pioa, piob, PIOA, PIOB},
 };
 
-#[cfg(feature = "atsam4s_c")]
+#[cfg(any(feature = "atsam4n_c", feature = "atsam4s_c"))]
 use {
     crate::clock::PioCClock,
     crate::pac::{pioc, PIOC},
@@ -49,7 +41,7 @@ pub trait GpioExt {
 pub struct Ports {
     pioa: PhantomData<(PIOA, PioAClock<Enabled>)>,
     piob: PhantomData<(PIOB, PioBClock<Enabled>)>,
-    #[cfg(any(feature = "atsam4n", feature = "atsam4s_c", feature = "atsam4e_e"))]
+    #[cfg(any(feature = "atsam4n_c", feature = "atsam4s_c", feature = "atsam4e_e"))]
     pioc: PhantomData<(PIOC, PioCClock<Enabled>)>,
     #[cfg(feature = "atsam4e")]
     piod: PhantomData<(PIOD, PioDClock<Enabled>)>,
@@ -61,7 +53,7 @@ impl Ports {
     pub fn new(
         _pioa: (PIOA, PioAClock<Enabled>),
         _piob: (PIOB, PioBClock<Enabled>),
-        #[cfg(any(feature = "atsam4n", feature = "atsam4s_c", feature = "atsam4e_e"))] _pioc: (
+        #[cfg(any(feature = "atsam4n_c", feature = "atsam4s_c", feature = "atsam4e_e"))] _pioc: (
             PIOC,
             PioCClock<Enabled>,
         ),
@@ -72,7 +64,7 @@ impl Ports {
         Ports {
             pioa: PhantomData,
             piob: PhantomData,
-            #[cfg(any(feature = "atsam4n", feature = "atsam4s_c", feature = "atsam4e_e"))]
+            #[cfg(any(feature = "atsam4n_c", feature = "atsam4s_c", feature = "atsam4e_e"))]
             pioc: PhantomData,
             #[cfg(feature = "atsam4e")]
             piod: PhantomData,
@@ -121,41 +113,41 @@ pub struct OpenDrain;
 
 macro_rules! pins {
     ([
-        $($PinTypeA:ident: ($pin_identA:ident, $pin_noA:expr),)+
+        $($PinTypeA:ident: ($pin_identA:ident, $pin_noA:expr),)*
     ],[
-        $($PinTypeB:ident: ($pin_identB:ident, $pin_noB:expr, $sysioB:ident),)+
+        $($PinTypeB:ident: ($pin_identB:ident, $pin_noB:expr, $sysioB:ident),)*
     ],[
-        $($PinTypeC:ident: ($pin_identC:ident, $pin_noC:expr),)+
+        $($PinTypeC:ident: ($pin_identC:ident, $pin_noC:expr),)*
     ],[
-        $($PinTypeD:ident: ($pin_identD:ident, $pin_noD:expr),)+
+        $($PinTypeD:ident: ($pin_identD:ident, $pin_noD:expr),)*
     ],[
-        $($PinTypeE:ident: ($pin_identE:ident, $pin_noE:expr),)+
+        $($PinTypeE:ident: ($pin_identE:ident, $pin_noE:expr),)*
     ]) => {
         /// Holds the GPIO broken out pin instances (consumes the Ports object)
         pub struct Pins {
             $(
                 /// Pin $pin_identA
                 pub $pin_identA: $PinTypeA<Input<Floating>>,
-            )+
+            )*
             $(
                 /// Pin $pin_identB
                 pub $pin_identB: $PinTypeB<Input<Floating>>,
-            )+
+            )*
             $(
                 /// Pin $pin_identC
-                #[cfg(any(feature = "atsam4n", feature = "atsam4s_c", feature = "atsam4e_e"))]
+                #[cfg(any(feature = "atsam4n_c", feature = "atsam4s_c", feature = "atsam4e_e"))]
                 pub $pin_identC: $PinTypeC<Input<Floating>>,
-            )+
+            )*
             $(
                 /// Pin $pin_identD
                 #[cfg(feature = "atsam4e")]
                 pub $pin_identD: $PinTypeD<Input<Floating>>,
-            )+
+            )*
             $(
                 /// Pin $pin_identE
                 #[cfg(feature = "atsam4e_e")]
                 pub $pin_identE: $PinTypeE<Input<Floating>>,
-            )+
+            )*
         }
 
         impl GpioExt for Ports {
@@ -166,22 +158,22 @@ macro_rules! pins {
                 Pins {
                     $(
                         $pin_identA: $PinTypeA { _mode: PhantomData },
-                    )+
+                    )*
                     $(
                         $pin_identB: $PinTypeB { _mode: PhantomData },
-                    )+
+                    )*
                     $(
-                        #[cfg(any(feature = "atsam4n", feature = "atsam4s_c", feature = "atsam4e_e"))]
+                        #[cfg(any(feature = "atsam4n_c", feature = "atsam4s_c", feature = "atsam4e_e"))]
                         $pin_identC: $PinTypeC { _mode: PhantomData },
-                    )+
+                    )*
                     $(
                         #[cfg(feature = "atsam4e")]
                         $pin_identD: $PinTypeD { _mode: PhantomData },
-                    )+
+                    )*
                     $(
                         #[cfg(feature = "atsam4e_e")]
                         $pin_identE: $PinTypeE { _mode: PhantomData },
-                    )+
+                    )*
                 }
             }
         }
@@ -189,29 +181,29 @@ macro_rules! pins {
         $(
             pin!($PinTypeA, $pin_identA, $pin_noA, PIOA, pioa);
             pin_sysio!($PinTypeA, $pin_noA, false);
-        )+
+        )*
         $(
             pin!($PinTypeB, $pin_identB, $pin_noB, PIOB, piob);
             pin_sysio!($PinTypeB, $pin_noB, $sysioB);
-        )+
+        )*
         $(
-            #[cfg(any(feature = "atsam4n", feature = "atsam4s_c", feature = "atsam4e_e"))]
+            #[cfg(any(feature = "atsam4n_c", feature = "atsam4s_c", feature = "atsam4e_e"))]
             pin!($PinTypeC, $pin_identC, $pin_noC, PIOC, pioc);
-            #[cfg(any(feature = "atsam4n", feature = "atsam4s_c", feature = "atsam4e_e"))]
+            #[cfg(any(feature = "atsam4n_c", feature = "atsam4s_c", feature = "atsam4e_e"))]
             pin_sysio!($PinTypeC, $pin_noC, false);
-        )+
+        )*
         $(
             #[cfg(feature = "atsam4e")]
             pin!($PinTypeD, $pin_identD, $pin_noD, PIOD, piod);
             #[cfg(feature = "atsam4e")]
             pin_sysio!($PinTypeD, $pin_noD, false);
-        )+
+        )*
         $(
             #[cfg(feature = "atsam4e_e")]
             pin!($PinTypeE, $pin_identE, $pin_noE, PIOE, pioe);
             #[cfg(feature = "atsam4e_e")]
             pin_sysio!($PinTypeE, $pin_noE, false);
-        )+
+        )*
     };
 }
 
@@ -623,6 +615,7 @@ macro_rules! pin {
     };
 }
 
+#[cfg(feature = "atsam4e")]
 pins!([
     Pa0: (pa0, 0),
     Pa1: (pa1, 1),
@@ -753,6 +746,182 @@ pins!([
 
     // Pe6-31 do not exist.
 ]);
+
+#[cfg(feature = "atsam4n")]
+pins!([
+    Pa0: (pa0, 0),
+    Pa1: (pa1, 1),
+    Pa2: (pa2, 2),
+    Pa3: (pa3, 3),
+    Pa4: (pa4, 4),
+    Pa5: (pa5, 5),
+    Pa6: (pa6, 6),
+    Pa7: (pa7, 7),
+    Pa8: (pa8, 8),
+    Pa9: (pa9, 9),
+    Pa10: (pa10, 10),
+    Pa11: (pa11, 11),
+    Pa12: (pa12, 12),
+    Pa13: (pa13, 13),
+    Pa14: (pa14, 14),
+    Pa15: (pa15, 15),
+    Pa16: (pa16, 16),
+    Pa17: (pa17, 17),
+    Pa18: (pa18, 18),
+    Pa19: (pa19, 19),
+    Pa20: (pa20, 20),
+    Pa21: (pa21, 21),
+    Pa22: (pa22, 22),
+    Pa23: (pa23, 23),
+    Pa24: (pa24, 24),
+    Pa25: (pa25, 25),
+    Pa26: (pa26, 26),
+    Pa27: (pa27, 27),
+    Pa28: (pa28, 28),
+    Pa29: (pa29, 29),
+    Pa30: (pa30, 30),
+    Pa31: (pa31, 31),
+],[
+    Pb0: (pb0, 0, false),
+    Pb1: (pb1, 1, false),
+    Pb2: (pb2, 2, false),
+    Pb3: (pb3, 3, false),
+    Pb4: (pb4, 4, true), // SYSIO4 - TDI
+    Pb5: (pb5, 5, true), // SYSIO5 - TDO/TRACESWO
+    Pb6: (pb6, 6, true), // SYSIO6 - TMS/SWDIO
+    Pb7: (pb7, 7, true), // SYSIO7 - TCK/SWCLK
+    Pb8: (pb8, 8, false),
+    Pb9: (pb9, 9, false),
+    Pb10: (pb10, 10, false),
+    Pb11: (pb11, 11, false),
+    Pb12: (pb12, 12, true), // SYSIO12 - ERASE
+    Pb13: (pb13, 13, false),
+    Pb14: (pb14, 14, false),
+
+    // PB15-31 do not exist.
+],
+[
+    Pc0: (pc0, 0),
+    Pc1: (pc1, 1),
+    Pc2: (pc2, 2),
+    Pc3: (pc3, 3),
+    Pc4: (pc4, 4),
+    Pc5: (pc5, 5),
+    Pc6: (pc6, 6),
+    Pc7: (pc7, 7),
+    Pc8: (pc8, 8),
+    Pc9: (pc9, 9),
+    Pc10: (pc10, 10),
+    Pc11: (pc11, 11),
+    Pc12: (pc12, 12),
+    Pc13: (pc13, 13),
+    Pc14: (pc14, 14),
+    Pc15: (pc15, 15),
+    Pc16: (pc16, 16),
+    Pc17: (pc17, 17),
+    Pc18: (pc18, 18),
+    Pc19: (pc19, 19),
+    Pc20: (pc20, 20),
+    Pc21: (pc21, 21),
+    Pc22: (pc22, 22),
+    Pc23: (pc23, 23),
+    Pc24: (pc24, 24),
+    Pc25: (pc25, 25),
+    Pc26: (pc26, 26),
+    Pc27: (pc27, 27),
+    Pc28: (pc28, 28),
+    Pc29: (pc29, 29),
+    Pc30: (pc30, 30),
+    Pc31: (pc31, 31),
+], [], []);
+
+#[cfg(feature = "atsam4s")]
+pins!([
+    Pa0: (pa0, 0),
+    Pa1: (pa1, 1),
+    Pa2: (pa2, 2),
+    Pa3: (pa3, 3),
+    Pa4: (pa4, 4),
+    Pa5: (pa5, 5),
+    Pa6: (pa6, 6),
+    Pa7: (pa7, 7),
+    Pa8: (pa8, 8),
+    Pa9: (pa9, 9),
+    Pa10: (pa10, 10),
+    Pa11: (pa11, 11),
+    Pa12: (pa12, 12),
+    Pa13: (pa13, 13),
+    Pa14: (pa14, 14),
+    Pa15: (pa15, 15),
+    Pa16: (pa16, 16),
+    Pa17: (pa17, 17),
+    Pa18: (pa18, 18),
+    Pa19: (pa19, 19),
+    Pa20: (pa20, 20),
+    Pa21: (pa21, 21),
+    Pa22: (pa22, 22),
+    Pa23: (pa23, 23),
+    Pa24: (pa24, 24),
+    Pa25: (pa25, 25),
+    Pa26: (pa26, 26),
+    Pa27: (pa27, 27),
+    Pa28: (pa28, 28),
+    Pa29: (pa29, 29),
+    Pa30: (pa30, 30),
+    Pa31: (pa31, 31),
+],[
+    Pb0: (pb0, 0, false),
+    Pb1: (pb1, 1, false),
+    Pb2: (pb2, 2, false),
+    Pb3: (pb3, 3, false),
+    Pb4: (pb4, 4, true), // SYSIO4 - TDI
+    Pb5: (pb5, 5, true), // SYSIO5 - TDO/TRACESWO
+    Pb6: (pb6, 6, true), // SYSIO6 - TMS/SWDIO
+    Pb7: (pb7, 7, true), // SYSIO7 - TCK/SWCLK
+    Pb8: (pb8, 8, false),
+    Pb9: (pb9, 9, false),
+    Pb10: (pb10, 10, true), // SYSIO10 - DDM
+    Pb11: (pb11, 11, true), // SYSIO11 - DDP
+    Pb12: (pb12, 12, true), // SYSIO12 - ERASE
+    Pb13: (pb13, 13, false),
+    Pb14: (pb14, 14, false),
+
+    // PB15-31 do not exist.
+],
+[
+    Pc0: (pc0, 0),
+    Pc1: (pc1, 1),
+    Pc2: (pc2, 2),
+    Pc3: (pc3, 3),
+    Pc4: (pc4, 4),
+    Pc5: (pc5, 5),
+    Pc6: (pc6, 6),
+    Pc7: (pc7, 7),
+    Pc8: (pc8, 8),
+    Pc9: (pc9, 9),
+    Pc10: (pc10, 10),
+    Pc11: (pc11, 11),
+    Pc12: (pc12, 12),
+    Pc13: (pc13, 13),
+    Pc14: (pc14, 14),
+    Pc15: (pc15, 15),
+    Pc16: (pc16, 16),
+    Pc17: (pc17, 17),
+    Pc18: (pc18, 18),
+    Pc19: (pc19, 19),
+    Pc20: (pc20, 20),
+    Pc21: (pc21, 21),
+    Pc22: (pc22, 22),
+    Pc23: (pc23, 23),
+    Pc24: (pc24, 24),
+    Pc25: (pc25, 25),
+    Pc26: (pc26, 26),
+    Pc27: (pc27, 27),
+    Pc28: (pc28, 28),
+    Pc29: (pc29, 29),
+    Pc30: (pc30, 30),
+    Pc31: (pc31, 31),
+], [], []);
 
 #[macro_export]
 macro_rules! define_pin_map {
