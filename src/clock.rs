@@ -947,22 +947,24 @@ impl ClockController {
                 // This works for both sam4s and sam4e as sam4e only has 1 pll (sam4s has 2)
                 // However, using plla and pllb, lower current usage can be achieved on sam4s
                 // Per the datasheet ~1 mA
+                // NOTE: the datasheet indicates divider is USBDIV + 1
                 #[cfg(feature = "atsam4e")]
                 {
                     let usbdiv = 5;
                     pmc.pmc_usb
-                        .modify(|_, w| unsafe { w.usbdiv().bits(usbdiv) });
+                        .modify(|_, w| unsafe { w.usbdiv().bits(usbdiv - 1) });
                 }
 
                 // Use PLLB for sam4s
                 // 96 MHz / 2 = 48 MHz
+                // NOTE: the datasheet indicates divider is USBDIV + 1
                 #[cfg(feature = "atsam4s")]
                 {
                     wait_for_pllb_lock(&pmc);
 
-                    let usbdiv = 1;
+                    let usbdiv = 2;
                     pmc.pmc_usb
-                        .modify(|_, w| unsafe { w.usbs().set_bit().usbdiv().bits(usbdiv) });
+                        .modify(|_, w| unsafe { w.usbs().set_bit().usbdiv().bits(usbdiv - 1) });
                 }
             }
         }

@@ -1,4 +1,4 @@
-use crate::clock::{Enabled, UdpClock};
+use crate::clock::{Disabled, UdpClock};
 use crate::gpio::{Pb10, Pb11, SysFn};
 use crate::pac::{PMC, UDP};
 use crate::udp::Endpoint;
@@ -20,7 +20,7 @@ pub const NUM_ENDPOINTS: usize = 8;
 pub struct UdpBus {
     udp: Mutex<RefCell<UDP>>,
     endpoints: [Mutex<RefCell<Endpoint>>; NUM_ENDPOINTS],
-    clock: PhantomData<UdpClock<Enabled>>,
+    clock: PhantomData<UdpClock<Disabled>>,
     ddm: PhantomData<Pb10<SysFn>>,
     ddp: PhantomData<Pb11<SysFn>>,
     sof_errors: Mutex<RefCell<u32>>,
@@ -28,7 +28,7 @@ pub struct UdpBus {
 
 impl UdpBus {
     /// Initialize UDP as a USB device
-    pub fn new(udp: UDP, _clock: UdpClock<Enabled>, _ddm: Pb10<SysFn>, _ddp: Pb11<SysFn>) -> Self {
+    pub fn new(udp: UDP, _clock: UdpClock<Disabled>, _ddm: Pb10<SysFn>, _ddp: Pb11<SysFn>) -> Self {
         log::trace!("UdpBus::new()");
         Self {
             udp: Mutex::new(RefCell::new(udp)),
