@@ -481,6 +481,26 @@ impl UsbBus for UdpBus {
         PollResult::None
     }
 
+    /// Initiates the remote wakeup sequenec
+    fn remote_wakeup(&self) -> usb_device::Result<()> {
+        cortex_m::interrupt::free(|cs| {
+            // Check if bus has been suspended
+            // NOTE: You must wait 5 ms between host suspending the bus and initiating a remote wakeup
+            // The transceiver is disabled on bus suspend, so this is a reliable check
+            if !self.udp.borrow(cs).borrow().txvc.read().txvdis().bit() {
+                return Err(usb_device::UsbError::NotSuspended);
+            }
+
+            // Initiate remote wakeup
+            self.udp
+                .borrow(cs)
+                .borrow()
+                .glb_stat
+                .modify(|_, w| w.esr().set_bit());
+            Ok(())
+        })
+    }
+
     /// Simulates disconnection from the USB bus
     fn force_reset(&self) -> usb_device::Result<()> {
         log::trace!("UsbBus::force_reset()");
