@@ -15,10 +15,11 @@ cortex-m = "0.7.2"
 cortex-m-rt = "0.6.13"
 embedded-hal = { version = "0.2.4", features = ["unproven"] }
 embedded-time = "0.10.1"
-log = { version = "0.4", features = ["max_level_debug", "release_max_level_warn"] }
+log = "0.4"
 nb = "0.1.0"
 paste = "1.0"
-usb-device = { version = "0.2", optional = true }
+usb-device = { git = "https://github.com/haata/usb-device.git", optional = true }
+#usb-device = { version = "0.2", optional = true }
 void = { version = "1.0.2", default-features = false }
 volatile = "0.4.1"
 
