@@ -4,16 +4,16 @@ pub trait DescriptorEntry {
 }
 
 #[repr(C)]
-pub struct DescriptorBlock<T:Copy + Default + DescriptorEntry, const COUNT: usize, const MTU: usize> {
+pub struct DescriptorBlock<T:Copy + Default + DescriptorEntry, const MTU: usize, const COUNT: usize> {
     descriptors: [T; COUNT],
     buffers: [[u8; MTU]; COUNT],
 
     next_entry: usize,  // Index of next entry to read/write
 }
 
-impl<T:Copy + Default + DescriptorEntry, const COUNT: usize, const MTU: usize> DescriptorBlock<T, COUNT, MTU> {
+impl<T:Copy + Default + DescriptorEntry, const MTU: usize, const COUNT: usize> DescriptorBlock<T, MTU, COUNT> {
     pub fn new() -> Self {
-        let mut block = DescriptorBlock::<T, COUNT, MTU> {
+        let mut block = DescriptorBlock::<T, MTU, COUNT> {
             descriptors: [Default::default(); COUNT],
             buffers: [[0; MTU]; COUNT],
             next_entry: 0,

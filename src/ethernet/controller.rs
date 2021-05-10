@@ -6,9 +6,8 @@ use super::{
     builder::Builder,
     eui48::Identifier as EthernetAddress,
     phy::{Phy, Register, Reader as PhyReader},
-    descriptor_block::DescriptorBlock,
-    rx::{RxDescriptor, RxDescriptorBlockExt},
-    tx::{TxDescriptor, TxDescriptorBlockExt},
+    Receiver,
+    Transmitter,
 };
 use core::marker::PhantomData;
 use paste::paste;
@@ -41,20 +40,25 @@ macro_rules! define_ethernet_address_function {
     };
 }
 
-pub struct Controller<const RXCOUNT: usize, const TXCOUNT: usize> {
+pub struct Controller<'rxtx> {
     gmac: GMAC,
     clock: PhantomData<GmacClock<Enabled>>,
-    rx: DescriptorBlock<RxDescriptor, RXCOUNT, 1500>,
-    tx: DescriptorBlock<TxDescriptor, TXCOUNT, 1500>,
+    rx: &'rxtx dyn Receiver,
+    tx: &'rxtx dyn Transmitter,
 }
 
-impl<const RXCOUNT: usize, const TXCOUNT: usize>  Controller<RXCOUNT, TXCOUNT> {
-    pub(super) fn new(gmac: GMAC, _: GmacClock<Enabled>, builder: Builder) -> Self {
+impl<'txrx> Controller<'txrx> {
+    pub(super) fn new(
+        gmac: GMAC, _: GmacClock<Enabled>,
+        rx: &'txrx dyn Receiver,
+        tx: &'txrx dyn Transmitter,
+        builder: Builder) -> Self {
+
         let mut e = Controller {
             gmac,
             clock: PhantomData,
-            rx: DescriptorBlock::new(),
-            tx: DescriptorBlock::new(),
+            rx,
+            tx,
         };
 
         // Reset the GMAC to its reset state.
@@ -83,8 +87,8 @@ impl<const RXCOUNT: usize, const TXCOUNT: usize>  Controller<RXCOUNT, TXCOUNT> {
         }
 
         // Initialize the GMAC's DMA controller for each buffer descriptor table.
-        e.rx.setup_dma(&e.gmac);
-        e.tx.setup_dma(&e.gmac);
+        // e.rx.setup_dma(&e.gmac);
+        // e.tx.setup_dma(&e.gmac);
 
         // Enable receive and transmit circuits
         e.enable_receive();
@@ -209,7 +213,7 @@ impl<const RXCOUNT: usize, const TXCOUNT: usize>  Controller<RXCOUNT, TXCOUNT> {
     }
 }
 
-impl<const RXCOUNT: usize, const TXCOUNT: usize> Phy for Controller<RXCOUNT, TXCOUNT> {
+impl<'txrx> Phy for Controller<'txrx> {
     fn read_register(&self, register: Register) -> u16 {
         self.wait_for_idle();
         self.gmac.man.modify(|r, w| unsafe { w.

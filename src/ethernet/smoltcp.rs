@@ -4,7 +4,7 @@ use smoltcp::time::Instant;
 use smoltcp::Error;
 
 /// Use this Ethernet driver with [smoltcp](https://github.com/m-labs/smoltcp)
-impl<'d, const RXCOUNT: usize, const TXCOUNT: usize> Device<'d> for Controller<RXCOUNT, TXCOUNT> {
+impl<'d, 'rxtx> Device<'d> for Controller<'rxtx> {
     type RxToken = EthRxToken;
     type TxToken = EthTxToken;
 

@@ -1,7 +1,15 @@
-use super::EthernetAddress;
-use super::Controller;
+use super::{
+    Controller,
+    EthernetAddress,
+    Receiver,
+    Transmitter,
+};
+
 use crate::{
-    clock::{Enabled, GmacClock},
+    clock::{
+        Enabled,
+        GmacClock,
+    },
     pac::GMAC,
 };
 
@@ -62,7 +70,12 @@ impl Builder {
         self.disable_broadcast
     }
 
-    pub fn freeze<const RXCOUNT: usize, const TXCOUNT: usize>(self, gmac: GMAC, clock: GmacClock<Enabled>) -> Controller<RXCOUNT, TXCOUNT> {
-        Controller::new(gmac, clock, self)
+    pub fn freeze<'rxtx> (
+        self, 
+        gmac: GMAC, 
+        clock: GmacClock<Enabled>, 
+        rx: &'rxtx dyn Receiver, 
+        tx: &'rxtx dyn Transmitter) -> Controller<'rxtx> {
+        Controller::new(gmac, clock, rx, tx, self)
     }
 }
