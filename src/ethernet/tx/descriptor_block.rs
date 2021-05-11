@@ -23,7 +23,7 @@ impl<const COUNT: usize> TxDescriptorBlock<COUNT> {
         tx
     }
 
-    fn setup_dma(&self, gmac: &GMAC) {
+    pub fn setup_dma(&self, gmac: &GMAC) {
         gmac.tbqb.write(|w| unsafe { w.bits(self.descriptors.descriptor_table_address()) });
     }
 }

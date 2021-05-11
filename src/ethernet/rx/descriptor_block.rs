@@ -20,7 +20,7 @@ impl<const COUNT: usize> RxDescriptorBlock<COUNT> {
         rx
     }
 
-    fn setup_dma(&self, gmac: &GMAC) {
+    pub fn setup_dma(&self, gmac: &GMAC) {
         gmac.rbqb.write(|w| unsafe { w.bits(self.descriptors.descriptor_table_address()) });
     }
 }

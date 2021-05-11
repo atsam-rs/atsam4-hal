@@ -59,7 +59,7 @@ impl<'txrx> Controller<'txrx> {
             clock: PhantomData,
             rx,
             tx,
-        };
+        };        
 
         // Reset the GMAC to its reset state.
         e.reset();
