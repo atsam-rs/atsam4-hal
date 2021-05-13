@@ -3,14 +3,13 @@ use smoltcp::phy::{Device, DeviceCapabilities, RxToken, TxToken};
 use smoltcp::time::Instant;
 use smoltcp::Error;
 
-/// Use this Ethernet driver with [smoltcp](https://github.com/m-labs/smoltcp)
 impl<'d, 'rxtx, RX: Receiver, TX: Transmitter> Device<'d> for Controller<'rxtx, RX, TX> {
     type RxToken = EthRxToken;
     type TxToken = EthTxToken;
 
     fn capabilities(&self) -> DeviceCapabilities {
         let mut caps = DeviceCapabilities::default();
-        caps.max_transmission_unit = super::MTU;
+        caps.max_transmission_unit = super::MTU as usize;
         caps.max_burst_size = Some(1);
         caps
     }

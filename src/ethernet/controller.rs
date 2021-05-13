@@ -106,7 +106,7 @@ impl<'rxtx, RX: Receiver, TX: Transmitter> Controller<'rxtx, RX, TX> {
         self.read()
     }
 
-    fn send<F: FnOnce(&mut [u8], usize)>(&mut self, size: usize, f: F) -> Result<(), TxError> where Self: Sized {
+    fn send<F: FnOnce(&mut [u8], u16)>(&mut self, size: u16, f: F) -> Result<(), TxError> where Self: Sized {
         let result = self.tx.send(size, f);
 //        self.tx_ring.demand_poll(&self.eth_dma);
         result

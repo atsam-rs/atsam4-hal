@@ -53,7 +53,7 @@ impl RxDescriptorReader {
         self.0 & (1 << 1) != 0x0
     }
 
-    pub fn buffer_length(&self) -> u16 {
+    pub fn buffer_size(&self) -> u16 {
         //!todo - If jumbo frames are enabled, this needs to take into account the 13th bit as well.
         (self.1 & 0x0000_0FFF) as u16
     }

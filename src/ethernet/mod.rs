@@ -27,9 +27,9 @@ pub use volatile_read_write::VolatileReadWrite;
 const MTU: usize = 1500;
 
 pub trait Receiver {
-    fn receive<F: FnOnce(&mut [u8], usize)>(&mut self, f: F) -> Result<(), RxError> where Self: Sized;
+    fn receive<F: FnOnce(&mut [u8], u16)>(&mut self, f: F) -> Result<(), RxError> where Self: Sized;
 }
 
 pub trait Transmitter {
-    fn send<F: FnOnce(&mut [u8], usize)>(&mut self, size: usize, f: F) -> Result<(), TxError> where Self: Sized;
+    fn send<F: FnOnce(&mut [u8], u16)>(&mut self, size: u16, f: F) -> Result<(), TxError> where Self: Sized;
 }

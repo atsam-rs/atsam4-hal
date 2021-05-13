@@ -40,7 +40,7 @@ impl DescriptorEntry for TxDescriptor {
             .clear_used()
             .clear_end_of_frame()
             .set_address(address)
-            .set_buffer_length(0)
+            .set_buffer_size(0)
         )
     }
 
@@ -82,8 +82,8 @@ impl TxDescriptorWriter {
         TxDescriptorWriter(address as u32, self.1)
     }
 
-    pub fn set_buffer_length(self, byte_length: usize) -> Self {
-        if byte_length > MTU {
+    pub fn set_buffer_size(self, byte_length: u16) -> Self {
+        if byte_length as usize > MTU {
             panic!("Specified byte length is larger than 0x1FFFF");
         }
         TxDescriptorWriter(self.0, (self.1 & !0x0000_1FFF) | byte_length as u32)
