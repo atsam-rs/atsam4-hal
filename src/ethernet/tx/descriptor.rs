@@ -82,8 +82,8 @@ impl TxDescriptorWriter {
         TxDescriptorWriter(address as u32, self.1)
     }
 
-    pub fn set_buffer_length(self, byte_length: u16) -> Self {
-        if byte_length as usize > MTU {
+    pub fn set_buffer_length(self, byte_length: usize) -> Self {
+        if byte_length > MTU {
             panic!("Specified byte length is larger than 0x1FFFF");
         }
         TxDescriptorWriter(self.0, (self.1 & !0x0000_1FFF) | byte_length as u32)

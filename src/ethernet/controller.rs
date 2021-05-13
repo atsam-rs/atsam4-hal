@@ -6,8 +6,8 @@ use super::{
     builder::Builder,
     eui48::Identifier as EthernetAddress,
     phy::{Phy, Register, Reader as PhyReader},
-    Receiver,
-    Transmitter,
+    Receiver, RxError,
+    Transmitter, TxError,
 };
 use core::marker::PhantomData;
 use paste::paste;
@@ -40,18 +40,18 @@ macro_rules! define_ethernet_address_function {
     };
 }
 
-pub struct Controller<'rxtx> {
+pub struct Controller<'rxtx, RX: Receiver, TX: Transmitter> {
     gmac: GMAC,
     clock: PhantomData<GmacClock<Enabled>>,
-    rx: &'rxtx dyn Receiver,
-    tx: &'rxtx dyn Transmitter,
+    rx: &'rxtx mut RX,
+    tx: &'rxtx mut TX,
 }
 
-impl<'txrx> Controller<'txrx> {
+impl<'rxtx, RX: Receiver, TX: Transmitter> Controller<'rxtx, RX, TX> {
     pub(super) fn new(
         gmac: GMAC, _: GmacClock<Enabled>,
-        rx: &'txrx dyn Receiver,
-        tx: &'txrx dyn Transmitter,
+        rx: &'rxtx mut RX,
+        tx: &'rxtx mut TX,
         builder: Builder) -> Self {
 
         let mut e = Controller {
@@ -102,12 +102,14 @@ impl<'txrx> Controller<'txrx> {
         e
     }
 
-    pub fn send<F: FnOnce([&mut u8])>(&self, _size: usize, _f: F) {
-        unimplemented!()
-    }
-
     pub fn status(&self) -> PhyReader {
         self.read()
+    }
+
+    fn send<F: FnOnce(&mut [u8], usize)>(&mut self, size: usize, f: F) -> Result<(), TxError> where Self: Sized {
+        let result = self.tx.send(size, f);
+//        self.tx_ring.demand_poll(&self.eth_dma);
+        result
     }
 
     fn reset(&mut self) {
@@ -213,7 +215,7 @@ impl<'txrx> Controller<'txrx> {
     }
 }
 
-impl<'txrx> Phy for Controller<'txrx> {
+impl<'rxtx, RX: Receiver, TX: Transmitter> Phy for Controller<'rxtx, RX, TX> {
     fn read_register(&self, register: Register) -> u16 {
         self.wait_for_idle();
         self.gmac.man.modify(|r, w| unsafe { w.

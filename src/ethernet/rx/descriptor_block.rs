@@ -26,7 +26,7 @@ impl<const COUNT: usize> RxDescriptorBlock<COUNT> {
 }
 
 impl<const COUNT: usize> Receiver for RxDescriptorBlock<COUNT> {
-    fn receive<F: FnOnce(&mut [u8], u16)>(&mut self, f: F) -> Result<(), RxError> {
+    fn receive<F: FnOnce(&mut [u8], usize)>(&mut self, f: F) -> Result<(), RxError> {
         // Check if the next entry is still being used by the GMAC...if so, 
         // indicate there's no more entries and the client has to wait for one to
         // become available.
@@ -39,7 +39,7 @@ impl<const COUNT: usize> Receiver for RxDescriptorBlock<COUNT> {
         let length = descriptor_properties.buffer_length();
 
         // Call the closure to copy data out of the buffer
-        f(next_buffer, length);
+        f(next_buffer, length as usize);
 
         // Indicate that the descriptor is no longer owned by software and is available
         // for the GMAC to write into.

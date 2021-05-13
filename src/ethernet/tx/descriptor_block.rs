@@ -29,7 +29,7 @@ impl<const COUNT: usize> TxDescriptorBlock<COUNT> {
 }
 
 impl<const COUNT: usize> Transmitter for TxDescriptorBlock<COUNT> {
-    fn send<F: FnOnce(&mut [u8], u16)>(&mut self, length: u16, f: F) -> Result<(), TxError> {
+    fn send<F: FnOnce(&mut [u8], usize)>(&mut self, length: usize, f: F) -> Result<(), TxError> {
         // Check if the next entry is still being used by the GMAC...if so, 
         // indicate there's no more entries and the client has to wait for one to
         // become available.

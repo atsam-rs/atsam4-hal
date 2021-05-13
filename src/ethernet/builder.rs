@@ -70,12 +70,12 @@ impl Builder {
         self.disable_broadcast
     }
 
-    pub fn freeze<'rxtx> (
+    pub fn freeze<'rxtx, RX: Receiver, TX: Transmitter> (
         self, 
         gmac: GMAC, 
         clock: GmacClock<Enabled>, 
-        rx: &'rxtx dyn Receiver, 
-        tx: &'rxtx dyn Transmitter) -> Controller<'rxtx> {
+        rx: &'rxtx mut RX, 
+        tx: &'rxtx mut TX) -> Controller<'rxtx, RX, TX> {
         Controller::new(gmac, clock, rx, tx, self)
     }
 }
