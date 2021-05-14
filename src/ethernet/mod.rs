@@ -13,7 +13,7 @@ pub use eui48::Identifier as EthernetAddress;
 mod phy;
 
 #[cfg(feature = "smoltcp")]
-mod smoltcp;
+mod smoltcp_support;
 
 mod tx;
 pub use tx::{TxDescriptorBlock, TxError};
@@ -27,9 +27,17 @@ pub use volatile_read_write::VolatileReadWrite;
 const MTU: usize = 1500;
 
 pub trait Receiver {
-    fn receive<F: FnOnce(&mut [u8], u16)>(&mut self, f: F) -> Result<(), RxError> where Self: Sized;
+    #[cfg(not(feature = "smoltcp"))]
+    fn receive<R, F: FnOnce(&mut [u8]) -> Result<R, RxError>>(&mut self, f: F) -> Result<R, RxError> where Self: Sized;
+
+    #[cfg(feature = "smoltcp")]
+    fn receive<R, F: FnOnce(&mut [u8]) -> Result<R, smoltcp::Error>>(&mut self, f: F) -> Result<R, smoltcp::Error> where Self: Sized;
 }
 
 pub trait Transmitter {
-    fn send<F: FnOnce(&mut [u8], u16)>(&mut self, size: u16, f: F) -> Result<(), TxError> where Self: Sized;
+    #[cfg(not(feature = "smoltcp"))]
+    fn send<R, F: FnOnce(&mut [u8], u16) -> Result<R, TxError>>(&mut self, size: u16, f: F) -> Result<R, TxError> where Self: Sized;
+
+    #[cfg(feature = "smoltcp")]
+    fn send<R, F: FnOnce(&mut [u8]) -> Result<R, smoltcp::Error>>(&mut self, size: usize, f: F) -> Result<R, smoltcp::Error> where Self: Sized;
 }

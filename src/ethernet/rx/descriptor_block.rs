@@ -2,10 +2,12 @@ use crate::pac::GMAC;
 use super::{
     DescriptorBlock,
     Receiver,
-    RxError,
     RxDescriptor,
     MTU,
 };
+
+#[cfg(not(feature = "smoltcp"))]
+use super::RxError;
 
 pub struct RxDescriptorBlock<const COUNT: usize> {
     descriptors: DescriptorBlock<RxDescriptor, MTU, COUNT>
@@ -26,7 +28,8 @@ impl<const COUNT: usize> RxDescriptorBlock<COUNT> {
 }
 
 impl<const COUNT: usize> Receiver for RxDescriptorBlock<COUNT> {
-    fn receive<F: FnOnce(&mut [u8], u16)>(&mut self, f: F) -> Result<(), RxError> {
+    #[cfg(not(feature = "smoltcp"))]
+    fn receive<R, F: FnOnce(&mut [u8]) -> Result<R, RxError>>(&mut self, f: F) -> Result<R, RxError> {
         // Check if the next entry is still being used by the GMAC...if so, 
         // indicate there's no more entries and the client has to wait for one to
         // become available.
@@ -39,7 +42,7 @@ impl<const COUNT: usize> Receiver for RxDescriptorBlock<COUNT> {
         let size = descriptor_properties.buffer_size();
 
         // Call the closure to copy data out of the buffer
-        f(next_buffer, size);
+        let r = f(next_buffer);
 
         // Indicate that the descriptor is no longer owned by software and is available
         // for the GMAC to write into.
@@ -48,6 +51,31 @@ impl<const COUNT: usize> Receiver for RxDescriptorBlock<COUNT> {
         // This entry has been consumed, indicate this.
         self.descriptors.increment_next_entry();
 
-        Ok(())
+        r
     }
-}
+
+    #[cfg(feature = "smoltcp")]
+    fn receive<R, F: FnOnce(&mut [u8]) -> Result<R, smoltcp::Error>>(&mut self, f: F) -> Result<R, smoltcp::Error> {
+        // Check if the next entry is still being used by the GMAC...if so, 
+        // indicate there's no more entries and the client has to wait for one to
+        // become available.
+        let (next_descriptor, next_buffer) = self.descriptors.next_mut();
+        let descriptor_properties = next_descriptor.read();
+        if !descriptor_properties.is_owned() {
+            return Err(smoltcp::Error::Exhausted);
+        }
+
+        let size = descriptor_properties.buffer_size();
+
+        // Call the closure to copy data out of the buffer
+        let r = f(next_buffer);
+
+        // Indicate that the descriptor is no longer owned by software and is available
+        // for the GMAC to write into.
+        next_descriptor.modify(|w| w.clear_owned());
+
+        // This entry has been consumed, indicate this.
+        self.descriptors.increment_next_entry();
+
+        r
+    }}

@@ -43,8 +43,8 @@ macro_rules! define_ethernet_address_function {
 pub struct Controller<'rxtx, RX: Receiver, TX: Transmitter> {
     gmac: GMAC,
     clock: PhantomData<GmacClock<Enabled>>,
-    rx: &'rxtx mut RX,
-    tx: &'rxtx mut TX,
+    pub(super) rx: &'rxtx mut RX,
+    pub(super) tx: &'rxtx mut TX,
 }
 
 impl<'rxtx, RX: Receiver, TX: Transmitter> Controller<'rxtx, RX, TX> {
@@ -104,12 +104,6 @@ impl<'rxtx, RX: Receiver, TX: Transmitter> Controller<'rxtx, RX, TX> {
 
     pub fn status(&self) -> PhyReader {
         self.read()
-    }
-
-    fn send<F: FnOnce(&mut [u8], u16)>(&mut self, size: u16, f: F) -> Result<(), TxError> where Self: Sized {
-        let result = self.tx.send(size, f);
-//        self.tx_ring.demand_poll(&self.eth_dma);
-        result
     }
 
     fn reset(&mut self) {
