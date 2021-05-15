@@ -53,16 +53,16 @@ impl RxDescriptorReader {
         self.0 & (1 << 1) != 0x0
     }
 
-    pub fn buffer_size(&self) -> u16 {
+    pub fn _buffer_size(&self) -> u16 {
         //!todo - If jumbo frames are enabled, this needs to take into account the 13th bit as well.
         (self.1 & 0x0000_0FFF) as u16
     }
 
-    pub fn is_start_of_frame(&self) -> bool {
+    pub fn _is_start_of_frame(&self) -> bool {
         self.1 & (1 << 14) != 0
     }
 
-    pub fn is_end_of_frame(&self) -> bool {
+    pub fn _is_end_of_frame(&self) -> bool {
         self.1 & (1 << 15) != 0
     }
 }
@@ -76,19 +76,11 @@ impl RxDescriptorWriter {
         RxDescriptorWriter(self.0 | ((address as u32) & !0x03), self.1)
     }
 
-    pub fn set_owned(self) -> Self {
-        RxDescriptorWriter(self.0 | 0x0000_0001, self.1)
-    }
-
     pub fn clear_owned(self) -> Self {
         RxDescriptorWriter(self.0 & !0x0000_0001, self.1)
     }
 
     pub fn set_wrap(self) -> Self {
         RxDescriptorWriter(self.0 | 0x0000_0002, self.1)
-    }
-
-    pub fn clear_wrap(self) -> Self {
-        RxDescriptorWriter(self.0 & !0x0000_0002, self.1)
     }
 }

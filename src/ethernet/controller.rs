@@ -6,8 +6,8 @@ use super::{
     builder::Builder,
     eui48::Identifier as EthernetAddress,
     phy::{Phy, Register, Reader as PhyReader},
-    Receiver, RxError,
-    Transmitter, TxError,
+    Receiver,
+    Transmitter,
 };
 use core::marker::PhantomData;
 use paste::paste;
@@ -40,14 +40,14 @@ macro_rules! define_ethernet_address_function {
     };
 }
 
-pub struct Controller<'rxtx, RX: Receiver, TX: Transmitter> {
+pub struct Controller<'rxtx, RX: 'rxtx + Receiver, TX: 'rxtx + Transmitter> {
     gmac: GMAC,
     clock: PhantomData<GmacClock<Enabled>>,
     pub(super) rx: &'rxtx mut RX,
     pub(super) tx: &'rxtx mut TX,
 }
 
-impl<'rxtx, RX: Receiver, TX: Transmitter> Controller<'rxtx, RX, TX> {
+impl<'rxtx, RX: 'rxtx + Receiver, TX: 'rxtx + Transmitter> Controller<'rxtx, RX, TX> {
     pub(super) fn new(
         gmac: GMAC, _: GmacClock<Enabled>,
         rx: &'rxtx mut RX,
@@ -99,7 +99,7 @@ impl<'rxtx, RX: Receiver, TX: Transmitter> Controller<'rxtx, RX, TX> {
         // Enable all interupts
         unimplemented!();
 
-        e
+        //e
     }
 
     pub fn status(&self) -> PhyReader {
@@ -181,7 +181,7 @@ impl<'rxtx, RX: Receiver, TX: Transmitter> Controller<'rxtx, RX, TX> {
         self.gmac.ncr.modify(|_, w| w.txen().set_bit())
     }
 
-    fn disable_transmit(&mut self) {
+    fn _disable_transmit(&mut self) {
         self.gmac.ncr.modify(|_, w| w.txen().clear_bit())
     }
 
@@ -189,7 +189,7 @@ impl<'rxtx, RX: Receiver, TX: Transmitter> Controller<'rxtx, RX, TX> {
         self.gmac.ncr.modify(|_, w| w.rxen().set_bit())
     }
 
-    fn disable_receive(&mut self) {
+    fn _disable_receive(&mut self) {
         self.gmac.ncr.modify(|_, w| w.rxen().clear_bit())
     }
 
@@ -204,7 +204,7 @@ impl<'rxtx, RX: Receiver, TX: Transmitter> Controller<'rxtx, RX, TX> {
         self.gmac.ncr.modify(|_, w| w.clrstat().set_bit())
     }
 
-    fn increment_statistics(&mut self) {
+    fn _increment_statistics(&mut self) {
         self.gmac.ncr.modify(|_, w| w.incstat().set_bit())
     }
 }
@@ -212,7 +212,7 @@ impl<'rxtx, RX: Receiver, TX: Transmitter> Controller<'rxtx, RX, TX> {
 impl<'rxtx, RX: Receiver, TX: Transmitter> Phy for Controller<'rxtx, RX, TX> {
     fn read_register(&self, register: Register) -> u16 {
         self.wait_for_idle();
-        self.gmac.man.modify(|r, w| unsafe { w.
+        self.gmac.man.modify(|_, w| unsafe { w.
             wtn().bits(0b10).                   // must always be binary 10 (0x02)
             rega().bits(register as u8).        // phy register to read
             phya().bits(0x0).                   // phy address

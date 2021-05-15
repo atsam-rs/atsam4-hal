@@ -101,10 +101,6 @@ impl TxDescriptorWriter {
         TxDescriptorWriter(self.0, self.1 | (1 << 30))
     }
 
-    pub fn clear_wrap(self) -> Self {
-        TxDescriptorWriter(self.0, self.1 & !(1 << 30))
-    }
-
     pub fn set_used(self) -> Self {
         TxDescriptorWriter(self.0, self.1 | (1 << 31))
     }

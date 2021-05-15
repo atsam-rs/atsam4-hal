@@ -65,7 +65,7 @@ impl<const COUNT: usize> Receiver for RxDescriptorBlock<COUNT> {
             return Err(smoltcp::Error::Exhausted);
         }
 
-        let size = descriptor_properties.buffer_size();
+//        let size = descriptor_properties.buffer_size();
 
         // Call the closure to copy data out of the buffer
         let r = f(next_buffer);

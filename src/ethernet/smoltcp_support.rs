@@ -1,11 +1,11 @@
-use super::{Controller, Receiver, RxError, Transmitter, TxError};
+use super::{Controller, Receiver, Transmitter};
 use smoltcp::phy::{Device, DeviceCapabilities, RxToken, TxToken};
 use smoltcp::time::Instant;
 use smoltcp::Error;
 
-impl<'rxtx, RX: 'rxtx + Receiver, TX: 'rxtx + Transmitter> Device<'rxtx> for Controller<'rxtx, RX, TX> {
-    type RxToken = EthRxToken<'rxtx, RX>;
-    type TxToken = EthTxToken<'rxtx, TX>;
+impl<'d, 'rxtx, RX: 'd + Receiver, TX: 'd + Transmitter> Device<'d> for Controller<'rxtx, RX, TX> {
+    type RxToken = EthRxToken<'d, RX>;
+    type TxToken = EthTxToken<'d, TX>;
 
     fn capabilities(&self) -> DeviceCapabilities {
         let mut caps = DeviceCapabilities::default();
@@ -14,11 +14,11 @@ impl<'rxtx, RX: 'rxtx + Receiver, TX: 'rxtx + Transmitter> Device<'rxtx> for Con
         caps
     }
 
-    fn receive(&'rxtx mut self) -> Option<(Self::RxToken, Self::TxToken)> {
+    fn receive(&'d mut self) -> Option<(Self::RxToken, Self::TxToken)> {
         Some((EthRxToken(self.rx), EthTxToken(self.tx)))
     }
 
-    fn transmit(&'rxtx mut self) -> Option<Self::TxToken> {
+    fn transmit(&'d mut self) -> Option<Self::TxToken> {
         Some(EthTxToken(self.tx))
     }
 }
