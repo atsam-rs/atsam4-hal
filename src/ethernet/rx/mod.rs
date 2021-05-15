@@ -5,8 +5,6 @@ mod descriptor_block;
 pub use descriptor_block::RxDescriptorBlock;
 
 use super::{
-    DescriptorBlock,
-    DescriptorEntry,
     MTU,
     Receiver,
     VolatileReadWrite,

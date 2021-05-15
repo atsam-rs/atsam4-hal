@@ -5,8 +5,6 @@ mod descriptor_block;
 pub use descriptor_block::TxDescriptorBlock;
 
 use super::{
-    DescriptorBlock,
-    DescriptorEntry,
     MTU,
     Transmitter,
     VolatileReadWrite,

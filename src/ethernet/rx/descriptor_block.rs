@@ -1,6 +1,5 @@
 use crate::pac::GMAC;
 use super::{
-    DescriptorBlock,
     Receiver,
     RxDescriptor,
     MTU,
@@ -10,20 +9,57 @@ use super::{
 use super::RxError;
 
 pub struct RxDescriptorBlock<const COUNT: usize> {
-    descriptors: DescriptorBlock<RxDescriptor, MTU, COUNT>
+    descriptors: [RxDescriptor; COUNT],
+    buffers: [[u8; MTU]; COUNT],
+
+    next_entry: usize,  // Index of next entry to read/write
 }
 
 impl<const COUNT: usize> RxDescriptorBlock<COUNT> {
-    pub fn new() -> Self {
+    pub const fn const_default() -> Self {
         let rx = RxDescriptorBlock {
-            descriptors: DescriptorBlock::new()
+            descriptors: [RxDescriptor::const_default(); COUNT],
+            buffers: [[0; MTU]; COUNT],
+            next_entry: 0,
         };
 
         rx
     }
 
-    pub fn setup_dma(&self, gmac: &GMAC) {
-        gmac.rbqb.write(|w| unsafe { w.bits(self.descriptors.descriptor_table_address()) });
+    pub fn initialize(&mut self, gmac: &GMAC) {
+        let mut i = 0;
+        for descriptor in self.descriptors.iter_mut() {   
+            let buffer_address = &self.buffers[i][0];         
+            descriptor.modify(|w| {
+                w.set_address(buffer_address)
+            });
+            i += 1;
+        }
+
+        self.descriptors[COUNT - 1].modify(|w| w.set_wrap());
+
+        gmac.rbqb.write(|w| unsafe { w.bits(self.descriptor_table_address()) });
+    }
+
+    fn descriptor_table_address(&self) -> u32 {
+        let address:*const RxDescriptor = &self.descriptors[0];
+        let a = address as u32;
+        if a & 0x0000_0003 != 0 {
+            panic!("Unaligned buffer address in descriptor table")
+        }
+        a
+    }
+
+    fn increment_next_entry(&mut self) {
+        if self.next_entry == COUNT - 1 {
+            self.next_entry = 0;
+        } else {
+            self.next_entry += 1;
+        }
+    }
+
+    fn next_mut(&mut self) -> (&mut RxDescriptor, &mut [u8]) {
+        (&mut self.descriptors[self.next_entry], &mut self.buffers[self.next_entry])
     }
 }
 
@@ -59,7 +95,7 @@ impl<const COUNT: usize> Receiver for RxDescriptorBlock<COUNT> {
         // Check if the next entry is still being used by the GMAC...if so, 
         // indicate there's no more entries and the client has to wait for one to
         // become available.
-        let (next_descriptor, next_buffer) = self.descriptors.next_mut();
+        let (next_descriptor, next_buffer) = self.next_mut();
         let descriptor_properties = next_descriptor.read();
         if !descriptor_properties.is_owned() {
             return Err(smoltcp::Error::Exhausted);
@@ -75,7 +111,7 @@ impl<const COUNT: usize> Receiver for RxDescriptorBlock<COUNT> {
         next_descriptor.modify(|w| w.clear_owned());
 
         // This entry has been consumed, indicate this.
-        self.descriptors.increment_next_entry();
+        self.increment_next_entry();
 
         r
     }}

@@ -1,5 +1,4 @@
 use super::{
-    DescriptorEntry,
     VolatileReadWrite,
 };
 
@@ -12,6 +11,13 @@ pub struct RxDescriptor {
 }
 
 impl RxDescriptor {
+    pub const fn const_default() -> Self {
+        RxDescriptor {
+            word0: 0,
+            word1: 0,
+        }        
+    }
+
     pub fn read(&self) -> RxDescriptorReader {
         RxDescriptorReader(self.word0.read_volatile(), self.word1.read_volatile())
     }
@@ -21,25 +27,6 @@ impl RxDescriptor {
         let result = f(w);
         self.word0.write_volatile(result.0);
         self.word1.write_volatile(result.1);
-    }
-}
-
-impl Default for RxDescriptor {
-    fn default() -> Self {
-        RxDescriptor {
-            word0: 0,
-            word1: 0,
-        }
-    }
-}
-
-impl DescriptorEntry for RxDescriptor {
-    fn initialize(&mut self, address: *const u8) {
-        self.modify(|w| w.set_address(address));
-    }
-
-    fn set_wrap(&mut self) {
-        self.modify(|w| w.set_wrap());
     }
 }
 

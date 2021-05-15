@@ -1,5 +1,4 @@
 use super::{
-    DescriptorEntry,
     MTU,
     VolatileReadWrite,
 };
@@ -13,6 +12,22 @@ pub struct TxDescriptor {
 }
 
 impl TxDescriptor {
+    pub const fn const_default() -> Self {
+        TxDescriptor {
+            word0: 0,
+            word1: 0,
+        }        
+    }
+
+    pub fn initialize(&mut self, address: *const u8) {
+        self.modify(|w| w
+            .clear_used()
+            .clear_end_of_frame()
+            .set_address(address)
+            .set_buffer_size(0)
+        )
+    }
+
     pub fn read(&self) -> TxDescriptorReader {
         TxDescriptorReader(self.word0.read_volatile(), self.word1.read_volatile())
     }
@@ -22,26 +37,6 @@ impl TxDescriptor {
         let result = f(w);
         self.word0.write_volatile(result.0);
         self.word1.write_volatile(result.1);
-    }
-}
-
-impl Default for TxDescriptor {
-    fn default() -> Self {
-        TxDescriptor {
-            word0: 0,
-            word1: 0,
-        }
-    }
-}
-
-impl DescriptorEntry for TxDescriptor {
-    fn initialize(&mut self, address: *const u8) {
-        self.modify(|w| w
-            .clear_used()
-            .clear_end_of_frame()
-            .set_address(address)
-            .set_buffer_size(0)
-        )
     }
 
     fn set_wrap(&mut self) {

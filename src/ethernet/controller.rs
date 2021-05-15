@@ -86,20 +86,11 @@ impl<'rxtx, RX: 'rxtx + Receiver, TX: 'rxtx + Transmitter> Controller<'rxtx, RX,
             }
         }
 
-        // Initialize the GMAC's DMA controller for each buffer descriptor table.
-        // e.rx.setup_dma(&e.gmac);
-        // e.tx.setup_dma(&e.gmac);
-
         // Enable receive and transmit circuits
         e.enable_receive();
         e.enable_transmit();
 
-        // Set up interrupt handlers
-
-        // Enable all interupts
-        unimplemented!();
-
-        //e
+        e
     }
 
     pub fn status(&self) -> PhyReader {

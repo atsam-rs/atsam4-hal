@@ -1,9 +1,6 @@
 mod controller;
 pub use controller::*;
 
-mod descriptor_block;
-pub use descriptor_block::{DescriptorBlock, DescriptorEntry};
-
 mod builder;
 pub use builder::Builder;
 
