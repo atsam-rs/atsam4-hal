@@ -81,10 +81,15 @@ use core::mem;
 
 pub use embedded_time as time;
 
+// NOTE: In ASF atsam4s uses sam/drivers/adc/adc.c whereas atsam4n uses sam/drivers/adc/adc2.c
+#[cfg(feature = "atsam4s")]
+pub mod adc;
 pub mod chipid;
 pub mod clock;
 pub mod delay;
 pub mod gpio;
+#[cfg(feature = "atsam4s")]
+pub mod pdc;
 pub mod prelude;
 pub mod rtt;
 pub mod serial;
