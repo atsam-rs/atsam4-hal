@@ -1,6 +1,4 @@
-use super::{
-    VolatileReadWrite,
-};
+use super::VolatileReadWrite;
 
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -12,10 +10,7 @@ pub struct RxDescriptor {
 
 impl RxDescriptor {
     pub const fn const_default() -> Self {
-        RxDescriptor {
-            word0: 0,
-            word1: 0,
-        }        
+        RxDescriptor { word0: 0, word1: 0 }
     }
 
     pub fn read(&self) -> RxDescriptorReader {

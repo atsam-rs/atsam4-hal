@@ -1,15 +1,7 @@
-use super::{
-    Controller,
-    EthernetAddress,
-    Receiver,
-    Transmitter,
-};
+use super::{Controller, EthernetAddress, Receiver, Transmitter};
 
 use crate::{
-    clock::{
-        Enabled,
-        GmacClock,
-    },
+    clock::{Enabled, GmacClock},
     pac::GMAC,
 };
 
@@ -23,7 +15,7 @@ pub struct Builder {
 impl Builder {
     pub fn new() -> Self {
         Builder {
-            ethernet_address: EthernetAddress::default(), 
+            ethernet_address: EthernetAddress::default(),
             alternate_addresses: [None; 3],
             alternate_address_count: 0,
             disable_broadcast: false,
@@ -70,12 +62,13 @@ impl Builder {
         self.disable_broadcast
     }
 
-    pub fn freeze<'rxtx, RX: Receiver, TX: Transmitter> (
-        self, 
-        gmac: GMAC, 
-        clock: GmacClock<Enabled>, 
-        rx: &'rxtx mut RX, 
-        tx: &'rxtx mut TX) -> Controller<'rxtx, RX, TX> {
+    pub fn freeze<'rxtx, RX: Receiver, TX: Transmitter, const PHYADDRESS: u8>(
+        self,
+        gmac: GMAC,
+        clock: GmacClock<Enabled>,
+        rx: &'rxtx mut RX,
+        tx: &'rxtx mut TX,
+    ) -> Controller<'rxtx, RX, TX, PHYADDRESS> {
         Controller::new(gmac, clock, rx, tx, self)
     }
 }

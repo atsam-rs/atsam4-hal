@@ -12,10 +12,10 @@ enum BitNumber {
 }
 
 #[derive(Clone, Copy)]
-pub struct Bmcr(pub(super) u16);
-impl Bmcr {
+pub struct Writer(pub(super) u16);
+impl Writer {
     pub fn new(initial_value: u16) -> Self {
-        Bmcr(initial_value)
+        Writer(initial_value)
     }
 
     pub fn set_speed_1000(self) -> Self {
@@ -38,12 +38,24 @@ impl Bmcr {
         Self(self.0 | (1 << BitNumber::Isolate as u32))
     }
 
+    pub fn clear_isolate(self) -> Self {
+        Self(self.0 & !(1 << BitNumber::Isolate as u32))
+    }
+
     pub fn set_power_down(self) -> Self {
         Self(self.0 | (1 << BitNumber::PowerDown as u32))
     }
 
+    pub fn clear_power_down(self) -> Self {
+        Self(self.0 & !(1 << BitNumber::PowerDown as u32))
+    }
+
     pub fn set_enable_auto_negotiation(self) -> Self {
         Self(self.0 | (1 << BitNumber::EnableAutoNegotiation as u32))
+    }
+
+    pub fn clear_enable_auto_negotiation(self) -> Self {
+        Self(self.0 & !(1 << BitNumber::EnableAutoNegotiation as u32))
     }
 
     pub fn set_speed_100(self) -> Self {
@@ -54,7 +66,36 @@ impl Bmcr {
         Self(self.0 | (1 << BitNumber::LoopBack as u32))
     }
 
+    pub fn clear_loop_back(self) -> Self {
+        Self(self.0 & !(1 << BitNumber::LoopBack as u32))
+    }
+
     pub fn set_reset(self) -> Self {
         Self(self.0 | (1 << BitNumber::Reset as u32))
+    }
+}
+
+pub struct Reset(bool);
+impl Reset {
+    pub fn is_set(&self) -> bool {
+        self.0
+    }
+
+    pub fn is_clear(&self) -> bool {
+        !self.0
+    }
+}
+
+pub struct Reader {
+    value: u16,
+}
+
+impl Reader {
+    pub fn new(value: u16) -> Self {
+        Reader { value }
+    }
+
+    pub fn reset(&self) -> Reset {
+        Reset((self.value & (1 << BitNumber::Speed1Gbps as u32)) != 0)
     }
 }

@@ -3,7 +3,9 @@ use smoltcp::phy::{Device, DeviceCapabilities, RxToken, TxToken};
 use smoltcp::time::Instant;
 use smoltcp::Error;
 
-impl<'d, 'rxtx, RX: 'd + Receiver, TX: 'd + Transmitter> Device<'d> for Controller<'rxtx, RX, TX> {
+impl<'d, 'rxtx, RX: 'd + Receiver, TX: 'd + Transmitter, const PHYADDRESS: u8> Device<'d>
+    for Controller<'rxtx, RX, TX, PHYADDRESS>
+{
     type RxToken = EthRxToken<'d, RX>;
     type TxToken = EthTxToken<'d, TX>;
 
@@ -41,6 +43,6 @@ impl<'a, TX: Transmitter> TxToken for EthTxToken<'a, TX> {
     where
         F: FnOnce(&mut [u8]) -> Result<R, Error>,
     {
-        self.0.send(size,  f)
+        self.0.send(size, f)
     }
 }

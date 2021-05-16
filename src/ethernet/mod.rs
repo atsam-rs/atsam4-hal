@@ -25,16 +25,38 @@ const MTU: usize = 1500;
 
 pub trait Receiver {
     #[cfg(not(feature = "smoltcp"))]
-    fn receive<R, F: FnOnce(&mut [u8]) -> Result<R, RxError>>(&mut self, f: F) -> Result<R, RxError> where Self: Sized;
+    fn receive<R, F: FnOnce(&mut [u8]) -> Result<R, RxError>>(
+        &mut self,
+        f: F,
+    ) -> Result<R, RxError>
+    where
+        Self: Sized;
 
     #[cfg(feature = "smoltcp")]
-    fn receive<R, F: FnOnce(&mut [u8]) -> Result<R, smoltcp::Error>>(&mut self, f: F) -> Result<R, smoltcp::Error> where Self: Sized;
+    fn receive<R, F: FnOnce(&mut [u8]) -> Result<R, smoltcp::Error>>(
+        &mut self,
+        f: F,
+    ) -> Result<R, smoltcp::Error>
+    where
+        Self: Sized;
 }
 
 pub trait Transmitter {
     #[cfg(not(feature = "smoltcp"))]
-    fn send<R, F: FnOnce(&mut [u8], u16) -> Result<R, TxError>>(&mut self, size: u16, f: F) -> Result<R, TxError> where Self: Sized;
+    fn send<R, F: FnOnce(&mut [u8], u16) -> Result<R, TxError>>(
+        &mut self,
+        size: u16,
+        f: F,
+    ) -> Result<R, TxError>
+    where
+        Self: Sized;
 
     #[cfg(feature = "smoltcp")]
-    fn send<R, F: FnOnce(&mut [u8]) -> Result<R, smoltcp::Error>>(&mut self, size: usize, f: F) -> Result<R, smoltcp::Error> where Self: Sized;
+    fn send<R, F: FnOnce(&mut [u8]) -> Result<R, smoltcp::Error>>(
+        &mut self,
+        size: usize,
+        f: F,
+    ) -> Result<R, smoltcp::Error>
+    where
+        Self: Sized;
 }

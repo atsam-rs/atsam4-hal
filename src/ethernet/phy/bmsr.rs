@@ -15,10 +15,10 @@ enum BitNumbers {
 }
 
 #[derive(Clone, Copy)]
-pub struct Bmsr(u16);
-impl Bmsr {
+pub struct Reader(u16);
+impl Reader {
     pub fn new(initial_value: u16) -> Self {
-        Bmsr(initial_value)
+        Reader(initial_value)
     }
 
     pub fn has_extended_capability(&self) -> bool {
@@ -66,18 +66,24 @@ impl Bmsr {
     }
 
     pub fn is_full_duplex(&self) -> bool {
-        (self.0 & (1 << BitNumbers::FullDuplex10BaseTCapable as u32)
-                & (1 << BitNumbers::FullDuplex100BaseTXCapable as u32)) != 0
+        (self.0
+            & (1 << BitNumbers::FullDuplex10BaseTCapable as u32)
+            & (1 << BitNumbers::FullDuplex100BaseTXCapable as u32))
+            != 0
     }
 
     pub fn is_10mbit(&self) -> bool {
-        (self.0 & (1 << BitNumbers::HalfDuplex10BaseTCapable as u32)
-                & (1 << BitNumbers::FullDuplex10BaseTCapable as u32)) != 0
+        (self.0
+            & (1 << BitNumbers::HalfDuplex10BaseTCapable as u32)
+            & (1 << BitNumbers::FullDuplex10BaseTCapable as u32))
+            != 0
     }
 
     pub fn is_100mbit(&self) -> bool {
-        (self.0 & (1 << BitNumbers::HalfDuplex100BaseTXCapable as u32)
-                & (1 << BitNumbers::FullDuplex100BaseTXCapable as u32)) != 0
+        (self.0
+            & (1 << BitNumbers::HalfDuplex100BaseTXCapable as u32)
+            & (1 << BitNumbers::FullDuplex100BaseTXCapable as u32))
+            != 0
     }
 
     pub fn speed(&self) -> MegabitsPerSecond {

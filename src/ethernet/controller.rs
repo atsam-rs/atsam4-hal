@@ -1,15 +1,15 @@
-use crate::{
-    clock::{Enabled, GmacClock},
-    pac::GMAC,
-};
 use super::{
     builder::Builder,
     eui48::Identifier as EthernetAddress,
-    phy::{Phy, Register, Reader as PhyReader},
-    Receiver,
-    Transmitter,
+    phy::{LinkType, Phy, Register},
+    Receiver, Transmitter,
+};
+use crate::{
+    clock::{get_master_clock_frequency, Enabled, GmacClock},
+    pac::GMAC,
 };
 use core::marker::PhantomData;
+use embedded_time::rate::Extensions;
 use paste::paste;
 
 macro_rules! define_ethernet_address_function {
@@ -40,26 +40,29 @@ macro_rules! define_ethernet_address_function {
     };
 }
 
-pub struct Controller<'rxtx, RX: 'rxtx + Receiver, TX: 'rxtx + Transmitter> {
+pub struct Controller<'rxtx, RX: 'rxtx + Receiver, TX: 'rxtx + Transmitter, const PHYADDRESS: u8> {
     gmac: GMAC,
     clock: PhantomData<GmacClock<Enabled>>,
     pub(super) rx: &'rxtx mut RX,
     pub(super) tx: &'rxtx mut TX,
 }
 
-impl<'rxtx, RX: 'rxtx + Receiver, TX: 'rxtx + Transmitter> Controller<'rxtx, RX, TX> {
+impl<'rxtx, RX: 'rxtx + Receiver, TX: 'rxtx + Transmitter, const PHYADDRESS: u8>
+    Controller<'rxtx, RX, TX, PHYADDRESS>
+{
     pub(super) fn new(
-        gmac: GMAC, _: GmacClock<Enabled>,
+        gmac: GMAC,
+        _: GmacClock<Enabled>,
         rx: &'rxtx mut RX,
         tx: &'rxtx mut TX,
-        builder: Builder) -> Self {
-
+        builder: Builder,
+    ) -> Self {
         let mut e = Controller {
             gmac,
             clock: PhantomData,
             rx,
             tx,
-        };        
+        };
 
         // Reset the GMAC to its reset state.
         e.reset();
@@ -86,6 +89,46 @@ impl<'rxtx, RX: 'rxtx + Receiver, TX: 'rxtx + Transmitter> Controller<'rxtx, RX,
             }
         }
 
+        // Set up the MDC (Management Data Clock) for the PHY based on the master clock frequency
+        e.gmac.ncfgr.modify(|_, w| {
+            let mck = get_master_clock_frequency();
+            if mck > 240u32.MHz() {
+                panic!("Invalid master clock frequency")
+            } else if mck > 160u32.MHz() {
+                w.clk().mck_96()
+            } else if mck > 120u32.MHz() {
+                w.clk().mck_64()
+            } else if mck > 80u32.MHz() {
+                w.clk().mck_48()
+            } else if mck > 40u32.MHz() {
+                w.clk().mck_32()
+            } else if mck > 20u32.MHz() {
+                w.clk().mck_16()
+            } else {
+                w.clk().mck_8()
+            }
+        });
+
+        // Initialize the PHY and set the GMAC's speed and duplex based on returned link type.
+        match e.initialize_phy() {
+            LinkType::HalfDuplex10 => e
+                .gmac
+                .ncfgr
+                .modify(|_, w| w.spd().clear_bit().fd().clear_bit()),
+            LinkType::FullDuplex10 => e
+                .gmac
+                .ncfgr
+                .modify(|_, w| w.spd().clear_bit().fd().set_bit()),
+            LinkType::HalfDuplex100 => e
+                .gmac
+                .ncfgr
+                .modify(|_, w| w.spd().set_bit().fd().clear_bit()),
+            LinkType::FullDuplex100 => e.gmac.ncfgr.modify(|_, w| w.spd().set_bit().fd().set_bit()),
+        }
+
+        // Ensure MII mode is set (NOTE: it's clear by default)
+        e.gmac.ur.modify(|_, w| w.mii().set_bit());
+
         // Enable receive and transmit circuits
         e.enable_receive();
         e.enable_transmit();
@@ -93,8 +136,18 @@ impl<'rxtx, RX: 'rxtx + Receiver, TX: 'rxtx + Transmitter> Controller<'rxtx, RX,
         e
     }
 
-    pub fn status(&self) -> PhyReader {
-        self.read()
+    pub fn link_state(&self) -> Option<embedded_time::rate::MegabitsPerSecond> {
+        let phy_status = self.read_phy_bmsr();
+        match phy_status.link_detected() {
+            false => None,
+            true => {
+                if phy_status.is_100mbit() {
+                    Some(100.Mbps())
+                } else {
+                    Some(10.Mbps())
+                }
+            }
+        }
     }
 
     fn reset(&mut self) {
@@ -190,6 +243,11 @@ impl<'rxtx, RX: 'rxtx + Receiver, TX: 'rxtx + Transmitter> Controller<'rxtx, RX,
     define_ethernet_address_function!(3);
     define_ethernet_address_function!(4);
 
+    // PHY
+    fn wait_for_phy_idle(&self) {
+        while !self.gmac.nsr.read().idle().bit() {}
+    }
+
     // Statistics
     fn clear_statistics(&mut self) {
         self.gmac.ncr.modify(|_, w| w.clrstat().set_bit())
@@ -200,48 +258,48 @@ impl<'rxtx, RX: 'rxtx + Receiver, TX: 'rxtx + Transmitter> Controller<'rxtx, RX,
     }
 }
 
-impl<'rxtx, RX: Receiver, TX: Transmitter> Phy for Controller<'rxtx, RX, TX> {
-    fn read_register(&self, register: Register) -> u16 {
-        self.wait_for_idle();
-        self.gmac.man.modify(|_, w| unsafe { w.
+impl<'rxtx, RX: Receiver, TX: Transmitter, const PHYADDRESS: u8> Phy
+    for Controller<'rxtx, RX, TX, PHYADDRESS>
+{
+    fn read_phy_register(&self, register: Register) -> u16 {
+        self.wait_for_phy_idle();
+        self.gmac.man.modify(|_, w| unsafe {
+            w.
             wtn().bits(0b10).                   // must always be binary 10 (0x02)
             rega().bits(register as u8).        // phy register to read
-            phya().bits(0x0).                   // phy address
+            phya().bits(PHYADDRESS).                   // phy address
             op().bits(0b01).                    // read = 0b01, write = 0b10
-            cltto().clear_bit().
-            wzo().clear_bit()                   // must be set to zero
+            cltto().set_bit().
+            wzo().clear_bit() // must be set to zero
         });
 
         // Wait for the shift operation to complete and the register value to be present
-        self.wait_for_idle();
+        self.wait_for_phy_idle();
 
         // Read the data portion of the register
         self.gmac.man.read().data().bits()
     }
 
-    fn write_register(&mut self, register: Register, new_value: u16) {
-        self.wait_for_idle();
-        self.gmac.man.modify(|_, w| unsafe { w.
+    fn write_phy_register(&mut self, register: Register, new_value: u16) {
+        self.wait_for_phy_idle();
+        self.gmac.man.modify(|_, w| unsafe {
+            w.
             data().bits(new_value).
             wtn().bits(0b10).                   // must always be binary 10 (0x02)
             rega().bits(register as u8).        // phy register to read
-            phya().bits(0x0).                   // phy address
+            phya().bits(PHYADDRESS).                   // phy address
             op().bits(0b10).                    // read = 0b01, write = 0b10
-            cltto().clear_bit().
-            wzo().clear_bit()                   // must be set to zero
+            cltto().set_bit().
+            wzo().clear_bit() // must be set to zero
         });
-        self.wait_for_idle();
+        self.wait_for_phy_idle();
     }
 
-    fn wait_for_idle(&self) {
-        while !self.gmac.nsr.read().idle().bit() {}
-    }
-
-    fn enable_management_port(&self) {
+    fn enable_phy_management_port(&self) {
         self.gmac.ncr.modify(|_, w| w.mpe().set_bit());
     }
 
-    fn disable_management_port(&self) {
+    fn disable_phy_management_port(&self) {
         self.gmac.ncr.modify(|_, w| w.mpe().clear_bit());
     }
 }

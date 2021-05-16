@@ -1,7 +1,4 @@
-use super::{
-    MTU,
-    VolatileReadWrite,
-};
+use super::{VolatileReadWrite, MTU};
 
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -13,19 +10,16 @@ pub struct TxDescriptor {
 
 impl TxDescriptor {
     pub const fn const_default() -> Self {
-        TxDescriptor {
-            word0: 0,
-            word1: 0,
-        }        
+        TxDescriptor { word0: 0, word1: 0 }
     }
 
     pub fn initialize(&mut self, address: *const u8) {
-        self.modify(|w| w
-            .clear_used()
-            .clear_end_of_frame()
-            .set_address(address)
-            .set_buffer_size(0)
-        )
+        self.modify(|w| {
+            w.clear_used()
+                .clear_end_of_frame()
+                .set_address(address)
+                .set_buffer_size(0)
+        })
     }
 
     pub fn read(&self) -> TxDescriptorReader {
