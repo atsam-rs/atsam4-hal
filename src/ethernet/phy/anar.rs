@@ -13,23 +13,23 @@ impl Writer {
         Writer(initial_value)
     }
 
-    pub fn set_802_Dot_3_Supported(self) -> Self {
+    pub fn set_802_dot_3_supported(self) -> Self {
         Self(self.0 | (1 << BitNumber::Supports802Dot3 as u32))
     }
 
-    pub fn set_10Mbps_Half_Duplex_Supported(self) -> Self {
+    pub fn set_10mbps_half_duplex_supported(self) -> Self {
         Self(self.0 | (1 << BitNumber::Speed10MbpsHalfDuplex as u32))
     }
 
-    pub fn set_10Mbps_Full_Duplex_Supported(self) -> Self {
+    pub fn set_10mbps_full_duplex_supported(self) -> Self {
         Self(self.0 | (1 << BitNumber::Speed10MbpsFullDuplex as u32))
     }
 
-    pub fn set_100Mbps_Half_Duplex_Supported(self) -> Self {
+    pub fn set_100mbps_half_duplex_supported(self) -> Self {
         Self(self.0 | (1 << BitNumber::Speed100MbpsHalfDuplex as u32))
     }
 
-    pub fn set_100Mbps_Full_Duplex_Supported(self) -> Self {
+    pub fn set_100mbps_full_duplex_supported(self) -> Self {
         Self(self.0 | (1 << BitNumber::Speed100MbpsFullDuplex as u32))
     }
 }

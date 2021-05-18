@@ -23,17 +23,16 @@ pub enum LinkType {
 }
 
 pub trait Phy {
-    fn initialize_phy(&mut self) -> LinkType {
-        self.reset_phy();
-        self.enable_phy_auto_negotiation()
-    }
-
     fn reset_phy(&mut self) {
-        self.write_phy_bmcr(|w| w.set_reset());
+        self.enable_phy_management_port();
+
+        self.write_phy_bmcr_(|w| w.set_reset());
 
         // Wait for the PHY to be reset
         // !todo - use timeout.
-        while self.read_phy_bmcr().reset().is_set() {}
+        while self.read_phy_bmcr_().reset().is_set() {}
+
+        self.enable_phy_management_port();
     }
 
     fn enable_phy_auto_negotiation(&mut self) -> LinkType {
@@ -45,11 +44,11 @@ pub trait Phy {
         });
 
         self.modify_phy_anar(|w| {
-            w.set_802_Dot_3_Supported()
-                .set_10Mbps_Half_Duplex_Supported()
-                .set_10Mbps_Full_Duplex_Supported()
-                .set_100Mbps_Half_Duplex_Supported()
-                .set_100Mbps_Full_Duplex_Supported()
+            w.set_802_dot_3_supported()
+                .set_10mbps_half_duplex_supported()
+                .set_10mbps_full_duplex_supported()
+                .set_100mbps_half_duplex_supported()
+                .set_100mbps_full_duplex_supported()
         });
 
         self.modify_phy_bmcr(|w| {
@@ -67,11 +66,11 @@ pub trait Phy {
 
         // Get the auto-negotiation partner configuration
         let partner = self.read_phy_pcr1();
-        if partner.is_100Mbps_Full_Duplex_Supported() {
+        if partner.is_100mbps_full_duplex_supported() {
             LinkType::FullDuplex100
-        } else if partner.is_100Mbps_Half_Duplex_Supported() {
+        } else if partner.is_100mbps_half_duplex_supported() {
             LinkType::HalfDuplex100
-        } else if partner.is_10Mbps_Full_Duplex_Supported() {
+        } else if partner.is_10mbps_full_duplex_supported() {
             LinkType::FullDuplex10
         } else {
             LinkType::HalfDuplex10
@@ -90,25 +89,38 @@ pub trait Phy {
     // BMCR
     fn read_phy_bmcr(&self) -> BmcrReader {
         self.enable_phy_management_port();
-        let value = BmcrReader::new(self.read_phy_register(Register::Bmcr));
+        let value = self.read_phy_bmcr_();
         self.disable_phy_management_port();
+        value
+    }
+
+    fn read_phy_bmcr_(&self) -> BmcrReader {
+        let value = BmcrReader::new(self.read_phy_register(Register::Bmcr));
         value
     }
 
     fn modify_phy_bmcr<F: FnOnce(BmcrWriter) -> BmcrWriter>(&mut self, f: F) {
         self.enable_phy_management_port();
+        self.modify_phy_bmcr_(f);
+        self.disable_phy_management_port();
+    }
+
+    fn modify_phy_bmcr_<F: FnOnce(BmcrWriter) -> BmcrWriter>(&mut self, f: F) {
         let w = BmcrWriter::new(self.read_phy_register(Register::Bmcr));
         let new_value = f(w);
         self.write_phy_register(Register::Bmcr, new_value.0);
-        self.disable_phy_management_port();
     }
 
     fn write_phy_bmcr<F: FnOnce(BmcrWriter) -> BmcrWriter>(&mut self, f: F) {
         self.enable_phy_management_port();
+        self.write_phy_bmcr_(f);
+        self.disable_phy_management_port();
+    }
+
+    fn write_phy_bmcr_<F: FnOnce(BmcrWriter) -> BmcrWriter>(&mut self, f: F) {
         let w = BmcrWriter::new(0);
         let new_value = f(w);
         self.write_phy_register(Register::Bmcr, new_value.0);
-        self.disable_phy_management_port();
     }
 
     // BMSR

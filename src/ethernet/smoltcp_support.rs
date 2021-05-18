@@ -1,10 +1,10 @@
 use super::{Controller, Receiver, Transmitter};
-use smoltcp::phy::{Device, DeviceCapabilities, RxToken, TxToken};
+use smoltcp::phy::{Device, DeviceCapabilities, RxToken, TxToken, Medium};
 use smoltcp::time::Instant;
 use smoltcp::Error;
 
-impl<'d, 'rxtx, RX: 'd + Receiver, TX: 'd + Transmitter, const PHYADDRESS: u8> Device<'d>
-    for Controller<'rxtx, RX, TX, PHYADDRESS>
+impl<'d, 'rxtx, RX: 'd + Receiver, TX: 'd + Transmitter> Device<'d>
+    for Controller<'rxtx, RX, TX>
 {
     type RxToken = EthRxToken<'d, RX>;
     type TxToken = EthTxToken<'d, TX>;
@@ -13,6 +13,7 @@ impl<'d, 'rxtx, RX: 'd + Receiver, TX: 'd + Transmitter, const PHYADDRESS: u8> D
         let mut caps = DeviceCapabilities::default();
         caps.max_transmission_unit = super::MTU as usize;
         caps.max_burst_size = Some(1);
+        caps.medium = Medium::Ip;
         caps
     }
 

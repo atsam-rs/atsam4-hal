@@ -86,16 +86,13 @@ impl Reset {
     }
 }
 
-pub struct Reader {
-    value: u16,
-}
-
+pub struct Reader(u16);
 impl Reader {
     pub fn new(value: u16) -> Self {
-        Reader { value }
+        Reader(value)
     }
 
     pub fn reset(&self) -> Reset {
-        Reset((self.value & (1 << BitNumber::Speed1Gbps as u32)) != 0)
+        Reset((self.0 & (1 << BitNumber::Reset as u32)) != 0)
     }
 }

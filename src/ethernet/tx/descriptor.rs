@@ -40,24 +40,20 @@ impl TxDescriptor {
 
 pub struct TxDescriptorReader(u32, u32);
 impl TxDescriptorReader {
-    pub fn has_collision(&self) -> bool {
+    pub fn collided(&self) -> bool {
         self.1 & (1 << 26) != 0
     }
 
-    pub fn has_corruption(&self) -> bool {
+    pub fn corrupted(&self) -> bool {
         self.1 & (1 << 27) != 0
     }
 
-    pub fn has_underrun(&self) -> bool {
+    pub fn underran(&self) -> bool {
         self.1 & (1 << 28) != 0
     }
 
-    pub fn has_retry_exceeded(&self) -> bool {
+    pub fn retry_exceeded(&self) -> bool {
         self.1 & (1 << 29) != 0
-    }
-
-    pub fn is_wrap(&self) -> bool {
-        self.1 & (1 << 30) != 0
     }
 
     pub fn is_used(&self) -> bool {

@@ -2,6 +2,7 @@ use super::{Controller, EthernetAddress, Receiver, Transmitter};
 
 use crate::{
     clock::{Enabled, GmacClock},
+    gpio::{Pd0, Pd1, Pd2, Pd3, Pd4, Pd5, Pd6, Pd7, Pd8, Pd9, PfA},
     pac::GMAC,
 };
 
@@ -10,6 +11,7 @@ pub struct Builder {
     alternate_addresses: [Option<EthernetAddress>; 3],
     alternate_address_count: usize,
     disable_broadcast: bool,
+    phy_address: u8,
 }
 
 impl Builder {
@@ -19,6 +21,7 @@ impl Builder {
             alternate_addresses: [None; 3],
             alternate_address_count: 0,
             disable_broadcast: false,
+            phy_address: 0,
         }
     }
 
@@ -62,13 +65,32 @@ impl Builder {
         self.disable_broadcast
     }
 
-    pub fn freeze<'rxtx, RX: Receiver, TX: Transmitter, const PHYADDRESS: u8>(
+    pub fn set_phy_address(mut self, phy_address: u8) -> Self {
+        self.phy_address = phy_address;
+        self
+    }
+
+    pub fn phy_address(&self) -> u8 {
+        self.phy_address
+    }
+
+    pub fn freeze<'rxtx, RX: Receiver, TX: Transmitter>(
         self,
         gmac: GMAC,
         clock: GmacClock<Enabled>,
+        grefck: Pd0<PfA>,
+        gtxen:  Pd1<PfA>,
+        gtx0:   Pd2<PfA>,
+        gtx1:   Pd3<PfA>,
+        gcrsdv: Pd4<PfA>,
+        grx0:   Pd5<PfA>,
+        grx1:   Pd6<PfA>,
+        grxer:  Pd7<PfA>,
+        gmdc:   Pd8<PfA>,
+        gmdio:  Pd9<PfA>,
         rx: &'rxtx mut RX,
         tx: &'rxtx mut TX,
-    ) -> Controller<'rxtx, RX, TX, PHYADDRESS> {
-        Controller::new(gmac, clock, rx, tx, self)
+    ) -> Controller<'rxtx, RX, TX> {
+        Controller::new(gmac, clock, grefck, gtxen, gtx0, gtx1, gcrsdv, grx0, grx1, grxer, gmdc, gmdio, rx, tx, self)
     }
 }

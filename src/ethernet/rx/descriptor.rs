@@ -27,10 +27,6 @@ impl RxDescriptor {
 
 pub struct RxDescriptorReader(u32, u32);
 impl RxDescriptorReader {
-    pub fn is_wrap(&self) -> bool {
-        self.0 & (1 << 0) != 0x0
-    }
-
     pub fn is_owned(&self) -> bool {
         self.0 & (1 << 1) != 0x0
     }

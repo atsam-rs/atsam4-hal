@@ -6,6 +6,7 @@ use super::{
 };
 use crate::{
     clock::{get_master_clock_frequency, Enabled, GmacClock},
+    gpio::{Pd0, Pd1, Pd2, Pd3, Pd4, Pd5, Pd6, Pd7, Pd8, Pd9, PfA},
     pac::GMAC,
 };
 use core::marker::PhantomData;
@@ -40,19 +41,30 @@ macro_rules! define_ethernet_address_function {
     };
 }
 
-pub struct Controller<'rxtx, RX: 'rxtx + Receiver, TX: 'rxtx + Transmitter, const PHYADDRESS: u8> {
+pub struct Controller<'rxtx, RX: 'rxtx + Receiver, TX: 'rxtx + Transmitter> {
     gmac: GMAC,
     clock: PhantomData<GmacClock<Enabled>>,
+    phy_address: u8,
     pub(super) rx: &'rxtx mut RX,
     pub(super) tx: &'rxtx mut TX,
 }
 
-impl<'rxtx, RX: 'rxtx + Receiver, TX: 'rxtx + Transmitter, const PHYADDRESS: u8>
-    Controller<'rxtx, RX, TX, PHYADDRESS>
+impl<'rxtx, RX: 'rxtx + Receiver, TX: 'rxtx + Transmitter>
+    Controller<'rxtx, RX, TX>
 {
     pub(super) fn new(
         gmac: GMAC,
         _: GmacClock<Enabled>,
+        _grefck: Pd0<PfA>,
+        _gtxen:  Pd1<PfA>,
+        _gtx0:   Pd2<PfA>,
+        _gtx1:   Pd3<PfA>,
+        _gcrsdv: Pd4<PfA>,
+        _grx0:   Pd5<PfA>,
+        _grx1:   Pd6<PfA>,
+        _grxer:  Pd7<PfA>,
+        _gmdc:   Pd8<PfA>,
+        _gmdio:  Pd9<PfA>,
         rx: &'rxtx mut RX,
         tx: &'rxtx mut TX,
         builder: Builder,
@@ -60,12 +72,49 @@ impl<'rxtx, RX: 'rxtx + Receiver, TX: 'rxtx + Transmitter, const PHYADDRESS: u8>
         let mut e = Controller {
             gmac,
             clock: PhantomData,
+            phy_address: builder.phy_address(),
             rx,
             tx,
         };
 
         // Reset the GMAC to its reset state.
-        e.reset();
+        //e.reset();
+        {
+            e.gmac.ncr.reset();
+            e.disable_all_interrupts();
+            e.clear_statistics();
+    
+            // Clear all status bits in the receive status register by setting the four
+            // status bits.
+            e.gmac.rsr.write(|w| w
+                .bna().set_bit()     // Buffer not available
+                .rec().set_bit()    // Frame Received
+                .rxovr().set_bit()  // Receive Overrun
+                .hno().set_bit()    // HRESP not ok
+            );
+    
+            // Clear all bits in the transmit status register
+            e.gmac.tsr.write(|w| w
+                .ubr().set_bit()    // Used bit read 
+                .col().set_bit()    // Collision occurred
+                .rle().set_bit()    // Retry limit exceeded
+                .txgo().set_bit()   // Transmit go
+                .tfc().set_bit()    // Transmit frame corruption due to AHB error
+                .txcomp().set_bit() // Transmit complete
+                .und().set_bit()    // Transmit underrun
+                .hresp().set_bit()  // HRESP not ok
+            );
+
+            // Read the interrupt status register to ensure all interrupts are clear
+            e.gmac.isr.read();
+    
+            // Reset the configuration register
+            e.gmac.ncfgr.reset();
+        }
+
+        // Ensure transmit and receive are disabled since all configuration must happen in this state.
+        e.disable_transmit();
+        e.disable_receive();
 
         // Set the GMAC configuration register value.
         e.gmac.ncfgr.modify(|_, w| {
@@ -76,18 +125,6 @@ impl<'rxtx, RX: 'rxtx + Receiver, TX: 'rxtx + Transmitter, const PHYADDRESS: u8>
                 pen().set_bit();
             w
         });
-
-        // Set the MAC addresses into the hardware.
-        e.set_ethernet_address1(&builder.ethernet_address());
-        for index in 0..builder.alternate_ethernet_address_count() {
-            let alternate_address = builder.alternate_ethernet_address(index);
-            match index {
-                0 => e.set_ethernet_address2(&alternate_address),
-                1 => e.set_ethernet_address3(&alternate_address),
-                2 => e.set_ethernet_address4(&alternate_address),
-                _ => panic!("unexpected alternate mac address offset in 3 element array"),
-            }
-        }
 
         // Set up the MDC (Management Data Clock) for the PHY based on the master clock frequency
         e.gmac.ncfgr.modify(|_, w| {
@@ -109,8 +146,14 @@ impl<'rxtx, RX: 'rxtx + Receiver, TX: 'rxtx + Transmitter, const PHYADDRESS: u8>
             }
         });
 
+        // Enable receive and transmit circuits
+//        e.enable_receive();
+//        e.enable_transmit();
+        
+        e.reset_phy();
+
         // Initialize the PHY and set the GMAC's speed and duplex based on returned link type.
-        match e.initialize_phy() {
+        match e.enable_phy_auto_negotiation() {
             LinkType::HalfDuplex10 => e
                 .gmac
                 .ncfgr
@@ -129,9 +172,17 @@ impl<'rxtx, RX: 'rxtx + Receiver, TX: 'rxtx + Transmitter, const PHYADDRESS: u8>
         // Ensure MII mode is set (NOTE: it's clear by default)
         e.gmac.ur.modify(|_, w| w.mii().set_bit());
 
-        // Enable receive and transmit circuits
-        e.enable_receive();
-        e.enable_transmit();
+        // Set the MAC addresses into the hardware.
+        e.set_ethernet_address1(&builder.ethernet_address());
+        for index in 0..builder.alternate_ethernet_address_count() {
+            let alternate_address = builder.alternate_ethernet_address(index);
+            match index {
+                0 => e.set_ethernet_address2(&alternate_address),
+                1 => e.set_ethernet_address3(&alternate_address),
+                2 => e.set_ethernet_address4(&alternate_address),
+                _ => panic!("unexpected alternate mac address offset in 3 element array"),
+            }
+        }
 
         e
     }
@@ -225,7 +276,7 @@ impl<'rxtx, RX: 'rxtx + Receiver, TX: 'rxtx + Transmitter, const PHYADDRESS: u8>
         self.gmac.ncr.modify(|_, w| w.txen().set_bit())
     }
 
-    fn _disable_transmit(&mut self) {
+    fn disable_transmit(&mut self) {
         self.gmac.ncr.modify(|_, w| w.txen().clear_bit())
     }
 
@@ -233,7 +284,7 @@ impl<'rxtx, RX: 'rxtx + Receiver, TX: 'rxtx + Transmitter, const PHYADDRESS: u8>
         self.gmac.ncr.modify(|_, w| w.rxen().set_bit())
     }
 
-    fn _disable_receive(&mut self) {
+    fn disable_receive(&mut self) {
         self.gmac.ncr.modify(|_, w| w.rxen().clear_bit())
     }
 
@@ -258,17 +309,17 @@ impl<'rxtx, RX: 'rxtx + Receiver, TX: 'rxtx + Transmitter, const PHYADDRESS: u8>
     }
 }
 
-impl<'rxtx, RX: Receiver, TX: Transmitter, const PHYADDRESS: u8> Phy
-    for Controller<'rxtx, RX, TX, PHYADDRESS>
+impl<'rxtx, RX: Receiver, TX: Transmitter> Phy
+    for Controller<'rxtx, RX, TX>
 {
     fn read_phy_register(&self, register: Register) -> u16 {
         self.wait_for_phy_idle();
-        self.gmac.man.modify(|_, w| unsafe {
+        self.gmac.man.write(|w| unsafe {
             w.
             wtn().bits(0b10).                   // must always be binary 10 (0x02)
             rega().bits(register as u8).        // phy register to read
-            phya().bits(PHYADDRESS).                   // phy address
-            op().bits(0b01).                    // read = 0b01, write = 0b10
+            phya().bits(self.phy_address).      // phy address
+            op().bits(0b10).                    // write = 0b01, read = 0b10
             cltto().set_bit().
             wzo().clear_bit() // must be set to zero
         });
@@ -282,15 +333,15 @@ impl<'rxtx, RX: Receiver, TX: Transmitter, const PHYADDRESS: u8> Phy
 
     fn write_phy_register(&mut self, register: Register, new_value: u16) {
         self.wait_for_phy_idle();
-        self.gmac.man.modify(|_, w| unsafe {
+        self.gmac.man.write(|w| unsafe {
             w.
             data().bits(new_value).
             wtn().bits(0b10).                   // must always be binary 10 (0x02)
-            rega().bits(register as u8).        // phy register to read
-            phya().bits(PHYADDRESS).                   // phy address
-            op().bits(0b10).                    // read = 0b01, write = 0b10
+            rega().bits(register as u8).        // phy register to read/write
+            phya().bits(self.phy_address).      // phy address
+            op().bits(0b01).                    // write = 0b01, read = 0b10
             cltto().set_bit().
-            wzo().clear_bit() // must be set to zero
+            wzo().clear_bit()                   // must be set to zero
         });
         self.wait_for_phy_idle();
     }

@@ -19,7 +19,7 @@ embedded-time = "0.10.1"
 log = "0.4"
 nb = "0.1.0"
 paste = "1.0"
-smoltcp = { version = "0.7.1", default-features = false, features = ["proto-ipv4", "proto-dhcpv4", "socket-udp", "socket-tcp", "socket-icmp"], optional = true }
+smoltcp = { git = "https://github.com/smoltcp-rs/smoltcp.git", branch = "master", default-features = false, features = ["medium-ip", "proto-ipv4", "proto-dhcpv4", "socket-udp", "socket-tcp", "socket-icmp"], optional=true }
 usb-device = { git = "https://github.com/haata/usb-device.git", optional = true }
 #usb-device = { version = "0.2", optional = true }
 vcell = "0.1"
@@ -106,6 +106,3 @@ atsam4sd16b = ["atsam4s", "atsam4sd", "atsam4s_b", "atsam4sd16b-pac", "atsam4sd1
 atsam4sd16c = ["atsam4s", "atsam4sd", "atsam4s_c", "atsam4sd16c-pac", "atsam4sd16c-pac/rt"]
 atsam4sd32b = ["atsam4s", "atsam4sd", "atsam4s_b", "atsam4sd32b-pac", "atsam4sd32b-pac/rt"]
 atsam4sd32c = ["atsam4s", "atsam4sd", "atsam4s_c", "atsam4sd32c-pac", "atsam4sd32c-pac/rt"]
-
-# [patch.crates-io]
-# smoltcp = { path = "../smoltcp" }
