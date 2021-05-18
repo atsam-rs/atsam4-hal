@@ -57,12 +57,16 @@ pub trait Phy {
                 .set_full_duplex()
         });
 
-        // Restart auto-negotiation
-        self.modify_phy_bmcr(|w| w.set_auto_negotiation_restart().clear_isolate());
+        // Restart auto-negotiation (this must be done with managment port enabled)
+        {
+            self.enable_phy_management_port();
+            self.modify_phy_bmcr_(|w| w.set_auto_negotiation_restart().clear_isolate());
 
-        // Wait for auto-negotiation to complete
-        // !todo - use timeout.
-        while !self.read_phy_bmsr().auto_negotiation_complete() {}
+            // Wait for auto-negotiation to complete
+            // !todo - use timeout.
+            while !self.read_phy_bmsr().auto_negotiation_complete() {}
+            self.disable_phy_management_port();            
+        }
 
         // Get the auto-negotiation partner configuration
         let partner = self.read_phy_pcr1();
