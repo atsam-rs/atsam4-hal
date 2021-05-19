@@ -4,9 +4,14 @@ use crate::pac::GMAC;
 #[cfg(not(feature = "smoltcp"))]
 use super::RxError;
 
+// In order to keep the buffers 32 bit aligned (required by the hardware), we adjust
+// the size here to be the next 4 byte multiple greater than the requested MTU.
+const BUFFERSIZE: usize = (MTU & !3) + 4;
+
+#[repr(C)]
 pub struct RxDescriptorBlock<const COUNT: usize> {
     descriptors: [RxDescriptor; COUNT],
-    buffers: [[u8; MTU]; COUNT],
+    buffers: [[u8; BUFFERSIZE]; COUNT],
 
     next_entry: usize, // Index of next entry to read/write
 }
@@ -15,7 +20,7 @@ impl<const COUNT: usize> RxDescriptorBlock<COUNT> {
     pub const fn const_default() -> Self {
         let rx = RxDescriptorBlock {
             descriptors: [RxDescriptor::const_default(); COUNT],
-            buffers: [[0; MTU]; COUNT],
+            buffers: [[0; BUFFERSIZE]; COUNT],
             next_entry: 0,
         };
 

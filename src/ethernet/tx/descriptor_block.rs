@@ -5,6 +5,7 @@ use super::{Transmitter, TxDescriptor, MTU};
 #[cfg(not(feature = "smoltcp"))]
 use super::TxError;
 
+#[repr(C)]
 pub struct TxDescriptorBlock<const COUNT: usize> {
     descriptors: [TxDescriptor; COUNT],
     buffers: [[u8; MTU]; COUNT],

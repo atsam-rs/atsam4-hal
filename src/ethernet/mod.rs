@@ -21,7 +21,7 @@ pub use rx::{RxDescriptorBlock, RxError};
 mod volatile_read_write;
 pub use volatile_read_write::VolatileReadWrite;
 
-const MTU: usize = 1500;
+const MTU: usize = 1522;
 
 pub trait Receiver {
     #[cfg(not(feature = "smoltcp"))]

@@ -1,5 +1,5 @@
 use super::{Controller, Receiver, Transmitter};
-use smoltcp::phy::{Device, DeviceCapabilities, RxToken, TxToken, Medium};
+use smoltcp::phy::{Device, DeviceCapabilities, RxToken, TxToken};
 use smoltcp::time::Instant;
 use smoltcp::Error;
 
@@ -13,7 +13,6 @@ impl<'d, 'rxtx, RX: 'd + Receiver, TX: 'd + Transmitter> Device<'d>
         let mut caps = DeviceCapabilities::default();
         caps.max_transmission_unit = super::MTU as usize;
         caps.max_burst_size = Some(1);
-        caps.medium = Medium::Ip;
         caps
     }
 
