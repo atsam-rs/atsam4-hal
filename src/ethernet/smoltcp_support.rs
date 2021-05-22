@@ -17,7 +17,10 @@ impl<'d, 'rxtx, RX: 'd + Receiver, TX: 'd + Transmitter> Device<'d>
     }
 
     fn receive(&'d mut self) -> Option<(Self::RxToken, Self::TxToken)> {
-        Some((EthRxToken(self.rx), EthTxToken(self.tx)))
+        match self.rx.can_receive() {
+            true => Some((EthRxToken(self.rx), EthTxToken(self.tx))),
+            false => None,
+        }        
     }
 
     fn transmit(&'d mut self) -> Option<Self::TxToken> {

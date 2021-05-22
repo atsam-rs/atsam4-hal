@@ -13,10 +13,10 @@ mod phy;
 mod smoltcp_support;
 
 mod tx;
-pub use tx::{TxDescriptorBlock, TxError};
+pub use tx::{TxDescriptorBlock};
 
 mod rx;
-pub use rx::{RxDescriptorBlock, RxError};
+pub use rx::{RxDescriptorBlock};
 
 mod volatile_read_write;
 pub use volatile_read_write::VolatileReadWrite;
@@ -24,6 +24,8 @@ pub use volatile_read_write::VolatileReadWrite;
 const MTU: usize = 1522;
 
 pub trait Receiver {
+    fn can_receive(&self) -> bool;
+
     #[cfg(not(feature = "smoltcp"))]
     fn receive<R, F: FnOnce(&mut [u8]) -> Result<R, RxError>>(
         &mut self,

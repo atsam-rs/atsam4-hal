@@ -73,21 +73,19 @@ impl Reader {
     }
 
     pub fn is_10mbit(&self) -> bool {
-        (self.0
-            & (1 << BitNumbers::HalfDuplex10BaseTCapable as u32)
-            & (1 << BitNumbers::FullDuplex10BaseTCapable as u32))
-            != 0
+        (self.0 &
+            ((1 << BitNumbers::HalfDuplex10BaseTCapable as u32) | (1 << BitNumbers::FullDuplex10BaseTCapable as u32))
+        ) != 0
     }
 
     pub fn is_100mbit(&self) -> bool {
-        (self.0
-            & (1 << BitNumbers::HalfDuplex100BaseTXCapable as u32)
-            & (1 << BitNumbers::FullDuplex100BaseTXCapable as u32))
-            != 0
+        (self.0 &
+            ((1 << BitNumbers::HalfDuplex100BaseTXCapable as u32) | (1 << BitNumbers::FullDuplex100BaseTXCapable as u32))    
+        ) != 0
     }
 
     pub fn speed(&self) -> MegabitsPerSecond {
-        if self.is_100mbit() {
+        if self.is_10mbit() {
             MegabitsPerSecond(10)
         } else if self.is_100mbit() {
             MegabitsPerSecond(100)

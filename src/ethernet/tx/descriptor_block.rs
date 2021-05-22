@@ -13,7 +13,7 @@ pub struct TxDescriptorBlock<const COUNT: usize> {
     next_entry: usize, // Index of next entry to read/write
 }
 
-impl<const COUNT: usize> TxDescriptorBlock<COUNT> {
+impl<'a, const COUNT: usize> TxDescriptorBlock<COUNT> {
     pub const fn const_default() -> Self {
         let tx = TxDescriptorBlock {
             descriptors: [TxDescriptor::const_default(); COUNT],
@@ -28,7 +28,7 @@ impl<const COUNT: usize> TxDescriptorBlock<COUNT> {
         let mut i = 0;
         for descriptor in self.descriptors.iter_mut() {
             let buffer_address = &self.buffers[i][0];
-            descriptor.modify(|w| w.set_address(buffer_address));
+            descriptor.initialize(buffer_address);
             i += 1;
         }
 
@@ -102,6 +102,8 @@ impl<const COUNT: usize> Transmitter for TxDescriptorBlock<COUNT> {
         // Check if the next entry is still being used by the GMAC...if so,
         // indicate there's no more entries and the client has to wait for one to
         // become available.
+        debug_assert!(size <= MTU);
+
         let (next_descriptor, next_buffer) = self.next_mut();
         if !next_descriptor.read().is_used() {
             return Err(smoltcp::Error::Exhausted);
@@ -111,10 +113,10 @@ impl<const COUNT: usize> Transmitter for TxDescriptorBlock<COUNT> {
         next_descriptor.modify(|w| w.set_buffer_size(size as u16));
 
         // Call the closure to fill the buffer
-        let r = f(next_buffer);
+        let r = f(&mut next_buffer[0..size]);
 
         // Indicate to the GMAC that the entry is available for it to transmit
-        next_descriptor.modify(|w| w.set_used());
+        next_descriptor.modify(|w| w.clear_used());
 
         // This entry is now in use, indicate this.
         self.increment_next_entry();

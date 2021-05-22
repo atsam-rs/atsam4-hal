@@ -145,10 +145,6 @@ impl<'rxtx, RX: 'rxtx + Receiver, TX: 'rxtx + Transmitter>
                 w.clk().mck_8()
             }
         });
-
-        // Enable receive and transmit circuits
-//        e.enable_receive();
-//        e.enable_transmit();
         
         e.reset_phy();
 
@@ -183,6 +179,10 @@ impl<'rxtx, RX: 'rxtx + Receiver, TX: 'rxtx + Transmitter>
                 _ => panic!("unexpected alternate mac address offset in 3 element array"),
             }
         }
+
+        // Enable receive and transmit circuits
+        e.enable_receive();
+        e.enable_transmit();
 
         e
     }

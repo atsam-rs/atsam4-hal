@@ -1,5 +1,17 @@
 use super::{VolatileReadWrite, MTU};
 
+enum Word1BitNumbers {
+    LastBuffer = 15,
+    CRCNotAppended = 16,
+
+    LateCollision = 26,
+    FrameCorrupted = 27,
+    Underrun = 28,
+    RetryLimitExceeded = 29,
+    Wrap = 30,
+    Used = 31,
+}
+
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct TxDescriptor {
@@ -14,11 +26,11 @@ impl TxDescriptor {
     }
 
     pub fn initialize(&mut self, address: *const u8) {
-        self.modify(|w| {
-            w.clear_used()
-                .clear_end_of_frame()
-                .set_address(address)
-                .set_buffer_size(0)
+        self.write(|w| {
+            w
+            .set_used()
+            .set_address(address)
+            .set_buffer_size(0)
         })
     }
 
@@ -33,6 +45,13 @@ impl TxDescriptor {
         self.word1.write_volatile(result.1);
     }
 
+    pub fn write<F: FnOnce(TxDescriptorWriter) -> TxDescriptorWriter>(&mut self, f: F) {
+        let w = TxDescriptorWriter(0, 0);
+        let result = f(w);
+        self.word0.write_volatile(result.0);
+        self.word1.write_volatile(result.1);
+    }
+
     fn set_wrap(&mut self) {
         self.modify(|w| w.set_wrap())
     }
@@ -41,23 +60,23 @@ impl TxDescriptor {
 pub struct TxDescriptorReader(u32, u32);
 impl TxDescriptorReader {
     pub fn collided(&self) -> bool {
-        self.1 & (1 << 26) != 0
+        self.1 & (1 << Word1BitNumbers::LateCollision as u32) != 0
     }
 
     pub fn corrupted(&self) -> bool {
-        self.1 & (1 << 27) != 0
+        self.1 & (1 << Word1BitNumbers::FrameCorrupted as u32) != 0
     }
 
     pub fn underran(&self) -> bool {
-        self.1 & (1 << 28) != 0
+        self.1 & (1 << Word1BitNumbers::Underrun as u32) != 0
     }
 
     pub fn retry_exceeded(&self) -> bool {
-        self.1 & (1 << 29) != 0
+        self.1 & (1 << Word1BitNumbers::RetryLimitExceeded as u32) != 0
     }
 
     pub fn is_used(&self) -> bool {
-        self.1 & (1 << 31) != 0
+        self.1 & (1 << Word1BitNumbers::Used as u32) != 0
     }
 }
 
@@ -74,23 +93,15 @@ impl TxDescriptorWriter {
         TxDescriptorWriter(self.0, (self.1 & !0x0000_1FFF) | byte_length as u32)
     }
 
-    pub fn set_end_of_frame(self) -> Self {
-        TxDescriptorWriter(self.0, self.1 | (1 << 15))
-    }
-
-    pub fn clear_end_of_frame(self) -> Self {
-        TxDescriptorWriter(self.0, self.1 & !(1 << 15))
-    }
-
     pub fn set_wrap(self) -> Self {
-        TxDescriptorWriter(self.0, self.1 | (1 << 30))
+        TxDescriptorWriter(self.0, self.1 | (1 << Word1BitNumbers::Wrap as u32))
     }
 
     pub fn set_used(self) -> Self {
-        TxDescriptorWriter(self.0, self.1 | (1 << 31))
+        TxDescriptorWriter(self.0, self.1 | (1 << Word1BitNumbers::Used as u32))
     }
 
     pub fn clear_used(self) -> Self {
-        TxDescriptorWriter(self.0, self.1 & !(1 << 31))
+        TxDescriptorWriter(self.0, self.1 & !(1 << Word1BitNumbers::Used as u32))
     }
 }

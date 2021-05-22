@@ -31,7 +31,7 @@ impl<const COUNT: usize> RxDescriptorBlock<COUNT> {
         let mut i = 0;
         for descriptor in self.descriptors.iter_mut() {
             let buffer_address = &self.buffers[i][0];
-            descriptor.modify(|w| w.set_address(buffer_address));
+            descriptor.initialize(buffer_address);
             i += 1;
         }
 
@@ -58,6 +58,13 @@ impl<const COUNT: usize> RxDescriptorBlock<COUNT> {
         }
     }
 
+    fn next(&self) -> (&RxDescriptor, &[u8]) {
+        (
+            &self.descriptors[self.next_entry],
+            &self.buffers[self.next_entry],
+        )
+    }
+
     fn next_mut(&mut self) -> (&mut RxDescriptor, &mut [u8]) {
         (
             &mut self.descriptors[self.next_entry],
@@ -67,6 +74,12 @@ impl<const COUNT: usize> RxDescriptorBlock<COUNT> {
 }
 
 impl<const COUNT: usize> Receiver for RxDescriptorBlock<COUNT> {
+    fn can_receive(&self) -> bool {
+        let (next_descriptor, _) = self.next();
+        let descriptor_properties = next_descriptor.read();
+        descriptor_properties.is_owned()
+    }
+
     #[cfg(not(feature = "smoltcp"))]
     fn receive<R, F: FnOnce(&mut [u8]) -> Result<R, RxError>>(
         &mut self,
@@ -75,16 +88,16 @@ impl<const COUNT: usize> Receiver for RxDescriptorBlock<COUNT> {
         // Check if the next entry is still being used by the GMAC...if so,
         // indicate there's no more entries and the client has to wait for one to
         // become available.
-        let (next_descriptor, next_buffer) = self.descriptors.next_mut();
+        let (next_descriptor, next_buffer) = self.next_mut();
         let descriptor_properties = next_descriptor.read();
         if !descriptor_properties.is_owned() {
             return Err(RxError::WouldBlock);
         }
 
-        let size = descriptor_properties.buffer_size();
+        let buffer_size = descriptor_properties.buffer_size() as usize;
 
         // Call the closure to copy data out of the buffer
-        let r = f(next_buffer);
+        let r = f(&mut next_buffer[0..buffer_size]);
 
         // Indicate that the descriptor is no longer owned by software and is available
         // for the GMAC to write into.
@@ -110,10 +123,10 @@ impl<const COUNT: usize> Receiver for RxDescriptorBlock<COUNT> {
             return Err(smoltcp::Error::Exhausted);
         }
 
-        //        let size = descriptor_properties.buffer_size();
+        let buffer_size = descriptor_properties.buffer_size() as usize;
 
         // Call the closure to copy data out of the buffer
-        let r = f(next_buffer);
+        let r = f(&mut next_buffer[0..buffer_size]);
 
         // Indicate that the descriptor is no longer owned by software and is available
         // for the GMAC to write into.
