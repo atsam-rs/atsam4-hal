@@ -2,7 +2,14 @@ use super::{
     builder::Builder,
     eui48::Identifier as EthernetAddress,
     phy::{LinkType, Phy, Register},
-    Receiver, Transmitter,
+    rx::{
+        DescriptorTable as RxDescriptorTable,
+        Receiver
+    },
+    tx::{
+        DescriptorTable as TxDescriptorTable,
+        Transmitter,
+    }
 };
 use crate::{
     clock::{get_master_clock_frequency, Enabled, GmacClock},
@@ -41,16 +48,16 @@ macro_rules! define_ethernet_address_function {
     };
 }
 
-pub struct Controller<'rxtx, RX: 'rxtx + Receiver, TX: 'rxtx + Transmitter> {
-    gmac: GMAC,
+pub struct Controller<'rxtx> {
+    pub(super) gmac: GMAC,
     clock: PhantomData<GmacClock<Enabled>>,
     phy_address: u8,
-    pub(super) rx: &'rxtx mut RX,
-    pub(super) tx: &'rxtx mut TX,
+    pub(super) rx: Receiver<'rxtx>,
+    pub(super) tx: Transmitter<'rxtx>,
 }
 
-impl<'rxtx, RX: 'rxtx + Receiver, TX: 'rxtx + Transmitter>
-    Controller<'rxtx, RX, TX>
+impl<'rxtx>
+    Controller<'rxtx>
 {
     pub(super) fn new(
         gmac: GMAC,
@@ -65,62 +72,28 @@ impl<'rxtx, RX: 'rxtx + Receiver, TX: 'rxtx + Transmitter>
         _grxer:  Pd7<PfA>,
         _gmdc:   Pd8<PfA>,
         _gmdio:  Pd9<PfA>,
-        rx: &'rxtx mut RX,
-        tx: &'rxtx mut TX,
+        rx: &'rxtx mut dyn RxDescriptorTable,
+        tx: &'rxtx mut dyn TxDescriptorTable,
         builder: Builder,
     ) -> Self {
+        let rx_base_address = rx.base_address();
+        let tx_base_address = tx.base_address();
         let mut e = Controller {
             gmac,
             clock: PhantomData,
             phy_address: builder.phy_address(),
-            rx,
-            tx,
+            rx: Receiver::new(rx),
+            tx: Transmitter::new(tx),
         };
 
-        // Reset the GMAC to its reset state.
-        //e.reset();
-        {
-            e.gmac.ncr.reset();
-            e.disable_all_interrupts();
-            e.clear_statistics();
-    
-            // Clear all status bits in the receive status register by setting the four
-            // status bits.
-            e.gmac.rsr.write(|w| w
-                .bna().set_bit()     // Buffer not available
-                .rec().set_bit()    // Frame Received
-                .rxovr().set_bit()  // Receive Overrun
-                .hno().set_bit()    // HRESP not ok
-            );
-    
-            // Clear all bits in the transmit status register
-            e.gmac.tsr.write(|w| w
-                .ubr().set_bit()    // Used bit read 
-                .col().set_bit()    // Collision occurred
-                .rle().set_bit()    // Retry limit exceeded
-                .txgo().set_bit()   // Transmit go
-                .tfc().set_bit()    // Transmit frame corruption due to AHB error
-                .txcomp().set_bit() // Transmit complete
-                .und().set_bit()    // Transmit underrun
-                .hresp().set_bit()  // HRESP not ok
-            );
-
-            // Read the interrupt status register to ensure all interrupts are clear
-            e.gmac.isr.read();
-    
-            // Reset the configuration register
-            e.gmac.ncfgr.reset();
-        }
-
-        // Ensure transmit and receive are disabled since all configuration must happen in this state.
-        e.disable_transmit();
-        e.disable_receive();
+        // Reset the GMAC to its reset state (with transmit and receive disabled)
+        e.reset();
 
         // Set the GMAC configuration register value.
         e.gmac.ncfgr.modify(|_, w| {
             w.
                 // Don't write frame checksum bytes on received frames to memory.
-                rfcs().set_bit().
+                //rfcs().set_bit().
                 // Set pause-enable - transmission will pause if a non-zero 802.3 classic pause frame is received and PFC has not been negotiated.
                 pen().set_bit();
             w
@@ -180,6 +153,10 @@ impl<'rxtx, RX: 'rxtx + Receiver, TX: 'rxtx + Transmitter>
             }
         }
 
+        // Initialize the receive descriptor table
+        e.gmac.rbqb.write(|w| unsafe { w.bits(rx_base_address) });
+        e.gmac.tbqb.write(|w| unsafe { w.bits(tx_base_address) });
+
         // Enable receive and transmit circuits
         e.enable_receive();
         e.enable_transmit();
@@ -206,17 +183,36 @@ impl<'rxtx, RX: 'rxtx + Receiver, TX: 'rxtx + Transmitter>
         self.disable_all_interrupts();
         self.clear_statistics();
 
-        // Clear all bits in the receive status register
-        self.gmac.rsr.reset();
+        // Clear all status bits in the receive status register by setting the four
+        // status bits.
+        self.gmac.rsr.write(|w| w
+            .bna().set_bit()     // Buffer not available
+            .rec().set_bit()    // Frame Received
+            .rxovr().set_bit()  // Receive Overrun
+            .hno().set_bit()    // HRESP not ok
+        );
 
         // Clear all bits in the transmit status register
-        self.gmac.tsr.reset();
+        self.gmac.tsr.write(|w| w
+            .ubr().set_bit()    // Used bit read 
+            .col().set_bit()    // Collision occurred
+            .rle().set_bit()    // Retry limit exceeded
+            .txgo().set_bit()   // Transmit go
+            .tfc().set_bit()    // Transmit frame corruption due to AHB error
+            .txcomp().set_bit() // Transmit complete
+            .und().set_bit()    // Transmit underrun
+            .hresp().set_bit()  // HRESP not ok
+        );
 
         // Read the interrupt status register to ensure all interrupts are clear
         self.gmac.isr.read();
 
         // Reset the configuration register
         self.gmac.ncfgr.reset();
+
+        // Disable both transmit and receive circuits
+        self.disable_receive();
+        self.disable_transmit();
     }
 
     fn disable_all_interrupts(&mut self) {
@@ -272,19 +268,19 @@ impl<'rxtx, RX: 'rxtx + Receiver, TX: 'rxtx + Transmitter>
         });
     }
 
-    fn enable_transmit(&mut self) {
+    fn enable_transmit(&self) {
         self.gmac.ncr.modify(|_, w| w.txen().set_bit())
     }
 
-    fn disable_transmit(&mut self) {
+    fn disable_transmit(&self) {
         self.gmac.ncr.modify(|_, w| w.txen().clear_bit())
     }
 
-    fn enable_receive(&mut self) {
+    fn enable_receive(&self) {
         self.gmac.ncr.modify(|_, w| w.rxen().set_bit())
     }
 
-    fn disable_receive(&mut self) {
+    fn disable_receive(&self) {
         self.gmac.ncr.modify(|_, w| w.rxen().clear_bit())
     }
 
@@ -307,10 +303,15 @@ impl<'rxtx, RX: 'rxtx + Receiver, TX: 'rxtx + Transmitter>
     fn _increment_statistics(&mut self) {
         self.gmac.ncr.modify(|_, w| w.incstat().set_bit())
     }
+
+    // Transmission
+    fn start_transmission(&self) {
+        self.gmac.ncr.modify(|_, w| w.tstart().set_bit());
+    }
 }
 
-impl<'rxtx, RX: Receiver, TX: Transmitter> Phy
-    for Controller<'rxtx, RX, TX>
+impl<'rxtx> Phy
+    for Controller<'rxtx>
 {
     fn read_phy_register(&self, register: Register) -> u16 {
         self.wait_for_phy_idle();

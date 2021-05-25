@@ -1,4 +1,8 @@
-use super::{Controller, EthernetAddress, Receiver, Transmitter};
+use super::{
+    Controller, EthernetAddress, 
+    rx::DescriptorTable as RxDescriptorTable,
+    tx::DescriptorTable as TxDescriptorTable,
+};
 
 use crate::{
     clock::{Enabled, GmacClock},
@@ -74,7 +78,7 @@ impl Builder {
         self.phy_address
     }
 
-    pub fn freeze<'rxtx, RX: Receiver, TX: Transmitter>(
+    pub fn freeze<'rxtx>(
         self,
         gmac: GMAC,
         clock: GmacClock<Enabled>,
@@ -88,9 +92,9 @@ impl Builder {
         grxer:  Pd7<PfA>,
         gmdc:   Pd8<PfA>,
         gmdio:  Pd9<PfA>,
-        rx: &'rxtx mut RX,
-        tx: &'rxtx mut TX,
-    ) -> Controller<'rxtx, RX, TX> {
+        rx: &'rxtx mut dyn RxDescriptorTable,
+        tx: &'rxtx mut dyn TxDescriptorTable,
+    ) -> Controller<'rxtx> {
         Controller::new(gmac, clock, grefck, gtxen, gtx0, gtx1, gcrsdv, grx0, grx1, grxer, gmdc, gmdio, rx, tx, self)
     }
 }

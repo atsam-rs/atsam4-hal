@@ -1,30 +1,53 @@
-use crate::pac::GMAC;
+use super::{DescriptorTable, TxDescriptor, MTU};
 
-use super::{Transmitter, TxDescriptor, MTU};
-
-#[cfg(not(feature = "smoltcp"))]
-use super::TxError;
+// In order to keep the buffers 32 bit aligned (required by the hardware), we adjust
+// the size here to be the next 4 byte multiple greater than the requested MTU.
+const BUFFERSIZE: usize = (MTU & !3) + 4;
 
 #[repr(C)]
-pub struct TxDescriptorBlock<const COUNT: usize> {
+pub struct TxDescriptorTable<const COUNT: usize> {
     descriptors: [TxDescriptor; COUNT],
-    buffers: [[u8; MTU]; COUNT],
+    buffers: [[u8; BUFFERSIZE]; COUNT],
 
     next_entry: usize, // Index of next entry to read/write
 }
 
-impl<'a, const COUNT: usize> TxDescriptorBlock<COUNT> {
+impl<'a, const COUNT: usize> TxDescriptorTable<COUNT> {
     pub const fn const_default() -> Self {
-        let tx = TxDescriptorBlock {
+        let tx = TxDescriptorTable {
             descriptors: [TxDescriptor::const_default(); COUNT],
-            buffers: [[0; MTU]; COUNT],
+            buffers: [[0; BUFFERSIZE]; COUNT],
             next_entry: 0,
         };
 
         tx
     }
 
-    pub fn initialize(&mut self, gmac: &GMAC) {
+    fn increment_next_entry(&mut self) {
+        if self.next_entry == COUNT - 1 {
+            self.next_entry = 0;
+        } else {
+            self.next_entry += 1;
+        }
+    }
+
+    fn next(&self) -> (&TxDescriptor, &[u8]) {
+        (
+            &self.descriptors[self.next_entry],
+            &self.buffers[self.next_entry],
+        )
+    }
+
+    fn next_mut(&mut self) -> (&mut TxDescriptor, &mut [u8]) {
+        (
+            &mut self.descriptors[self.next_entry],
+            &mut self.buffers[self.next_entry],
+        )
+    }
+}
+/*
+impl<const COUNT: usize> Transmitter for TxDescriptorBlock<COUNT> {
+    fn initialize(&mut self, gmac: &GMAC) {
         let mut i = 0;
         for descriptor in self.descriptors.iter_mut() {
             let buffer_address = &self.buffers[i][0];
@@ -37,33 +60,7 @@ impl<'a, const COUNT: usize> TxDescriptorBlock<COUNT> {
         gmac.tbqb
             .write(|w| unsafe { w.bits(self.descriptor_table_address()) });
     }
-
-    fn descriptor_table_address(&self) -> u32 {
-        let address: *const TxDescriptor = &self.descriptors[0];
-        let a = address as u32;
-        if a & 0x0000_0003 != 0 {
-            panic!("Unaligned buffer address in descriptor table")
-        }
-        a
-    }
-
-    fn increment_next_entry(&mut self) {
-        if self.next_entry == COUNT - 1 {
-            self.next_entry = 0;
-        } else {
-            self.next_entry += 1;
-        }
-    }
-
-    fn next_mut(&mut self) -> (&mut TxDescriptor, &mut [u8]) {
-        (
-            &mut self.descriptors[self.next_entry],
-            &mut self.buffers[self.next_entry],
-        )
-    }
-}
-
-impl<const COUNT: usize> Transmitter for TxDescriptorBlock<COUNT> {
+    
     #[cfg(not(feature = "smoltcp"))]
     fn send<R, F: FnOnce(&mut [u8], u16) -> Result<R, TxError>>(
         &mut self,
@@ -122,5 +119,39 @@ impl<const COUNT: usize> Transmitter for TxDescriptorBlock<COUNT> {
         self.increment_next_entry();
 
         r
+    }
+}
+*/
+impl<const COUNT: usize> DescriptorTable for TxDescriptorTable<COUNT> {
+    fn initialize(&mut self) {
+        let mut i = 0;
+        for descriptor in self.descriptors.iter_mut() {
+            let buffer_address = &self.buffers[i][0];
+            descriptor.initialize(buffer_address);
+            i += 1;
+        }
+
+        self.descriptors[COUNT - 1].modify(|w| w.set_wrap());        
+    }
+    
+    fn base_address(&self) -> u32 {
+        let address: *const TxDescriptor = &self.descriptors[0];
+        let a = address as u32;
+        if a & 0x0000_0003 != 0 {
+            panic!("Unaligned buffer address in descriptor table")
+        }
+        a
+    }
+
+    fn next_descriptor(&mut self) -> (&mut TxDescriptor, &mut [u8]) {
+        (&mut self.descriptors[self.next_entry], &mut self.buffers[self.next_entry])
+    }
+
+    fn consume_next_descriptor(&mut self) {
+        if self.next_entry == COUNT - 1 {
+            self.next_entry = 0;
+        } else {
+            self.next_entry += 1;
+        }
     }
 }

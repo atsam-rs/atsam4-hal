@@ -1,53 +1,26 @@
-use super::{Receiver, RxDescriptor, MTU};
-use crate::pac::GMAC;
-
-#[cfg(not(feature = "smoltcp"))]
-use super::RxError;
+use super::{DescriptorTable, RxDescriptor, MTU};
 
 // In order to keep the buffers 32 bit aligned (required by the hardware), we adjust
 // the size here to be the next 4 byte multiple greater than the requested MTU.
 const BUFFERSIZE: usize = (MTU & !3) + 4;
 
 #[repr(C)]
-pub struct RxDescriptorBlock<const COUNT: usize> {
+pub struct RxDescriptorTable<const COUNT: usize> {
     descriptors: [RxDescriptor; COUNT],
     buffers: [[u8; BUFFERSIZE]; COUNT],
 
     next_entry: usize, // Index of next entry to read/write
 }
 
-impl<const COUNT: usize> RxDescriptorBlock<COUNT> {
+impl<const COUNT: usize> RxDescriptorTable<COUNT> {
     pub const fn const_default() -> Self {
-        let rx = RxDescriptorBlock {
+        let rx = RxDescriptorTable {
             descriptors: [RxDescriptor::const_default(); COUNT],
             buffers: [[0; BUFFERSIZE]; COUNT],
             next_entry: 0,
         };
 
         rx
-    }
-
-    pub fn initialize(&mut self, gmac: &GMAC) {
-        let mut i = 0;
-        for descriptor in self.descriptors.iter_mut() {
-            let buffer_address = &self.buffers[i][0];
-            descriptor.initialize(buffer_address);
-            i += 1;
-        }
-
-        self.descriptors[COUNT - 1].modify(|w| w.set_wrap());
-
-        gmac.rbqb
-            .write(|w| unsafe { w.bits(self.descriptor_table_address()) });
-    }
-
-    fn descriptor_table_address(&self) -> u32 {
-        let address: *const RxDescriptor = &self.descriptors[0];
-        let a = address as u32;
-        if a & 0x0000_0003 != 0 {
-            panic!("Unaligned buffer address in descriptor table")
-        }
-        a
     }
 
     fn increment_next_entry(&mut self) {
@@ -72,8 +45,22 @@ impl<const COUNT: usize> RxDescriptorBlock<COUNT> {
         )
     }
 }
+/*
+impl<const COUNT: usize> Receiver for RxDescriptorTable<COUNT> {
+    fn initialize(&mut self, gmac: &GMAC) {
+        let mut i = 0;
+        for descriptor in self.descriptors.iter_mut() {
+            let buffer_address = &self.buffers[i][0];
+            descriptor.initialize(buffer_address);
+            i += 1;
+        }
 
-impl<const COUNT: usize> Receiver for RxDescriptorBlock<COUNT> {
+        self.descriptors[COUNT - 1].modify(|w| w.set_wrap());
+
+        gmac.rbqb
+            .write(|w| unsafe { w.bits(self.descriptor_table_address()) });
+    }
+
     fn can_receive(&self) -> bool {
         let (next_descriptor, _) = self.next();
         let descriptor_properties = next_descriptor.read();
@@ -136,5 +123,43 @@ impl<const COUNT: usize> Receiver for RxDescriptorBlock<COUNT> {
         self.increment_next_entry();
 
         r
+    }
+}
+*/
+impl<const COUNT: usize> DescriptorTable for RxDescriptorTable<COUNT> {
+    fn initialize(&mut self) {
+        let mut i = 0;
+        for descriptor in self.descriptors.iter_mut() {
+            let buffer_address = &self.buffers[i][0];
+            descriptor.initialize(buffer_address);
+            i += 1;
+        }
+
+        self.descriptors[COUNT - 1].modify(|w| w.set_wrap());        
+    }
+
+    fn base_address(&self) -> u32 {
+        let address: *const RxDescriptor = &self.descriptors[0];
+        let a = address as u32;
+        if a & 0x0000_0003 != 0 {
+            panic!("Unaligned buffer address in descriptor table")
+        }
+        a
+    }
+
+    fn next_descriptor(&self) -> &RxDescriptor {
+        &self.descriptors[self.next_entry]
+    }
+
+    fn next_descriptor_pair(&mut self) -> (&mut RxDescriptor, &mut [u8]) {
+        (&mut self.descriptors[self.next_entry], &mut self.buffers[self.next_entry])
+    }
+
+    fn consume_next_descriptor(&mut self) {
+        if self.next_entry == COUNT - 1 {
+            self.next_entry = 0;
+        } else {
+            self.next_entry += 1;
+        }
     }
 }

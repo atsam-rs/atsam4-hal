@@ -1,13 +1,12 @@
+use crate::pac::GMAC;
 use super::{Controller, Receiver, Transmitter};
 use smoltcp::phy::{Device, DeviceCapabilities, RxToken, TxToken};
 use smoltcp::time::Instant;
 use smoltcp::Error;
 
-impl<'d, 'rxtx, RX: 'd + Receiver, TX: 'd + Transmitter> Device<'d>
-    for Controller<'rxtx, RX, TX>
-{
-    type RxToken = EthRxToken<'d, RX>;
-    type TxToken = EthTxToken<'d, TX>;
+impl<'d, 'rxtx: 'd> Device<'d> for Controller<'d> {
+    type RxToken = EthRxToken<'d>;
+    type TxToken = EthTxToken<'d>;
 
     fn capabilities(&self) -> DeviceCapabilities {
         let mut caps = DeviceCapabilities::default();
@@ -18,34 +17,32 @@ impl<'d, 'rxtx, RX: 'd + Receiver, TX: 'd + Transmitter> Device<'d>
 
     fn receive(&'d mut self) -> Option<(Self::RxToken, Self::TxToken)> {
         match self.rx.can_receive() {
-            true => Some((EthRxToken(self.rx), EthTxToken(self.tx))),
+            true => Some((EthRxToken(&mut self.rx), EthTxToken(&mut self.tx, &self.gmac))),
             false => None,
-        }        
+        }
     }
 
     fn transmit(&'d mut self) -> Option<Self::TxToken> {
-        Some(EthTxToken(self.tx))
+        Some(EthTxToken(&mut self.tx, &self.gmac))
     }
 }
 
-pub struct EthRxToken<'a, RX: Receiver>(&'a mut RX);
-
-impl<'a, RX: Receiver> RxToken for EthRxToken<'a, RX> {
+pub struct EthRxToken<'a>(&'a mut Receiver<'a>);
+impl<'a> RxToken for EthRxToken<'a> {
     fn consume<R, F>(mut self, _timestamp: Instant, f: F) -> Result<R, Error>
     where
         F: FnOnce(&mut [u8]) -> Result<R, Error>,
     {
-        self.0.receive(f)
+        self.0.receive_smoltcp(f)
     }
 }
 
-pub struct EthTxToken<'a, TX>(&'a mut TX);
-
-impl<'a, TX: Transmitter> TxToken for EthTxToken<'a, TX> {
+pub struct EthTxToken<'a>( &'a mut Transmitter<'a>, &'a GMAC);
+impl<'a> TxToken for EthTxToken<'a> {
     fn consume<R, F>(self, _timestamp: Instant, size: usize, f: F) -> Result<R, Error>
     where
         F: FnOnce(&mut [u8]) -> Result<R, Error>,
     {
-        self.0.send(size, f)
+        self.0.send_smoltcp(self.1, size, f)
     }
 }
