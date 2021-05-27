@@ -4,9 +4,9 @@ use smoltcp::phy::{Device, DeviceCapabilities, RxToken, TxToken};
 use smoltcp::time::Instant;
 use smoltcp::Error;
 
-impl<'d, 'rxtx: 'd> Device<'d> for Controller<'d> {
-    type RxToken = EthRxToken<'d>;
-    type TxToken = EthTxToken<'d>;
+impl<'d, 'rxtx: 'd> Device<'d> for Controller<'rxtx> {
+    type RxToken = EthRxToken<'rxtx>;
+    type TxToken = EthTxToken<'rxtx>;
 
     fn capabilities(&self) -> DeviceCapabilities {
         let mut caps = DeviceCapabilities::default();

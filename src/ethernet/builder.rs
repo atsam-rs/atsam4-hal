@@ -1,7 +1,8 @@
 use super::{
-    Controller, EthernetAddress, 
-    rx::DescriptorTable as RxDescriptorTable,
-    tx::DescriptorTable as TxDescriptorTable,
+    Controller,
+    EthernetAddress,
+    rx,
+    tx,
 };
 
 use crate::{
@@ -78,7 +79,7 @@ impl Builder {
         self.phy_address
     }
 
-    pub fn freeze<'rxtx>(
+    pub fn build<'rxtx>(
         self,
         gmac: GMAC,
         clock: GmacClock<Enabled>,
@@ -92,8 +93,8 @@ impl Builder {
         grxer:  Pd7<PfA>,
         gmdc:   Pd8<PfA>,
         gmdio:  Pd9<PfA>,
-        rx: &'rxtx mut dyn RxDescriptorTable,
-        tx: &'rxtx mut dyn TxDescriptorTable,
+        rx: &'rxtx mut dyn rx::DescriptorTable,
+        tx: &'rxtx mut dyn tx::DescriptorTable,
     ) -> Controller<'rxtx> {
         Controller::new(gmac, clock, grefck, gtxen, gtx0, gtx1, gcrsdv, grx0, grx1, grxer, gmdc, gmdio, rx, tx, self)
     }

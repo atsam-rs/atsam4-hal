@@ -1,4 +1,4 @@
-use super::{VolatileReadWrite, MTU};
+use super::{MTU, VolatileReadWrite};
 
 mod descriptor;
 use descriptor::RxDescriptor;
@@ -9,13 +9,13 @@ pub use descriptor_table::RxDescriptorTable;
 mod receiver;
 pub use receiver::Receiver;
 
+pub enum RxError {
+}
+
 pub trait DescriptorTable {
     fn initialize(&mut self);
     fn base_address(&self) -> u32;
     fn next_descriptor(&self) -> &RxDescriptor;
     fn next_descriptor_pair(&mut self) -> (&mut RxDescriptor, &mut [u8]);
     fn consume_next_descriptor(&mut self);
-}
-
-pub enum RxError {
 }

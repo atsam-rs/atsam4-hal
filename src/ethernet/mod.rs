@@ -1,10 +1,8 @@
-use crate::pac::GMAC;
+mod builder;
+pub use builder::Builder as ControllerBuilder;
 
 mod controller;
-pub use controller::*;
-
-mod builder;
-pub use builder::Builder;
+pub use controller::Controller;
 
 mod eui48;
 pub use eui48::Identifier as EthernetAddress;

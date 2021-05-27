@@ -1,13 +1,13 @@
 use super::{
     builder::Builder,
-    eui48::Identifier as EthernetAddress,
+    EthernetAddress,
     phy::{LinkType, Phy, Register},
+    rx,
     rx::{
-        DescriptorTable as RxDescriptorTable,
-        Receiver
+        Receiver,
     },
+    tx,
     tx::{
-        DescriptorTable as TxDescriptorTable,
         Transmitter,
     }
 };
@@ -72,8 +72,8 @@ impl<'rxtx>
         _grxer:  Pd7<PfA>,
         _gmdc:   Pd8<PfA>,
         _gmdio:  Pd9<PfA>,
-        rx: &'rxtx mut dyn RxDescriptorTable,
-        tx: &'rxtx mut dyn TxDescriptorTable,
+        rx: &'rxtx mut dyn rx::DescriptorTable,
+        tx: &'rxtx mut dyn tx::DescriptorTable,
         builder: Builder,
     ) -> Self {
         let rx_base_address = rx.base_address();

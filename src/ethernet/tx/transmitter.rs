@@ -28,7 +28,7 @@ impl<'tx> Transmitter<'tx> {
         // become available.
         debug_assert!(size <= MTU);
 
-        let (next_descriptor, next_buffer) = self.descriptors.next_descriptor();
+        let (next_descriptor, next_buffer) = self.descriptors.next_descriptor_pair();
         if !next_descriptor.read().is_used() {
             return Err(nb::Error::WouldBlock);
         }
@@ -62,7 +62,7 @@ impl<'tx> Transmitter<'tx> {
         // become available.
         debug_assert!(size <= MTU);
 
-        let (next_descriptor, next_buffer) = self.descriptors.next_descriptor();
+        let (next_descriptor, next_buffer) = self.descriptors.next_descriptor_pair();
         if !next_descriptor.read().is_used() {
             return Err(smoltcp::Error::Exhausted);
         }

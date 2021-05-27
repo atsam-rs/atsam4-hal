@@ -143,7 +143,11 @@ impl<const COUNT: usize> DescriptorTable for TxDescriptorTable<COUNT> {
         a
     }
 
-    fn next_descriptor(&mut self) -> (&mut TxDescriptor, &mut [u8]) {
+    fn next_descriptor(&self) -> &TxDescriptor {
+        &mut self.descriptors[self.next_entry]
+    }
+
+    fn next_descriptor_pair(&mut self) -> (&mut TxDescriptor, &mut [u8]) {
         (&mut self.descriptors[self.next_entry], &mut self.buffers[self.next_entry])
     }
 

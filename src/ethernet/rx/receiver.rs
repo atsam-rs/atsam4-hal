@@ -1,4 +1,3 @@
-use crate::pac::GMAC;
 use super::{DescriptorTable, RxError};
 
 pub struct Receiver<'rx> {
