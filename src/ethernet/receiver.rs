@@ -1,11 +1,14 @@
-use super::{DescriptorTable, RxError};
+use super::{rx::Descriptor as RxDescriptor, DescriptorTableT};
+
+pub enum Error {
+}
 
 pub struct Receiver<'rx> {
-    descriptors: &'rx mut dyn DescriptorTable,
+    descriptors: &'rx mut dyn DescriptorTableT<RxDescriptor>,
 }
 
 impl<'rx> Receiver<'rx> {
-    pub fn new(descriptors: &'rx mut dyn DescriptorTable) -> Self {
+    pub fn new(descriptors: &'rx mut dyn DescriptorTableT<RxDescriptor>) -> Self {
         descriptors.initialize();
         Receiver {
             descriptors,
@@ -13,19 +16,19 @@ impl<'rx> Receiver<'rx> {
     }
 
     pub fn can_receive(&self) -> bool {
-        self.descriptors.next_descriptor().read().is_owned()
+        self.descriptors.next_descriptor().read().owned()
     }
 
-    pub fn receive<R, F: FnOnce(&mut [u8]) -> nb::Result<R, RxError>>(
+    pub fn receive<R, F: FnOnce(&mut [u8]) -> nb::Result<R, Error>>(
         &mut self,
         f: F,
-    ) -> nb::Result<R, RxError> {
+    ) -> nb::Result<R, Error> {
         // Check if the next entry is still being used by the GMAC...if so,
         // indicate there's no more entries and the client has to wait for one to
         // become available.
         let (next_descriptor, next_buffer) = self.descriptors.next_descriptor_pair();
         let descriptor_properties = next_descriptor.read();
-        if !descriptor_properties.is_owned() {
+        if !descriptor_properties.owned() {
             return Err(nb::Error::WouldBlock);
         }
 
@@ -53,7 +56,7 @@ impl<'rx> Receiver<'rx> {
         // become available.
         let (next_descriptor, next_buffer) = self.descriptors.next_descriptor_pair();
         let descriptor_properties = next_descriptor.read();
-        if !descriptor_properties.is_owned() {
+        if !descriptor_properties.owned() {
             return Err(smoltcp::Error::Exhausted);
         }
 

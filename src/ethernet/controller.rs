@@ -1,15 +1,10 @@
 use super::{
     builder::Builder,
     EthernetAddress,
+    descriptor_table::{DescriptorTableT},
     phy::{LinkType, Phy, Register},
-    rx,
-    rx::{
-        Receiver,
-    },
-    tx,
-    tx::{
-        Transmitter,
-    }
+    Receiver, RxDescriptor,
+    Transmitter, TxDescriptor,
 };
 use crate::{
     clock::{get_master_clock_frequency, Enabled, GmacClock},
@@ -72,8 +67,8 @@ impl<'rxtx>
         _grxer:  Pd7<PfA>,
         _gmdc:   Pd8<PfA>,
         _gmdio:  Pd9<PfA>,
-        rx: &'rxtx mut dyn rx::DescriptorTable,
-        tx: &'rxtx mut dyn tx::DescriptorTable,
+        rx: &'rxtx mut dyn DescriptorTableT<RxDescriptor>,
+        tx: &'rxtx mut dyn DescriptorTableT<TxDescriptor>,
         builder: Builder,
     ) -> Self {
         let rx_base_address = rx.base_address();

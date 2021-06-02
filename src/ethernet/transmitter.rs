@@ -1,35 +1,34 @@
 use crate::pac::GMAC;
-use super::{DescriptorTable, MTU, TxError};
+use super::{tx::Descriptor as TxDescriptor, DescriptorTableT, MTU};
 
-trait BlockingError {
-
+pub enum Error {
 }
 
 pub struct Transmitter<'tx> {
-    descriptors: &'tx mut dyn DescriptorTable,
+    descriptors: &'tx mut dyn DescriptorTableT<TxDescriptor>,
 }
 
 impl<'tx> Transmitter<'tx> {
-    pub fn new(descriptors: &'tx mut dyn DescriptorTable) -> Self {
+    pub fn new(descriptors: &'tx mut dyn DescriptorTableT<TxDescriptor>) -> Self {
         descriptors.initialize();
         Transmitter {
             descriptors,
         }
     }
 
-    pub fn send<R, F: FnOnce(&mut [u8]) -> nb::Result<R, TxError>>(
+    pub fn send<R, F: FnOnce(&mut [u8]) -> nb::Result<R, Error>>(
         &mut self,
         gmac: &GMAC, 
         size: usize,
         f: F,
-    ) -> nb::Result<R, TxError> {
+    ) -> nb::Result<R, Error> {
         // Check if the next entry is still being used by the GMAC...if so,
         // indicate there's no more entries and the client has to wait for one to
         // become available.
         debug_assert!(size <= MTU);
 
         let (next_descriptor, next_buffer) = self.descriptors.next_descriptor_pair();
-        if !next_descriptor.read().is_used() {
+        if !next_descriptor.read().used() {
             return Err(nb::Error::WouldBlock);
         }
 
@@ -63,7 +62,7 @@ impl<'tx> Transmitter<'tx> {
         debug_assert!(size <= MTU);
 
         let (next_descriptor, next_buffer) = self.descriptors.next_descriptor_pair();
-        if !next_descriptor.read().is_used() {
+        if !next_descriptor.read().used() {
             return Err(smoltcp::Error::Exhausted);
         }
 

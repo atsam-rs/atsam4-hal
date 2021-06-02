@@ -1,8 +1,9 @@
 use super::{
     Controller,
+    descriptor_table::DescriptorTableT,
     EthernetAddress,
-    rx,
-    tx,
+    rx::Descriptor as RxDescriptor,
+    tx::Descriptor as TxDescriptor,
 };
 
 use crate::{
@@ -93,8 +94,8 @@ impl Builder {
         grxer:  Pd7<PfA>,
         gmdc:   Pd8<PfA>,
         gmdio:  Pd9<PfA>,
-        rx: &'rxtx mut dyn rx::DescriptorTable,
-        tx: &'rxtx mut dyn tx::DescriptorTable,
+        rx: &'rxtx mut dyn DescriptorTableT<RxDescriptor>,
+        tx: &'rxtx mut dyn DescriptorTableT<TxDescriptor>,
     ) -> Controller<'rxtx> {
         Controller::new(gmac, clock, grefck, gtxen, gtx0, gtx1, gcrsdv, grx0, grx1, grxer, gmdc, gmdio, rx, tx, self)
     }

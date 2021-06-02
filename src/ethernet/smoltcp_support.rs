@@ -16,14 +16,15 @@ impl<'d, 'rxtx: 'd> Device<'d> for Controller<'rxtx> {
     }
 
     fn receive(&'d mut self) -> Option<(Self::RxToken, Self::TxToken)> {
-        match self.rx.can_receive() {
-            true => Some((EthRxToken(&mut self.rx), EthTxToken(&mut self.tx, &self.gmac))),
-            false => None,
-        }
+        // match self.rx.can_receive() {
+        //     true => Some((EthRxToken(&mut self.rx), EthTxToken(&mut self.tx, &self.gmac))),
+        //     false => None,
+        // }
+        None
     }
 
     fn transmit(&'d mut self) -> Option<Self::TxToken> {
-        Some(EthTxToken(&mut self.tx, &self.gmac))
+        None // Some(EthTxToken(&mut self.tx, &self.gmac))
     }
 }
 
