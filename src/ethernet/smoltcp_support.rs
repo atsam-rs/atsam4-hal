@@ -4,9 +4,9 @@ use smoltcp::phy::{Device, DeviceCapabilities, RxToken, TxToken};
 use smoltcp::time::Instant;
 use smoltcp::Error;
 
-impl<'d, 'rxtx: 'd> Device<'d> for Controller<'rxtx> {
-    type RxToken = EthRxToken<'rxtx>;
-    type TxToken = EthTxToken<'rxtx>;
+impl<'a, 'rxtx: 'a> Device<'a> for Controller<'rxtx> {
+    type RxToken = EthRxToken<'a, 'rxtx>;
+    type TxToken = EthTxToken<'a, 'rxtx>;
 
     fn capabilities(&self) -> DeviceCapabilities {
         let mut caps = DeviceCapabilities::default();
@@ -15,21 +15,20 @@ impl<'d, 'rxtx: 'd> Device<'d> for Controller<'rxtx> {
         caps
     }
 
-    fn receive(&'d mut self) -> Option<(Self::RxToken, Self::TxToken)> {
-        // match self.rx.can_receive() {
-        //     true => Some((EthRxToken(&mut self.rx), EthTxToken(&mut self.tx, &self.gmac))),
-        //     false => None,
-        // }
-        None
+    fn receive(&'a mut self) -> Option<(Self::RxToken, Self::TxToken)> {
+        match self.rx.can_receive() {
+            true => Some((EthRxToken(&self.rx), EthTxToken(&self.tx, &self.gmac))),
+            false => None,
+        }
     }
 
-    fn transmit(&'d mut self) -> Option<Self::TxToken> {
-        None // Some(EthTxToken(&mut self.tx, &self.gmac))
+    fn transmit(&'a mut self) -> Option<Self::TxToken> {
+        Some(EthTxToken(&self.tx, &self.gmac))
     }
 }
 
-pub struct EthRxToken<'a>(&'a mut Receiver<'a>);
-impl<'a> RxToken for EthRxToken<'a> {
+pub struct EthRxToken<'a, 'rxtx>(&'a Receiver<'rxtx>);
+impl<'a, 'rxtx> RxToken for EthRxToken<'a, 'rxtx> {
     fn consume<R, F>(mut self, _timestamp: Instant, f: F) -> Result<R, Error>
     where
         F: FnOnce(&mut [u8]) -> Result<R, Error>,
@@ -38,8 +37,8 @@ impl<'a> RxToken for EthRxToken<'a> {
     }
 }
 
-pub struct EthTxToken<'a>( &'a mut Transmitter<'a>, &'a GMAC);
-impl<'a> TxToken for EthTxToken<'a> {
+pub struct EthTxToken<'a, 'rxtx>( &'a Transmitter<'rxtx>, &'a GMAC);
+impl<'a, 'rxtx> TxToken for EthTxToken<'a, 'rxtx> {
     fn consume<R, F>(self, _timestamp: Instant, size: usize, f: F) -> Result<R, Error>
     where
         F: FnOnce(&mut [u8]) -> Result<R, Error>,

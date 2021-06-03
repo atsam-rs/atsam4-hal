@@ -17,7 +17,7 @@ impl<'tx> Transmitter<'tx> {
     }
 
     pub fn send<R, F: FnOnce(&mut [u8]) -> nb::Result<R, Error>>(
-        &mut self,
+        &self,
         gmac: &GMAC, 
         size: usize,
         f: F,
@@ -36,7 +36,8 @@ impl<'tx> Transmitter<'tx> {
         next_descriptor.modify(|w| w.set_buffer_size(size as u16));
 
         // Call the closure to fill the buffer
-        let r = f(&mut next_buffer[0..size]);
+        let mut buffer = next_buffer.borrow_mut();
+        let r = f(&mut buffer[0..size]);
 
         // Indicate to the GMAC that the entry is available for it to transmit
         next_descriptor.modify(|w| w.clear_used());
@@ -51,7 +52,7 @@ impl<'tx> Transmitter<'tx> {
     }
 
     pub fn send_smoltcp<R, F: FnOnce(&mut [u8]) -> Result<R, smoltcp::Error>>(
-        &mut self,
+        &self,
         gmac: &GMAC,
         size: usize,
         f: F,
@@ -70,7 +71,8 @@ impl<'tx> Transmitter<'tx> {
         next_descriptor.modify(|w| w.set_buffer_size(size as u16));
 
         // Call the closure to fill the buffer
-        let r = f(&mut next_buffer[0..size]);
+        let mut buffer = next_buffer.borrow_mut();
+        let r = f(&mut buffer[0..size]);
 
         // Indicate to the GMAC that the entry is available for it to transmit
         next_descriptor.modify(|w| w.clear_used());

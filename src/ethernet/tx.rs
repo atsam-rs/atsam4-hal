@@ -21,14 +21,14 @@ impl Descriptor {
         Reader(self.0.get(), self.0.get())
     }
 
-    pub fn modify<F: FnOnce(Writer) -> Writer>(&mut self, f: F) {
+    pub fn modify<F: FnOnce(Writer) -> Writer>(&self, f: F) {
         let w = Writer(self.0.get(), self.1.get());
         let result = f(w);
         self.0.set(result.0);
         self.1.set(result.1);
     }
 
-    pub fn write<F: FnOnce(Writer) -> Writer>(&mut self, f: F) {
+    pub fn write<F: FnOnce(Writer) -> Writer>(&self, f: F) {
         let w = Writer(0, 0);
         let result = f(w);
         self.0.set(result.0);

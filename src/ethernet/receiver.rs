@@ -20,7 +20,7 @@ impl<'rx> Receiver<'rx> {
     }
 
     pub fn receive<R, F: FnOnce(&mut [u8]) -> nb::Result<R, Error>>(
-        &mut self,
+        &self,
         f: F,
     ) -> nb::Result<R, Error> {
         // Check if the next entry is still being used by the GMAC...if so,
@@ -35,7 +35,8 @@ impl<'rx> Receiver<'rx> {
         let buffer_size = descriptor_properties.buffer_size() as usize;
 
         // Call the closure to copy data out of the buffer
-        let r = f(&mut next_buffer[0..buffer_size]);
+        let mut buffer = next_buffer.borrow_mut();
+        let r = f(&mut buffer[0..buffer_size]);
 
         // Indicate that the descriptor is no longer owned by software and is available
         // for the GMAC to write into.
@@ -48,7 +49,7 @@ impl<'rx> Receiver<'rx> {
     }
 
     pub fn receive_smoltcp<R, F: FnOnce(&mut [u8]) -> Result<R, smoltcp::Error>>(
-        &mut self,
+        &self,
         f: F,
     ) -> Result<R, smoltcp::Error> {
         // Check if the next entry is still being used by the GMAC...if so,
@@ -63,7 +64,8 @@ impl<'rx> Receiver<'rx> {
         let buffer_size = descriptor_properties.buffer_size() as usize;
 
         // Call the closure to copy data out of the buffer
-        let r = f(&mut next_buffer[0..buffer_size]);
+        let mut buffer = next_buffer.borrow_mut();
+        let r = f(&mut buffer[0..buffer_size]);
 
         // Indicate that the descriptor is no longer owned by software and is available
         // for the GMAC to write into.
