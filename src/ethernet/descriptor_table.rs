@@ -1,7 +1,7 @@
-use heapless::Vec;
+use super::MTU;
 use core::cell::Cell;
 use core::cell::RefCell;
-use super::MTU;
+use heapless::Vec;
 
 // In order to keep the buffers 32 bit aligned (required by the hardware), we adjust
 // the size here to be the next 4 byte multiple greater than the requested MTU.
@@ -20,31 +20,33 @@ pub trait DescriptorTableT<DESCRIPTOR> {
 }
 
 #[repr(C)]
-pub struct DescriptorTable<DESCRIPTOR, const COUNT:usize> {
+pub struct DescriptorTable<DESCRIPTOR, const COUNT: usize> {
     descriptors: Vec<DESCRIPTOR, COUNT>,
     buffers: Vec<RefCell<Vec<u8, BUFFERSIZE>>, COUNT>,
-//    buffers: [RefCell<[u8; BUFFERSIZE]>; COUNT],
+    //    buffers: [RefCell<[u8; BUFFERSIZE]>; COUNT],
     next_entry: Cell<usize>, // Index of next entry to read/write
 }
 
-impl<DESCRIPTOR, const COUNT:usize> DescriptorTable<DESCRIPTOR, COUNT> {
+impl<DESCRIPTOR, const COUNT: usize> DescriptorTable<DESCRIPTOR, COUNT> {
     pub const fn new() -> Self {
         DescriptorTable {
             descriptors: Vec::new(),
-//            buffers: [RefCell::new([0; BUFFERSIZE]); COUNT],
+            //            buffers: [RefCell::new([0; BUFFERSIZE]); COUNT],
             buffers: Vec::new(),
             next_entry: Cell::new(0),
         }
     }
 }
 
-impl<DESCRIPTOR: DescriptorT, const COUNT:usize> DescriptorTableT<DESCRIPTOR> for DescriptorTable<DESCRIPTOR, COUNT> {
+impl<DESCRIPTOR: DescriptorT, const COUNT: usize> DescriptorTableT<DESCRIPTOR>
+    for DescriptorTable<DESCRIPTOR, COUNT>
+{
     fn initialize(&mut self) {
         self.descriptors.truncate(0);
         for i in 0..COUNT {
             // Create the new buffer and fill it with 0.
-            self.buffers.push(RefCell::new(Vec::new()));
-            self.buffers[i].borrow_mut().resize(BUFFERSIZE, 0);
+            self.buffers.push(RefCell::new(Vec::new())).ok();
+            self.buffers[i].borrow_mut().resize(BUFFERSIZE, 0).ok();
 
             let buffer_address = &self.buffers[i].borrow()[0];
             let descriptor = DESCRIPTOR::new(buffer_address, i == COUNT - 1);

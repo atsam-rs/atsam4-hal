@@ -1,28 +1,23 @@
 use super::{rx::Descriptor as RxDescriptor, DescriptorTableT};
 
-pub enum Error {
-}
+#[derive(Debug)]
+pub enum Error {}
 
 pub struct Receiver<'rx> {
-    descriptors: &'rx mut dyn DescriptorTableT<RxDescriptor>,
+    pub(super) descriptors: &'rx mut dyn DescriptorTableT<RxDescriptor>,
 }
 
 impl<'rx> Receiver<'rx> {
     pub fn new(descriptors: &'rx mut dyn DescriptorTableT<RxDescriptor>) -> Self {
         descriptors.initialize();
-        Receiver {
-            descriptors,
-        }
+        Receiver { descriptors }
     }
 
     pub fn can_receive(&self) -> bool {
         self.descriptors.next_descriptor().read().owned()
     }
 
-    pub fn receive<R, F: FnOnce(&mut [u8]) -> nb::Result<R, Error>>(
-        &self,
-        f: F,
-    ) -> nb::Result<R, Error> {
+    pub fn receive(&self, buffer: &mut [u8]) -> nb::Result<usize, Error> {
         // Check if the next entry is still being used by the GMAC...if so,
         // indicate there's no more entries and the client has to wait for one to
         // become available.
@@ -33,39 +28,9 @@ impl<'rx> Receiver<'rx> {
         }
 
         let buffer_size = descriptor_properties.buffer_size() as usize;
+        let descriptor_buffer = next_buffer.borrow();
 
-        // Call the closure to copy data out of the buffer
-        let mut buffer = next_buffer.borrow_mut();
-        let r = f(&mut buffer[0..buffer_size]);
-
-        // Indicate that the descriptor is no longer owned by software and is available
-        // for the GMAC to write into.
-        next_descriptor.modify(|w| w.clear_owned());
-
-        // This entry has been consumed, indicate this.
-        self.descriptors.consume_next_descriptor();
-
-        r
-    }
-
-    pub fn receive_smoltcp<R, F: FnOnce(&mut [u8]) -> Result<R, smoltcp::Error>>(
-        &self,
-        f: F,
-    ) -> Result<R, smoltcp::Error> {
-        // Check if the next entry is still being used by the GMAC...if so,
-        // indicate there's no more entries and the client has to wait for one to
-        // become available.
-        let (next_descriptor, next_buffer) = self.descriptors.next_descriptor_pair();
-        let descriptor_properties = next_descriptor.read();
-        if !descriptor_properties.owned() {
-            return Err(smoltcp::Error::Exhausted);
-        }
-
-        let buffer_size = descriptor_properties.buffer_size() as usize;
-
-        // Call the closure to copy data out of the buffer
-        let mut buffer = next_buffer.borrow_mut();
-        let r = f(&mut buffer[0..buffer_size]);
+        buffer[..buffer_size].clone_from_slice(&descriptor_buffer);
 
         // Indicate that the descriptor is no longer owned by software and is available
         // for the GMAC to write into.
@@ -74,6 +39,6 @@ impl<'rx> Receiver<'rx> {
         // This entry has been consumed, indicate this.
         self.descriptors.consume_next_descriptor();
 
-        r
+        Ok(buffer_size)
     }
 }

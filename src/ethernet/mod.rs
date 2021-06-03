@@ -12,21 +12,21 @@ pub use eui48::Identifier as EthernetAddress;
 
 mod phy;
 
-#[cfg(feature = "smoltcp")]
-mod smoltcp_support;
-
 mod receiver;
 use receiver::Receiver;
 
 mod rx;
-pub type RxDescriptorTable<const COUNT:usize> = DescriptorTable<rx::Descriptor, COUNT>;
+pub type RxDescriptorTable<const COUNT: usize> = DescriptorTable<rx::Descriptor, COUNT>;
 use rx::Descriptor as RxDescriptor;
 
 mod transmitter;
 use transmitter::Transmitter;
 
 mod tx;
-pub type TxDescriptorTable<const COUNT:usize> = DescriptorTable<tx::Descriptor, COUNT>;
+pub type TxDescriptorTable<const COUNT: usize> = DescriptorTable<tx::Descriptor, COUNT>;
 use tx::Descriptor as TxDescriptor;
 
 const MTU: usize = 1522;
+
+#[cfg(feature = "smoltcp")]
+mod smoltcp;

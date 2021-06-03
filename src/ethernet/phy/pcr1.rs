@@ -1,6 +1,6 @@
 enum BitNumber {
     _Supports802Dot3 = 0,
-    _Speed10MbpsHalfDuplex = 5,  // 10BASE-T Half Duplex Support
+    _Speed10MbpsHalfDuplex = 5, // 10BASE-T Half Duplex Support
     Speed10MbpsFullDuplex = 6,  // 10BASE-T Full Duplex Support
     Speed100MbpsHalfDuplex = 7, // 100BASE-TX Half Duplex Support
     Speed100MbpsFullDuplex = 8, // 100BASE-TX Full Duplex Support

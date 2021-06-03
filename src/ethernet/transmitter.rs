@@ -1,31 +1,29 @@
-use crate::pac::GMAC;
 use super::{tx::Descriptor as TxDescriptor, DescriptorTableT, MTU};
+use crate::pac::GMAC;
 
+#[derive(Debug)]
 pub enum Error {
+    InvalidArgument,
 }
 
 pub struct Transmitter<'tx> {
-    descriptors: &'tx mut dyn DescriptorTableT<TxDescriptor>,
+    pub(super) descriptors: &'tx mut dyn DescriptorTableT<TxDescriptor>,
 }
 
 impl<'tx> Transmitter<'tx> {
     pub fn new(descriptors: &'tx mut dyn DescriptorTableT<TxDescriptor>) -> Self {
         descriptors.initialize();
-        Transmitter {
-            descriptors,
-        }
+        Transmitter { descriptors }
     }
 
-    pub fn send<R, F: FnOnce(&mut [u8]) -> nb::Result<R, Error>>(
-        &self,
-        gmac: &GMAC, 
-        size: usize,
-        f: F,
-    ) -> nb::Result<R, Error> {
+    pub fn send(&self, gmac: &GMAC, buffer: &[u8]) -> nb::Result<(), Error> {
         // Check if the next entry is still being used by the GMAC...if so,
         // indicate there's no more entries and the client has to wait for one to
         // become available.
-        debug_assert!(size <= MTU);
+        let buffer_length = buffer.len();
+        if buffer_length > MTU {
+            return Err(nb::Error::Other(Error::InvalidArgument));
+        }
 
         let (next_descriptor, next_buffer) = self.descriptors.next_descriptor_pair();
         if !next_descriptor.read().used() {
@@ -33,56 +31,18 @@ impl<'tx> Transmitter<'tx> {
         }
 
         // Set the length on the buffer descriptor
-        next_descriptor.modify(|w| w.set_buffer_size(size as u16));
+        next_descriptor.modify(|w| w.set_buffer_size(buffer_length as u16));
 
-        // Call the closure to fill the buffer
-        let mut buffer = next_buffer.borrow_mut();
-        let r = f(&mut buffer[0..size]);
-
-        // Indicate to the GMAC that the entry is available for it to transmit
-        next_descriptor.modify(|w| w.clear_used());
-
-        // This entry is now in use, indicate this.
-        self.descriptors.consume_next_descriptor();
+        let mut descriptor_buffer = next_buffer.borrow_mut();
+        descriptor_buffer[..buffer_length].clone_from_slice(&buffer);
 
         // Start the transmission
-        gmac.ncr.modify(|_, w| w.tstart().set_bit());
+        Self::start_transmission(&gmac);
 
-        r
+        Ok(())
     }
 
-    pub fn send_smoltcp<R, F: FnOnce(&mut [u8]) -> Result<R, smoltcp::Error>>(
-        &self,
-        gmac: &GMAC,
-        size: usize,
-        f: F,
-    ) -> Result<R, smoltcp::Error> {
-        // Check if the next entry is still being used by the GMAC...if so,
-        // indicate there's no more entries and the client has to wait for one to
-        // become available.
-        debug_assert!(size <= MTU);
-
-        let (next_descriptor, next_buffer) = self.descriptors.next_descriptor_pair();
-        if !next_descriptor.read().used() {
-            return Err(smoltcp::Error::Exhausted);
-        }
-
-        // Set the length on the buffer descriptor
-        next_descriptor.modify(|w| w.set_buffer_size(size as u16));
-
-        // Call the closure to fill the buffer
-        let mut buffer = next_buffer.borrow_mut();
-        let r = f(&mut buffer[0..size]);
-
-        // Indicate to the GMAC that the entry is available for it to transmit
-        next_descriptor.modify(|w| w.clear_used());
-
-        // This entry is now in use, indicate this.
-        self.descriptors.consume_next_descriptor();
-
-        // Start the transmission
+    fn start_transmission(gmac: &GMAC) {
         gmac.ncr.modify(|_, w| w.tstart().set_bit());
-
-        r
     }
 }

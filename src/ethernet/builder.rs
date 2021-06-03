@@ -1,9 +1,6 @@
 use super::{
-    Controller,
-    descriptor_table::DescriptorTableT,
-    EthernetAddress,
-    rx::Descriptor as RxDescriptor,
-    tx::Descriptor as TxDescriptor,
+    descriptor_table::DescriptorTableT, rx::Descriptor as RxDescriptor,
+    tx::Descriptor as TxDescriptor, Controller, EthernetAddress,
 };
 
 use crate::{
@@ -12,6 +9,7 @@ use crate::{
     pac::GMAC,
 };
 
+#[derive(Default)]
 pub struct Builder {
     ethernet_address: EthernetAddress,
     alternate_addresses: [Option<EthernetAddress>; 3],
@@ -80,23 +78,27 @@ impl Builder {
         self.phy_address
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn build<'rxtx>(
         self,
         gmac: GMAC,
         clock: GmacClock<Enabled>,
         grefck: Pd0<PfA>,
-        gtxen:  Pd1<PfA>,
-        gtx0:   Pd2<PfA>,
-        gtx1:   Pd3<PfA>,
+        gtxen: Pd1<PfA>,
+        gtx0: Pd2<PfA>,
+        gtx1: Pd3<PfA>,
         gcrsdv: Pd4<PfA>,
-        grx0:   Pd5<PfA>,
-        grx1:   Pd6<PfA>,
-        grxer:  Pd7<PfA>,
-        gmdc:   Pd8<PfA>,
-        gmdio:  Pd9<PfA>,
+        grx0: Pd5<PfA>,
+        grx1: Pd6<PfA>,
+        grxer: Pd7<PfA>,
+        gmdc: Pd8<PfA>,
+        gmdio: Pd9<PfA>,
         rx: &'rxtx mut dyn DescriptorTableT<RxDescriptor>,
         tx: &'rxtx mut dyn DescriptorTableT<TxDescriptor>,
     ) -> Controller<'rxtx> {
-        Controller::new(gmac, clock, grefck, gtxen, gtx0, gtx1, gcrsdv, grx0, grx1, grxer, gmdc, gmdio, rx, tx, self)
+        Controller::new(
+            gmac, clock, grefck, gtxen, gtx0, gtx1, gcrsdv, grx0, grx1, grxer, gmdc, gmdio, rx, tx,
+            self,
+        )
     }
 }

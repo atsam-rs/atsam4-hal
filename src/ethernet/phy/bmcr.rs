@@ -1,6 +1,4 @@
 enum BitNumber {
-    Speed1Gbps = 6,
-    CollisionTest = 7,
     FullDuplex = 8,
     RestartAutoNegotiation = 9,
     Isolate = 10,
@@ -16,14 +14,6 @@ pub struct Writer(pub(super) u16);
 impl Writer {
     pub fn new(initial_value: u16) -> Self {
         Writer(initial_value)
-    }
-
-    pub fn set_speed_1000(self) -> Self {
-        Self(self.0 | (1 << BitNumber::Speed1Gbps as u32))
-    }
-
-    pub fn set_collision_test(self) -> Self {
-        Self(self.0 | (1 << BitNumber::CollisionTest as u32))
     }
 
     pub fn set_full_duplex(self) -> Self {
@@ -42,7 +32,7 @@ impl Writer {
         Self(self.0 & !(1 << BitNumber::Isolate as u32))
     }
 
-    pub fn set_power_down(self) -> Self {
+    pub fn _set_power_down(self) -> Self {
         Self(self.0 | (1 << BitNumber::PowerDown as u32))
     }
 
@@ -62,7 +52,7 @@ impl Writer {
         Self(self.0 | (1 << BitNumber::Speed100Mbps as u32))
     }
 
-    pub fn set_loop_back(self) -> Self {
+    pub fn _set_loop_back(self) -> Self {
         Self(self.0 | (1 << BitNumber::LoopBack as u32))
     }
 
@@ -79,10 +69,6 @@ pub struct Reset(bool);
 impl Reset {
     pub fn is_set(&self) -> bool {
         self.0
-    }
-
-    pub fn is_clear(&self) -> bool {
-        !self.0
     }
 }
 

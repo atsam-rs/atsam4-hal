@@ -65,7 +65,7 @@ pub trait Phy {
             // Wait for auto-negotiation to complete
             // !todo - use timeout.
             while !self.read_phy_bmsr().auto_negotiation_complete() {}
-            self.disable_phy_management_port();            
+            self.disable_phy_management_port();
         }
 
         // Get the auto-negotiation partner configuration
@@ -99,8 +99,7 @@ pub trait Phy {
     }
 
     fn read_phy_bmcr_(&self) -> BmcrReader {
-        let value = BmcrReader::new(self.read_phy_register(Register::Bmcr));
-        value
+        BmcrReader::new(self.read_phy_register(Register::Bmcr))
     }
 
     fn modify_phy_bmcr<F: FnOnce(BmcrWriter) -> BmcrWriter>(&mut self, f: F) {

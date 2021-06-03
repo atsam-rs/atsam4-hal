@@ -1,10 +1,10 @@
 use super::DescriptorT;
+use super::MTU;
 use vcell::VolatileCell;
-use super::{MTU};
 
 enum Word1BitNumbers {
-    LastBuffer = 15,
-    CRCNotAppended = 16,
+    _LastBuffer = 15,
+    _CRCNotAppended = 16,
 
     LateCollision = 26,
     FrameCorrupted = 27,
@@ -38,13 +38,8 @@ impl Descriptor {
 
 impl DescriptorT for Descriptor {
     fn new(buffer_address: *const u8, last_entry: bool) -> Self {
-        let mut d = Descriptor(VolatileCell::new(0), VolatileCell::new(0));
-        d.write(|w| {
-            w
-            .set_used()
-            .set_address(buffer_address)
-            .set_buffer_size(0)
-        });
+        let d = Descriptor(VolatileCell::new(0), VolatileCell::new(0));
+        d.write(|w| w.set_used().set_address(buffer_address).set_buffer_size(0));
 
         if last_entry {
             d.modify(|w| w.set_wrap());

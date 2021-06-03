@@ -1,10 +1,8 @@
 use super::{
     builder::Builder,
-    EthernetAddress,
-    descriptor_table::{DescriptorTableT},
+    descriptor_table::DescriptorTableT,
     phy::{LinkType, Phy, Register},
-    Receiver, RxDescriptor,
-    Transmitter, TxDescriptor,
+    EthernetAddress, Receiver, RxDescriptor, Transmitter, TxDescriptor,
 };
 use crate::{
     clock::{get_master_clock_frequency, Enabled, GmacClock},
@@ -51,22 +49,21 @@ pub struct Controller<'rxtx> {
     pub(super) tx: Transmitter<'rxtx>,
 }
 
-impl<'rxtx>
-    Controller<'rxtx>
-{
+impl<'rxtx> Controller<'rxtx> {
+    #[allow(clippy::too_many_arguments)]
     pub(super) fn new(
         gmac: GMAC,
         _: GmacClock<Enabled>,
         _grefck: Pd0<PfA>,
-        _gtxen:  Pd1<PfA>,
-        _gtx0:   Pd2<PfA>,
-        _gtx1:   Pd3<PfA>,
+        _gtxen: Pd1<PfA>,
+        _gtx0: Pd2<PfA>,
+        _gtx1: Pd3<PfA>,
         _gcrsdv: Pd4<PfA>,
-        _grx0:   Pd5<PfA>,
-        _grx1:   Pd6<PfA>,
-        _grxer:  Pd7<PfA>,
-        _gmdc:   Pd8<PfA>,
-        _gmdio:  Pd9<PfA>,
+        _grx0: Pd5<PfA>,
+        _grx1: Pd6<PfA>,
+        _grxer: Pd7<PfA>,
+        _gmdc: Pd8<PfA>,
+        _gmdio: Pd9<PfA>,
         rx: &'rxtx mut dyn DescriptorTableT<RxDescriptor>,
         tx: &'rxtx mut dyn DescriptorTableT<TxDescriptor>,
         builder: Builder,
@@ -113,7 +110,7 @@ impl<'rxtx>
                 w.clk().mck_8()
             }
         });
-        
+
         e.reset_phy();
 
         // Initialize the PHY and set the GMAC's speed and duplex based on returned link type.
@@ -180,23 +177,39 @@ impl<'rxtx>
 
         // Clear all status bits in the receive status register by setting the four
         // status bits.
-        self.gmac.rsr.write(|w| w
-            .bna().set_bit()     // Buffer not available
-            .rec().set_bit()    // Frame Received
-            .rxovr().set_bit()  // Receive Overrun
-            .hno().set_bit()    // HRESP not ok
+        self.gmac.rsr.write(
+            |w| {
+                w.bna()
+                    .set_bit() // Buffer not available
+                    .rec()
+                    .set_bit() // Frame Received
+                    .rxovr()
+                    .set_bit() // Receive Overrun
+                    .hno()
+                    .set_bit()
+            }, // HRESP not ok
         );
 
         // Clear all bits in the transmit status register
-        self.gmac.tsr.write(|w| w
-            .ubr().set_bit()    // Used bit read 
-            .col().set_bit()    // Collision occurred
-            .rle().set_bit()    // Retry limit exceeded
-            .txgo().set_bit()   // Transmit go
-            .tfc().set_bit()    // Transmit frame corruption due to AHB error
-            .txcomp().set_bit() // Transmit complete
-            .und().set_bit()    // Transmit underrun
-            .hresp().set_bit()  // HRESP not ok
+        self.gmac.tsr.write(
+            |w| {
+                w.ubr()
+                    .set_bit() // Used bit read
+                    .col()
+                    .set_bit() // Collision occurred
+                    .rle()
+                    .set_bit() // Retry limit exceeded
+                    .txgo()
+                    .set_bit() // Transmit go
+                    .tfc()
+                    .set_bit() // Transmit frame corruption due to AHB error
+                    .txcomp()
+                    .set_bit() // Transmit complete
+                    .und()
+                    .set_bit() // Transmit underrun
+                    .hresp()
+                    .set_bit()
+            }, // HRESP not ok
         );
 
         // Read the interrupt status register to ensure all interrupts are clear
@@ -298,16 +311,9 @@ impl<'rxtx>
     fn _increment_statistics(&mut self) {
         self.gmac.ncr.modify(|_, w| w.incstat().set_bit())
     }
-
-    // Transmission
-    fn start_transmission(&self) {
-        self.gmac.ncr.modify(|_, w| w.tstart().set_bit());
-    }
 }
 
-impl<'rxtx> Phy
-    for Controller<'rxtx>
-{
+impl<'rxtx> Phy for Controller<'rxtx> {
     fn read_phy_register(&self, register: Register) -> u16 {
         self.wait_for_phy_idle();
         self.gmac.man.write(|w| unsafe {
@@ -337,7 +343,7 @@ impl<'rxtx> Phy
             phya().bits(self.phy_address).      // phy address
             op().bits(0b01).                    // write = 0b01, read = 0b10
             cltto().set_bit().
-            wzo().clear_bit()                   // must be set to zero
+            wzo().clear_bit() // must be set to zero
         });
         self.wait_for_phy_idle();
     }

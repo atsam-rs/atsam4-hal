@@ -30,12 +30,8 @@ impl Descriptor {
 
 impl DescriptorT for Descriptor {
     fn new(buffer_address: *const u8, last_entry: bool) -> Self {
-        let mut d = Descriptor(VolatileCell::new(0), VolatileCell::new(0));
-        d.write(|w| {
-            w
-            .set_address(buffer_address)
-            .clear_owned()
-        });
+        let d = Descriptor(VolatileCell::new(0), VolatileCell::new(0));
+        d.write(|w| w.set_address(buffer_address).clear_owned());
 
         if last_entry {
             d.modify(|w| w.set_wrap());

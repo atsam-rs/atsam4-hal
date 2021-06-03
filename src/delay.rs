@@ -15,16 +15,14 @@ pub struct Delay {
 impl Delay {
     /// Configures the system timer (SysTick) as a delay provider
     pub fn new(mut syst: SYST) -> Self {
-        let total_rvr:u32 = get_master_clock_frequency().0 / 1000;
+        let total_rvr: u32 = get_master_clock_frequency().0 / 1000;
         syst.set_clock_source(SystClkSource::Core);
         syst.set_reload(total_rvr);
         syst.clear_current();
         syst.enable_counter();
         syst.enable_interrupt();
-    
-        Delay {
-            syst,
-        }
+
+        Delay { syst }
     }
 
     /// Releases the system timer (SysTick) resource
