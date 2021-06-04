@@ -62,6 +62,10 @@ impl Writer {
         Writer(self.0 | ((address as u32) & !0x03), self.1)
     }
 
+    pub fn set_owned(self) -> Self {
+        Writer(self.0 | (1 << Word0BitNumbers::Owned as u32), self.1)
+    }
+
     pub fn clear_owned(self) -> Self {
         Writer(self.0 & !(1 << Word0BitNumbers::Owned as u32), self.1)
     }

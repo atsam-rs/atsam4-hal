@@ -152,6 +152,18 @@ impl<'rxtx> Controller<'rxtx> {
         e.gmac.rbqb.write(|w| unsafe { w.bits(rx_base_address) });
         e.gmac.tbqb.write(|w| unsafe { w.bits(tx_base_address) });
 
+        // Initialize the DMA configuration register
+        e.gmac.dcfgr.modify(|_, w| unsafe {
+            w.fbldo()
+                .incr4() // set up incr4 (default) transfers
+                .esma()
+                .clear_bit() // do not swap endianess for management transfer
+                .espa()
+                .clear_bit() // do not swap endianess for packet transfer
+                .drbs()
+                .bits(0x18) // Set transfer buffer sizes to 1536
+        });
+
         // Enable receive and transmit circuits
         e.enable_receive();
         e.enable_transmit();

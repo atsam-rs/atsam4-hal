@@ -29,7 +29,7 @@ impl<'rx> Receiver<'rx> {
         let buffer_size = descriptor_properties.buffer_size() as usize;
         let descriptor_buffer = next_buffer.borrow();
 
-        buffer[..buffer_size].clone_from_slice(&descriptor_buffer);
+        buffer[..buffer_size].clone_from_slice(&descriptor_buffer[..buffer_size]);
 
         // Indicate that the descriptor is no longer owned by software and is available
         // for the GMAC to write into.

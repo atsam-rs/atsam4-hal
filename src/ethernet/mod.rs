@@ -26,7 +26,7 @@ mod tx;
 pub type TxDescriptorTable<const COUNT: usize> = DescriptorTable<tx::Descriptor, COUNT>;
 use tx::Descriptor as TxDescriptor;
 
-const MTU: usize = 1522;
+const MTU: usize = 1536;
 
 #[cfg(feature = "smoltcp")]
 mod smoltcp;
