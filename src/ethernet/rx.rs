@@ -10,7 +10,7 @@ enum Word0BitNumbers {
 pub struct Descriptor(VolatileCell<u32>, VolatileCell<u32>);
 impl Descriptor {
     pub fn read(&self) -> Reader {
-        Reader(self.0.get(), self.0.get())
+        Reader(self.0.get(), self.1.get())
     }
 
     pub fn modify<F: FnOnce(Writer) -> Writer>(&self, f: F) {

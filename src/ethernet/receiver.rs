@@ -9,7 +9,6 @@ pub struct Receiver<'rx> {
 
 impl<'rx> Receiver<'rx> {
     pub fn new(descriptors: &'rx mut dyn DescriptorTableT<RxDescriptor>) -> Self {
-        descriptors.initialize();
         Receiver { descriptors }
     }
 

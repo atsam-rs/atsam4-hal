@@ -12,7 +12,6 @@ pub struct Transmitter<'tx> {
 
 impl<'tx> Transmitter<'tx> {
     pub fn new(descriptors: &'tx mut dyn DescriptorTableT<TxDescriptor>) -> Self {
-        descriptors.initialize();
         Transmitter { descriptors }
     }
 
