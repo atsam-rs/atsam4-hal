@@ -83,7 +83,6 @@ pub use embedded_time as time;
 
 pub mod chipid;
 pub mod clock;
-pub mod delay;
 #[cfg(feature = "ethernet")]
 pub mod ethernet;
 pub mod gpio;
