@@ -70,7 +70,7 @@ impl<'rxtx> Controller<'rxtx> {
     ) -> Self {
         rx.initialize();
         tx.initialize();
-        
+
         let rx_base_address = rx.base_address();
         let tx_base_address = tx.base_address();
         let mut e = Controller {
