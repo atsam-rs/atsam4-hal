@@ -84,34 +84,37 @@ impl<'rxtx> Controller<'rxtx> {
         // Reset the GMAC to its reset state (with transmit and receive disabled)
         e.reset();
 
-        // Set the GMAC configuration register value.
+        // Set the GMAC network configuration register value.
         e.gmac.ncfgr.modify(|_, w| {
-            w.
-                // Don't write frame checksum bytes on received frames to memory.
-                //rfcs().set_bit().
-                // Set pause-enable - transmission will pause if a non-zero 802.3 classic pause frame is received and PFC has not been negotiated.
-                pen().set_bit();
             w
-        });
+                // Copy All Frames (Promiscuous Mode) -- TODO: Only accept frame destined for our MAC.
+                .caf()
+                .set_bit()
+                // Allow 1536 byte frames
+                .maxfs()
+                .set_bit()
+                // Set pause-enable - transmission will pause if a non-zero 802.3 classic pause frame is received and PFC has not been negotiated.
+                .pen()
+                .set_bit();
 
-        // Set up the MDC (Management Data Clock) for the PHY based on the master clock frequency
-        e.gmac.ncfgr.modify(|_, w| {
+            // Set up the MDC (Management Data Clock) for the PHY based on the master clock frequency
             let mck = get_master_clock_frequency();
             if mck > 240u32.MHz() {
                 panic!("Invalid master clock frequency")
             } else if mck > 160u32.MHz() {
-                w.clk().mck_96()
+                w.clk().mck_96();
             } else if mck > 120u32.MHz() {
-                w.clk().mck_64()
+                w.clk().mck_64();
             } else if mck > 80u32.MHz() {
-                w.clk().mck_48()
+                w.clk().mck_48();
             } else if mck > 40u32.MHz() {
-                w.clk().mck_32()
+                w.clk().mck_32();
             } else if mck > 20u32.MHz() {
-                w.clk().mck_16()
+                w.clk().mck_16();
             } else {
-                w.clk().mck_8()
+                w.clk().mck_8();
             }
+            w
         });
 
         e.reset_phy();

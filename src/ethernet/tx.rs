@@ -3,8 +3,8 @@ use super::MTU;
 use vcell::VolatileCell;
 
 enum Word1BitNumbers {
-    _LastBuffer = 15,
-    _CRCNotAppended = 16,
+    LastBuffer = 15,
+    DoNotAppendCRC = 16,
 
     LateCollision = 26,
     FrameCorrupted = 27,
@@ -98,5 +98,16 @@ impl Writer {
 
     pub fn clear_used(self) -> Self {
         Writer(self.0, self.1 & !(1 << Word1BitNumbers::Used as u32))
+    }
+
+    pub fn set_last(self) -> Self {
+        Writer(self.0, self.1 & !(1 << Word1BitNumbers::LastBuffer as u32))
+    }
+
+    pub fn do_not_append_crc(self) -> Self {
+        Writer(
+            self.0,
+            self.1 & !(1 << Word1BitNumbers::DoNotAppendCRC as u32),
+        )
     }
 }
