@@ -38,6 +38,7 @@ pub trait GpioExt {
     /// Consume and split the device into its constituent parts
     fn split(self) -> Self::Parts;
 }
+
 pub struct Ports {
     pioa: PhantomData<(PIOA, PioAClock<Enabled>)>,
     piob: PhantomData<(PIOB, PioBClock<Enabled>)>,
