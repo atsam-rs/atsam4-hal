@@ -1,10 +1,10 @@
+use crate::{
+    clock::{get_master_clock_frequency, Enabled, Twi0Clock, Twi1Clock},
+    gpio::{Pa3, Pa4, Pb4, Pb5, PfA},
+    pac::{twi0, twi1, TWI0, TWI1},
+};
 use core::marker::PhantomData;
 use embedded_time::rate::{Baud, Hertz};
-use crate::{
-    clock::{Enabled, Twi0Clock, Twi1Clock, get_master_clock_frequency},
-    gpio::{Pa3, Pa4, Pb4, Pb5, PfA},
-    pac::{TWI0, twi0, TWI1, twi1},
-};
 use paste::paste;
 
 // TWI Mode Markers
@@ -78,7 +78,6 @@ macro_rules! two_wire_interfaces {
         $($InterfaceType:ident: (
             $TWI:ident,
             $Twi:ident,
-            $twi:ident,
             $pin_clock:ty,
             $pin_data:ty
         ),)+
@@ -159,7 +158,7 @@ macro_rules! two_wire_interfaces {
                 }
 
                 impl [<$InterfaceType Builder>] {
-                    pub fn new(                        
+                    pub fn new(
                         twi: $TWI,
                         clock: [<$Twi Clock>]<Enabled>,
                         clock_pin: $pin_clock,
@@ -193,7 +192,7 @@ macro_rules! two_wire_interfaces {
                                     w
                                         .msen().set_bit()   // Enable master mode
                                         .svdis().set_bit()  // Disable slave mode
-                                });        
+                                });
                             }
                         )
                     }
@@ -227,6 +226,6 @@ macro_rules! two_wire_interfaces {
 }
 
 two_wire_interfaces!(
-    TwoWireInterface0: (TWI0, Twi0, twi0, Pa4<PfA>, Pa3<PfA>),
-    TwoWireInterface1: (TWI1, Twi1, twi1, Pb5<PfA>, Pb4<PfA>),
+    TwoWireInterface0: (TWI0, Twi0, Pa4<PfA>, Pa3<PfA>),
+    TwoWireInterface1: (TWI1, Twi1, Pb5<PfA>, Pb4<PfA>),
 );
