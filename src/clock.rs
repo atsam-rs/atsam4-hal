@@ -192,13 +192,13 @@ fn setup_main_clock(pmc: &PMC, main_clock: MainClock) -> Hertz {
             0
         }
     };
-    wait_for_main_clock_ready(&pmc);
+    wait_for_main_clock_ready(pmc);
 
-    wait_for_plla_lock(&pmc);
+    wait_for_plla_lock(pmc);
 
     switch_master_clock_to_plla(pmc, prescaler);
 
-    calculate_master_clock_frequency(&pmc)
+    calculate_master_clock_frequency(pmc)
 }
 
 fn calculate_master_clock_frequency(pmc: &PMC) -> Hertz {
@@ -913,6 +913,10 @@ impl ClockController {
         main_clock: MainClock,
         slow_clock: SlowClock,
     ) -> Self {
+        // Make sure write protection has been disabled
+        pmc.pmc_wpmr
+            .modify(|_, w| w.wpkey().passwd().wpen().clear_bit());
+
         set_flash_wait_states_to_maximum(
             #[cfg(any(feature = "atsam4e", feature = "atsam4n"))]
             efc,
