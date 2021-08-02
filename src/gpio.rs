@@ -1,5 +1,6 @@
 //! General Purpose Input / Output
 use {
+    core::convert::Infallible,
     core::marker::PhantomData,
     hal::digital::v2::{toggleable, InputPin, OutputPin, StatefulOutputPin},
     paste::paste,
@@ -185,11 +186,13 @@ macro_rules! pins {
             pin_sysio!($PinTypeA, $pin_noA, false);
             pin_extrafn!($PinTypeA, $extfnA);
         )*
+        pin_generic!(PIOA);
         $(
             pin!($PinTypeB, $pin_identB, $pin_noB, PIOB, piob);
             pin_sysio!($PinTypeB, $pin_noB, $sysioB);
             pin_extrafn!($PinTypeB, $extfnB);
         )*
+        pin_generic!(PIOB);
         $(
             #[cfg(any(feature = "atsam4n_c", feature = "atsam4s_c", feature = "atsam4e_e"))]
             pin!($PinTypeC, $pin_identC, $pin_noC, PIOC, pioc);
@@ -198,18 +201,24 @@ macro_rules! pins {
             #[cfg(any(feature = "atsam4n_c", feature = "atsam4s_c", feature = "atsam4e_e"))]
             pin_extrafn!($PinTypeC, $extfnC);
         )*
+        #[cfg(any(feature = "atsam4n_c", feature = "atsam4s_c", feature = "atsam4e_e"))]
+        pin_generic!(PIOC);
         $(
             #[cfg(feature = "atsam4e")]
             pin!($PinTypeD, $pin_identD, $pin_noD, PIOD, piod);
             #[cfg(feature = "atsam4e")]
             pin_sysio!($PinTypeD, $pin_noD, false);
         )*
+        #[cfg(feature = "atsam4e")]
+        pin_generic!(PIOD);
         $(
             #[cfg(feature = "atsam4e_e")]
             pin!($PinTypeE, $pin_identE, $pin_noE, PIOE, pioe);
             #[cfg(feature = "atsam4e_e")]
             pin_sysio!($PinTypeE, $pin_noE, false);
         )*
+        #[cfg(feature = "atsam4e_e")]
+        pin_generic!(PIOE);
     };
 }
 
@@ -602,7 +611,7 @@ macro_rules! pin {
         }
 
         impl<MODE> InputPin for $PinType<Input<MODE>> {
-            type Error = ();
+            type Error = Infallible;
 
             fn is_high(&self) -> Result<bool, Self::Error> {
                 Ok(self.pdsr().read().bits() & (1 << $i) != 0)
@@ -614,7 +623,7 @@ macro_rules! pin {
         }
 
         impl<MODE> OutputPin for $PinType<Output<MODE>> {
-            type Error = ();
+            type Error = Infallible;
 
             fn set_high(&mut self) -> Result<(), Self::Error> {
                 self.sodr().write_with_zero(|w| unsafe { w.bits(1 << $i) });
@@ -639,6 +648,80 @@ macro_rules! pin {
 
         /// Software toggle (uses StatefulOutputPin and OutputPin)
         impl<MODE> toggleable::Default for $PinType<Output<MODE>> {}
+
+        paste! {
+            impl<MODE> $PinType<MODE> {
+                /// Erases the pin number from the type
+                #[inline]
+                fn into_generic(self) -> [<$PIO Generic>]<MODE> {
+                    [<$PIO Generic>] {
+                        i: $i,
+                        _mode: PhantomData,
+                    }
+                }
+
+                /// Erases the pin number and port from the type
+                ///
+                /// This is useful when you want to collect the pins into an array where you
+                /// need all the elements to have the same type
+                pub fn downgrade(self) -> PioX<MODE> {
+                    self.into_generic().downgrade()
+                }
+            }
+        }
+    };
+}
+
+macro_rules! pin_generic {
+    (
+        $port:ident
+    ) => {
+        paste! {
+            pub struct [<$port Generic>]<MODE> {
+                i: u8,
+                _mode: PhantomData<MODE>,
+            }
+
+            impl<MODE> [<$port Generic>]<MODE> {
+                pub fn downgrade(self) -> PioX<MODE> {
+                    PioX::$port(self)
+                }
+            }
+
+            impl<MODE> OutputPin for [<$port Generic>]<Output<MODE>> {
+                type Error = Infallible;
+                fn set_high(&mut self) -> Result<(), Self::Error> {
+                    Ok(unsafe { (*$port::ptr()).sodr.write_with_zero(|w| w.bits(1 << self.i) ) })
+                }
+
+                fn set_low(&mut self) -> Result<(), Self::Error> {
+                    Ok(unsafe { (*$port::ptr()).codr.write_with_zero(|w| w.bits(1 << self.i) ) })
+                }
+            }
+
+            impl<MODE> InputPin for [<$port Generic>]<Input<MODE>> {
+                type Error = Infallible;
+                fn is_high(&self) -> Result<bool, Self::Error> {
+                    Ok(unsafe { (*$port::ptr()).pdsr.read().bits() & (1 << self.i)} != 0)
+                }
+
+                fn is_low(&self) -> Result<bool, Self::Error> {
+                    Ok(unsafe { (*$port::ptr()).pdsr.read().bits() & (1 << self.i)} == 0)
+                }
+            }
+
+            impl <MODE> StatefulOutputPin for [<$port Generic>]<Output<MODE>> {
+                fn is_set_high(&self) -> Result<bool, Self::Error> {
+                    Ok(unsafe { (*$port::ptr()).odsr.read().bits() & (1 << self.i)} != 0)
+                }
+
+                fn is_set_low(&self) -> Result<bool, Self::Error> {
+                    Ok(unsafe { (*$port::ptr()).odsr.read().bits() & (1 << self.i)} == 0)
+                }
+            }
+
+            impl <MODE> toggleable::Default for [<$port Generic>]<Output<MODE>> {}
+        }
     };
 }
 
@@ -984,4 +1067,89 @@ macro_rules! define_pin_map {
             }
         }
     }
+}
+
+macro_rules! impl_pxx {
+    ($(($port:ident)),*) => {
+        paste! {
+            pub enum PioX<MODE> {
+                $(
+                    $port([<$port Generic>]<MODE>)
+                ),*
+            }
+
+            impl<MODE> OutputPin for PioX<Output<MODE>> {
+                type Error = Infallible;
+                fn set_high(&mut self) -> Result<(), Infallible> {
+                    match self {
+                        $(PioX::$port(pin) => pin.set_high()),*
+                    }
+                }
+
+                fn set_low(&mut self) -> Result<(), Infallible> {
+                    match self {
+                        $(PioX::$port(pin) => pin.set_low()),*
+                    }
+                }
+            }
+
+            impl<MODE> StatefulOutputPin for PioX<Output<MODE>> {
+                fn is_set_high(&self) -> Result<bool, Self::Error> {
+                    match self {
+                        $(PioX::$port(pin) => pin.is_set_high()),*
+                    }
+                }
+
+                fn is_set_low(&self) -> Result<bool, Self::Error> {
+                    match self {
+                        $(PioX::$port(pin) => pin.is_set_low()),*
+                    }
+                }
+            }
+
+            impl<MODE> InputPin for PioX<Input<MODE>> {
+                type Error = Infallible;
+                fn is_high(&self) -> Result<bool, Infallible> {
+                    match self {
+                        $(PioX::$port(pin) => pin.is_high()),*
+                    }
+                }
+
+                fn is_low(&self) -> Result<bool, Infallible> {
+                    match self {
+                        $(PioX::$port(pin) => pin.is_low()),*
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[cfg(not(any(feature = "atsam4n_c", feature = "atsam4s_c", feature = "atsam4e")))]
+impl_pxx! {
+    (PIOA),
+    (PIOB)
+}
+
+#[cfg(any(feature = "atsam4n_c", feature = "atsam4s_c"))]
+impl_pxx! {
+    (PIOA),
+    (PIOB),
+    (PIOC)
+}
+
+#[cfg(feature = "atsam4e_c")]
+impl_pxx! {
+    (PIOA),
+    (PIOB),
+    (PIOD)
+}
+
+#[cfg(feature = "atsam4e_e")]
+impl_pxx! {
+    (PIOA),
+    (PIOB),
+    (PIOC),
+    (PIOD),
+    (PIOE)
 }
