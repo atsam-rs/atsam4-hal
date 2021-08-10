@@ -1065,6 +1065,22 @@ where
 
         Transfer::w(buffer, self)
     }
+
+    /// Assigns the buffer, prepares PDC but does not enable the PDC
+    /// Useful when there is strict timing on when the ADC conversion should start
+    ///
+    /// transfer.resume() can be used to start the transfer
+    fn read_paused(mut self, mut buffer: B) -> Transfer<W, B, Self> {
+        // NOTE(unsafe) We own the buffer now and we won't call other `&mut` on it
+        // until the end of the transfer.
+        let (ptr, len) = unsafe { buffer.static_write_buffer() };
+        self.payload.adc.set_receive_address(ptr as u32);
+        self.payload.adc.set_receive_counter(len as u16);
+
+        compiler_fence(Ordering::Release);
+
+        Transfer::w(buffer, self)
+    }
 }
 
 impl TransferPayload for AdcDma<SingleSequence> {

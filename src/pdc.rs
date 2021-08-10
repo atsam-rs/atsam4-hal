@@ -35,6 +35,7 @@ where
     Self: core::marker::Sized + TransferPayload,
 {
     fn read(self, buffer: B) -> Transfer<W, B, Self>;
+    fn read_paused(self, buffer: B) -> Transfer<W, B, Self>;
 }
 
 /// Trait for DMA writing from memory to peripheral.
@@ -146,6 +147,14 @@ where
             mem::forget(self);
             (buffer, payload)
         }
+    }
+
+    pub fn pause(&mut self) {
+        self.payload.stop();
+    }
+
+    pub fn resume(&mut self) {
+        self.payload.start();
     }
 }
 
