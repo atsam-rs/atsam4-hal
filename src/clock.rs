@@ -179,13 +179,11 @@ fn setup_main_clock(pmc: &PMC, main_clock: MainClock) -> Hertz {
 
             #[cfg(feature = "usb")]
             {
-                // Setup PLLB for 96 MHz operation (12 MHz * (16 / 2) = 96 MHz)
+                // Setup PLLB for 96 MHz operation (12 MHz * (8 / 1) = 96 MHz)
                 // 96 MHz will be /2 to get 48 MHz
-                let multiplier: u16 = 16;
-                let divider: u8 = 2;
+                let multiplier: u16 = 8;
+                let divider: u8 = 1;
                 enable_pllb_clock(pmc, multiplier, divider);
-
-                unsafe { PLLB_MULTIPLIER = multiplier }; // Save for reenable_pllb_clock
             }
 
             // 0 = no prescaling
@@ -507,6 +505,8 @@ fn enable_pllb_clock(pmc: &PMC, multiplier: u16, divider: u8) {
             .divb()
             .bits(divider)
     });
+
+    unsafe { PLLB_MULTIPLIER = multiplier - 1 }; // Save for reenable_pllb_clock
 }
 
 /// Used to re-enable pllb clock if disabled later at runtime
