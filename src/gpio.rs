@@ -2,7 +2,7 @@
 use {
     core::convert::Infallible,
     core::marker::PhantomData,
-    hal::digital::v2::{toggleable, InputPin, OutputPin, StatefulOutputPin},
+    hal::digital::v2::{toggleable, InputPin, IoPin, OutputPin, PinState, StatefulOutputPin},
     paste::paste,
 };
 
@@ -675,6 +675,144 @@ macro_rules! pin {
         /// Software toggle (uses StatefulOutputPin and OutputPin)
         impl<MODE> toggleable::Default for $PinType<Output<MODE>> {}
 
+        impl IoPin<$PinType<Input<Floating>>, Self> for $PinType<Output<PushPull>> {
+            type Error = Infallible;
+            fn into_input_pin(mut self) -> Result<$PinType<Input<Floating>>, Self::Error> {
+                unsafe {
+                    self.mddr().write_with_zero(|w| w.bits(1 << $i)); // Disable open-drain/multi-drive
+                    self.odr().write_with_zero(|w| w.bits(1 << $i)); // Disable output mode
+                    self.pudr().write_with_zero(|w| w.bits(1 << $i)); // Disable pull-up
+                    self.ppddr().write_with_zero(|w| w.bits(1 << $i)); // Disable pull-down
+                    self.per().write_with_zero(|w| w.bits(1 << $i)); // Enable pio mode (disables peripheral control of pin)
+                }
+
+                Ok($PinType { _mode: PhantomData })
+            }
+            fn into_output_pin(mut self, state: PinState) -> Result<Self, Self::Error> {
+                self.set_state(state).unwrap();
+                Ok(self)
+            }
+        }
+
+        impl IoPin<$PinType<Input<PullDown>>, Self> for $PinType<Output<PushPull>> {
+            type Error = Infallible;
+            fn into_input_pin(mut self) -> Result<$PinType<Input<PullDown>>, Self::Error> {
+                unsafe {
+                    self.mddr().write_with_zero(|w| w.bits(1 << $i)); // Disable open-drain/multi-drive
+                    self.odr().write_with_zero(|w| w.bits(1 << $i)); // Disable output mode
+                    self.pudr().write_with_zero(|w| w.bits(1 << $i)); // Disable pull-up
+                    self.ppder().write_with_zero(|w| w.bits(1 << $i)); // Enable pull-down
+                    self.per().write_with_zero(|w| w.bits(1 << $i)); // Enable pio mode (disables peripheral control of pin)
+                }
+
+                Ok($PinType { _mode: PhantomData })
+            }
+            fn into_output_pin(mut self, state: PinState) -> Result<Self, Self::Error> {
+                self.set_state(state).unwrap();
+                Ok(self)
+            }
+        }
+
+        impl IoPin<$PinType<Input<PullUp>>, Self> for $PinType<Output<PushPull>> {
+            type Error = Infallible;
+            fn into_input_pin(mut self) -> Result<$PinType<Input<PullUp>>, Self::Error> {
+                unsafe {
+                    self.mddr().write_with_zero(|w| w.bits(1 << $i)); // Disable open-drain/multi-drive
+                    self.odr().write_with_zero(|w| w.bits(1 << $i)); // Disable output mode
+                    self.puer().write_with_zero(|w| w.bits(1 << $i)); // Enable pull-up
+                    self.ppddr().write_with_zero(|w| w.bits(1 << $i)); // Disable pull-down
+                    self.per().write_with_zero(|w| w.bits(1 << $i)); // Enable pio mode (disables peripheral control of pin)
+                }
+
+                Ok($PinType { _mode: PhantomData })
+            }
+            fn into_output_pin(mut self, state: PinState) -> Result<Self, Self::Error> {
+                self.set_state(state).unwrap();
+                Ok(self)
+            }
+        }
+
+        impl IoPin<Self, $PinType<Output<PushPull>>> for $PinType<Input<Floating>> {
+            type Error = Infallible;
+            fn into_input_pin(self) -> Result<Self, Self::Error> {
+                Ok(self)
+            }
+            fn into_output_pin(
+                mut self,
+                state: PinState,
+            ) -> Result<$PinType<Output<PushPull>>, Self::Error> {
+                unsafe {
+                    self.mddr().write_with_zero(|w| w.bits(1 << $i)); // Disable open-drain/multi-drive
+                    self.oer().write_with_zero(|w| w.bits(1 << $i)); // Enable output mode
+                    self.per().write_with_zero(|w| w.bits(1 << $i)); // Enable pio mode (disables peripheral control of pin)
+                    match state {
+                        PinState::Low => {
+                            self.codr().write_with_zero(|w| w.bits(1 << $i));
+                        }
+                        PinState::High => {
+                            self.sodr().write_with_zero(|w| w.bits(1 << $i));
+                        }
+                    }
+                }
+
+                Ok($PinType { _mode: PhantomData })
+            }
+        }
+
+        impl IoPin<Self, $PinType<Output<PushPull>>> for $PinType<Input<PullDown>> {
+            type Error = Infallible;
+            fn into_input_pin(self) -> Result<Self, Self::Error> {
+                Ok(self)
+            }
+            fn into_output_pin(
+                mut self,
+                state: PinState,
+            ) -> Result<$PinType<Output<PushPull>>, Self::Error> {
+                unsafe {
+                    self.mddr().write_with_zero(|w| w.bits(1 << $i)); // Disable open-drain/multi-drive
+                    self.oer().write_with_zero(|w| w.bits(1 << $i)); // Enable output mode
+                    self.per().write_with_zero(|w| w.bits(1 << $i)); // Enable pio mode (disables peripheral control of pin)
+                    match state {
+                        PinState::Low => {
+                            self.codr().write_with_zero(|w| w.bits(1 << $i));
+                        }
+                        PinState::High => {
+                            self.sodr().write_with_zero(|w| w.bits(1 << $i));
+                        }
+                    }
+                }
+
+                Ok($PinType { _mode: PhantomData })
+            }
+        }
+
+        impl IoPin<Self, $PinType<Output<PushPull>>> for $PinType<Input<PullUp>> {
+            type Error = Infallible;
+            fn into_input_pin(self) -> Result<Self, Self::Error> {
+                Ok(self)
+            }
+            fn into_output_pin(
+                mut self,
+                state: PinState,
+            ) -> Result<$PinType<Output<PushPull>>, Self::Error> {
+                unsafe {
+                    self.mddr().write_with_zero(|w| w.bits(1 << $i)); // Disable open-drain/multi-drive
+                    self.oer().write_with_zero(|w| w.bits(1 << $i)); // Enable output mode
+                    self.per().write_with_zero(|w| w.bits(1 << $i)); // Enable pio mode (disables peripheral control of pin)
+                    match state {
+                        PinState::Low => {
+                            self.codr().write_with_zero(|w| w.bits(1 << $i));
+                        }
+                        PinState::High => {
+                            self.sodr().write_with_zero(|w| w.bits(1 << $i));
+                        }
+                    }
+                }
+
+                Ok($PinType { _mode: PhantomData })
+            }
+        }
+
         paste! {
             impl<MODE> $PinType<MODE> {
                 /// Erases the pin number from the type
@@ -747,6 +885,135 @@ macro_rules! pin_generic {
             }
 
             impl <MODE> toggleable::Default for [<$port Generic>]<Output<MODE>> {}
+
+            impl IoPin<[<$port Generic>]<Input<Floating>>, Self> for [<$port Generic>]<Output<PushPull>> {
+                type Error = Infallible;
+                fn into_input_pin(self) -> Result<[<$port Generic>]<Input<Floating>>, Self::Error> {
+                    unsafe {
+                        (*$port::ptr()).mddr.write_with_zero(|w| w.bits(1 << self.i)); // Disable open-drain/multi-drive
+                        (*$port::ptr()).odr.write_with_zero(|w| w.bits(1 << self.i)); // Disable output mode
+                        (*$port::ptr()).pudr.write_with_zero(|w| w.bits(1 << self.i)); // Disable pull-up
+                        (*$port::ptr()).ppddr.write_with_zero(|w| w.bits(1 << self.i)); // Disable pull-down
+                        (*$port::ptr()).per.write_with_zero(|w| w.bits(1 << self.i)); // Enable pio mode (disables peripheral control of pin)
+                    }
+
+                    Ok([<$port Generic>] { i: self.i, _mode: PhantomData })
+                }
+                fn into_output_pin(mut self, state: PinState) -> Result<Self, Self::Error> {
+                    self.set_state(state).unwrap();
+                    Ok(self)
+                }
+            }
+
+            impl IoPin<[<$port Generic>]<Input<PullDown>>, Self> for [<$port Generic>]<Output<PushPull>> {
+                type Error = Infallible;
+                fn into_input_pin(self) -> Result<[<$port Generic>]<Input<PullDown>>, Self::Error> {
+                    unsafe {
+                        (*$port::ptr()).mddr.write_with_zero(|w| w.bits(1 << self.i)); // Disable open-drain/multi-drive
+                        (*$port::ptr()).odr.write_with_zero(|w| w.bits(1 << self.i)); // Disable output mode
+                        (*$port::ptr()).pudr.write_with_zero(|w| w.bits(1 << self.i)); // Disable pull-up
+                        (*$port::ptr()).ppder.write_with_zero(|w| w.bits(1 << self.i)); // Enable pull-down
+                        (*$port::ptr()).per.write_with_zero(|w| w.bits(1 << self.i)); // Enable pio mode (disables peripheral control of pin)
+                    }
+
+                    Ok([<$port Generic>] { i: self.i, _mode: PhantomData })
+                }
+                fn into_output_pin(mut self, state: PinState) -> Result<Self, Self::Error> {
+                    self.set_state(state).unwrap();
+                    Ok(self)
+                }
+            }
+
+            impl IoPin<[<$port Generic>]<Input<PullUp>>, Self> for [<$port Generic>]<Output<PushPull>> {
+                type Error = Infallible;
+                fn into_input_pin(self) -> Result<[<$port Generic>]<Input<PullUp>>, Self::Error> {
+                    unsafe {
+                        (*$port::ptr()).mddr.write_with_zero(|w| w.bits(1 << self.i)); // Disable open-drain/multi-drive
+                        (*$port::ptr()).odr.write_with_zero(|w| w.bits(1 << self.i)); // Disable output mode
+                        (*$port::ptr()).puer.write_with_zero(|w| w.bits(1 << self.i)); // Enable pull-up
+                        (*$port::ptr()).ppddr.write_with_zero(|w| w.bits(1 << self.i)); // Disable pull-down
+                        (*$port::ptr()).per.write_with_zero(|w| w.bits(1 << self.i)); // Enable pio mode (disables peripheral control of pin)
+                    }
+
+                    Ok([<$port Generic>] { i: self.i, _mode: PhantomData })
+                }
+                fn into_output_pin(mut self, state: PinState) -> Result<Self, Self::Error> {
+                    self.set_state(state).unwrap();
+                    Ok(self)
+                }
+            }
+
+            impl IoPin<Self, [<$port Generic>]<Output<PushPull>>> for [<$port Generic>]<Input<Floating>> {
+                type Error = Infallible;
+                fn into_input_pin(self) -> Result<Self, Self::Error> {
+                    Ok(self)
+                }
+                fn into_output_pin(self, state: PinState) -> Result<[<$port Generic>]<Output<PushPull>>, Self::Error> {
+                    unsafe {
+                        (*$port::ptr()).mddr.write_with_zero(|w| w.bits(1 << self.i)); // Disable open-drain/multi-drive
+                        (*$port::ptr()).oer.write_with_zero(|w| w.bits(1 << self.i)); // Enable output mode
+                        (*$port::ptr()).per.write_with_zero(|w| w.bits(1 << self.i)); // Enable pio mode (disables peripheral control of pin)
+                        match state {
+                            PinState::Low => {
+                                (*$port::ptr()).codr.write_with_zero(|w| w.bits(1 << self.i) );
+                            }
+                            PinState::High => {
+                                (*$port::ptr()).sodr.write_with_zero(|w| w.bits(1 << self.i) );
+                            }
+                        }
+                    }
+
+                    Ok( [<$port Generic>] { i: self.i, _mode: PhantomData } )
+                }
+            }
+
+            impl IoPin<Self, [<$port Generic>]<Output<PushPull>>> for [<$port Generic>]<Input<PullDown>> {
+                type Error = Infallible;
+                fn into_input_pin(self) -> Result<Self, Self::Error> {
+                    Ok(self)
+                }
+                fn into_output_pin(self, state: PinState) -> Result<[<$port Generic>]<Output<PushPull>>, Self::Error> {
+                    unsafe {
+                        (*$port::ptr()).mddr.write_with_zero(|w| w.bits(1 << self.i)); // Disable open-drain/multi-drive
+                        (*$port::ptr()).oer.write_with_zero(|w| w.bits(1 << self.i)); // Enable output mode
+                        (*$port::ptr()).per.write_with_zero(|w| w.bits(1 << self.i)); // Enable pio mode (disables peripheral control of pin)
+                        match state {
+                            PinState::Low => {
+                                (*$port::ptr()).codr.write_with_zero(|w| w.bits(1 << self.i) );
+                            }
+                            PinState::High => {
+                                (*$port::ptr()).sodr.write_with_zero(|w| w.bits(1 << self.i) );
+                            }
+                        }
+                    }
+
+                    Ok( [<$port Generic>] { i: self.i, _mode: PhantomData } )
+                }
+            }
+
+            impl IoPin<Self, [<$port Generic>]<Output<PushPull>>> for [<$port Generic>]<Input<PullUp>> {
+                type Error = Infallible;
+                fn into_input_pin(self) -> Result<Self, Self::Error> {
+                    Ok(self)
+                }
+                fn into_output_pin(self, state: PinState) -> Result<[<$port Generic>]<Output<PushPull>>, Self::Error> {
+                    unsafe {
+                        (*$port::ptr()).mddr.write_with_zero(|w| w.bits(1 << self.i)); // Disable open-drain/multi-drive
+                        (*$port::ptr()).oer.write_with_zero(|w| w.bits(1 << self.i)); // Enable output mode
+                        (*$port::ptr()).per.write_with_zero(|w| w.bits(1 << self.i)); // Enable pio mode (disables peripheral control of pin)
+                        match state {
+                            PinState::Low => {
+                                (*$port::ptr()).codr.write_with_zero(|w| w.bits(1 << self.i) );
+                            }
+                            PinState::High => {
+                                (*$port::ptr()).sodr.write_with_zero(|w| w.bits(1 << self.i) );
+                            }
+                        }
+                    }
+
+                    Ok( [<$port Generic>] { i: self.i, _mode: PhantomData } )
+                }
+            }
         }
     };
 }
@@ -1144,6 +1411,164 @@ macro_rules! impl_pxx {
                 fn is_low(&self) -> Result<bool, Infallible> {
                     match self {
                         $(PioX::$port(pin) => pin.is_low()),*
+                    }
+                }
+            }
+
+            impl <MODE> toggleable::Default for PioX<Output<MODE>> {}
+
+            impl IoPin<PioX<Input<Floating>>, Self> for PioX<Output<PushPull>> {
+                type Error = Infallible;
+                fn into_input_pin(self) -> Result<PioX<Input<Floating>>, Self::Error> {
+                    unsafe {
+                        match self {
+                            $(PioX::$port(pin) => {
+                                (*$port::ptr()).mddr.write_with_zero(|w| w.bits(1 << pin.i)); // Disable open-drain/multi-drive
+                                (*$port::ptr()).odr.write_with_zero(|w| w.bits(1 << pin.i)); // Disable output mode
+                                (*$port::ptr()).pudr.write_with_zero(|w| w.bits(1 << pin.i)); // Disable pull-up
+                                (*$port::ptr()).ppddr.write_with_zero(|w| w.bits(1 << pin.i)); // Disable pull-down
+                                (*$port::ptr()).per.write_with_zero(|w| w.bits(1 << pin.i)); // Enable pio mode (disables peripheral control of pin)
+
+                                Ok(PioX::$port([<$port Generic>] { i: pin.i, _mode: PhantomData }))
+                            })*
+                        }
+                    }
+
+                }
+                fn into_output_pin(mut self, state: PinState) -> Result<Self, Self::Error> {
+                    self.set_state(state).unwrap();
+                    Ok(self)
+                }
+            }
+
+            impl IoPin<PioX<Input<PullDown>>, Self> for PioX<Output<PushPull>> {
+                type Error = Infallible;
+                fn into_input_pin(self) -> Result<PioX<Input<PullDown>>, Self::Error> {
+                    unsafe {
+                        match self {
+                            $(PioX::$port(pin) => {
+                                (*$port::ptr()).mddr.write_with_zero(|w| w.bits(1 << pin.i)); // Disable open-drain/multi-drive
+                                (*$port::ptr()).odr.write_with_zero(|w| w.bits(1 << pin.i)); // Disable output mode
+                                (*$port::ptr()).pudr.write_with_zero(|w| w.bits(1 << pin.i)); // Disable pull-up
+                                (*$port::ptr()).ppder.write_with_zero(|w| w.bits(1 << pin.i)); // Enable pull-down
+                                (*$port::ptr()).per.write_with_zero(|w| w.bits(1 << pin.i)); // Enable pio mode (disables peripheral control of pin)
+
+                                Ok(PioX::$port([<$port Generic>] { i: pin.i, _mode: PhantomData }))
+                            })*
+                        }
+                    }
+
+                }
+                fn into_output_pin(mut self, state: PinState) -> Result<Self, Self::Error> {
+                    self.set_state(state).unwrap();
+                    Ok(self)
+                }
+            }
+
+            impl IoPin<PioX<Input<PullUp>>, Self> for PioX<Output<PushPull>> {
+                type Error = Infallible;
+                fn into_input_pin(self) -> Result<PioX<Input<PullUp>>, Self::Error> {
+                    unsafe {
+                        match self {
+                            $(PioX::$port(pin) => {
+                                (*$port::ptr()).mddr.write_with_zero(|w| w.bits(1 << pin.i)); // Disable open-drain/multi-drive
+                                (*$port::ptr()).odr.write_with_zero(|w| w.bits(1 << pin.i)); // Disable output mode
+                                (*$port::ptr()).puer.write_with_zero(|w| w.bits(1 << pin.i)); // Enable pull-up
+                                (*$port::ptr()).ppddr.write_with_zero(|w| w.bits(1 << pin.i)); // Disable pull-down
+                                (*$port::ptr()).per.write_with_zero(|w| w.bits(1 << pin.i)); // Enable pio mode (disables peripheral control of pin)
+
+                                Ok(PioX::$port([<$port Generic>] { i: pin.i, _mode: PhantomData }))
+                            })*
+                        }
+                    }
+
+                }
+                fn into_output_pin(mut self, state: PinState) -> Result<Self, Self::Error> {
+                    self.set_state(state).unwrap();
+                    Ok(self)
+                }
+            }
+
+            impl IoPin<Self, PioX<Output<PushPull>>> for PioX<Input<Floating>> {
+                type Error = Infallible;
+                fn into_input_pin(self) -> Result<Self, Self::Error> {
+                    Ok(self)
+                }
+                fn into_output_pin(self, state: PinState) -> Result<PioX<Output<PushPull>>, Self::Error> {
+                    unsafe {
+                        match self {
+                            $(PioX::$port(pin) => {
+                                (*$port::ptr()).mddr.write_with_zero(|w| w.bits(1 << pin.i)); // Disable open-drain/multi-drive
+                                (*$port::ptr()).oer.write_with_zero(|w| w.bits(1 << pin.i)); // Enable output mode
+                                (*$port::ptr()).per.write_with_zero(|w| w.bits(1 << pin.i)); // Enable pio mode (disables peripheral control of pin)
+                                match state {
+                                    PinState::Low => {
+                                        (*$port::ptr()).codr.write_with_zero(|w| w.bits(1 << pin.i) );
+                                    }
+                                    PinState::High => {
+                                        (*$port::ptr()).sodr.write_with_zero(|w| w.bits(1 << pin.i) );
+                                    }
+                                }
+
+                                Ok(PioX::$port([<$port Generic>] { i: pin.i, _mode: PhantomData }))
+                            })*
+                        }
+                    }
+                }
+            }
+
+            impl IoPin<Self, PioX<Output<PushPull>>> for PioX<Input<PullDown>> {
+                type Error = Infallible;
+                fn into_input_pin(self) -> Result<Self, Self::Error> {
+                    Ok(self)
+                }
+                fn into_output_pin(self, state: PinState) -> Result<PioX<Output<PushPull>>, Self::Error> {
+                    unsafe {
+                        match self {
+                            $(PioX::$port(pin) => {
+                                (*$port::ptr()).mddr.write_with_zero(|w| w.bits(1 << pin.i)); // Disable open-drain/multi-drive
+                                (*$port::ptr()).oer.write_with_zero(|w| w.bits(1 << pin.i)); // Enable output mode
+                                (*$port::ptr()).per.write_with_zero(|w| w.bits(1 << pin.i)); // Enable pio mode (disables peripheral control of pin)
+                                match state {
+                                    PinState::Low => {
+                                        (*$port::ptr()).codr.write_with_zero(|w| w.bits(1 << pin.i) );
+                                    }
+                                    PinState::High => {
+                                        (*$port::ptr()).sodr.write_with_zero(|w| w.bits(1 << pin.i) );
+                                    }
+                                }
+
+                                Ok(PioX::$port([<$port Generic>] { i: pin.i, _mode: PhantomData }))
+                            })*
+                        }
+                    }
+                }
+            }
+
+            impl IoPin<Self, PioX<Output<PushPull>>> for PioX<Input<PullUp>> {
+                type Error = Infallible;
+                fn into_input_pin(self) -> Result<Self, Self::Error> {
+                    Ok(self)
+                }
+                fn into_output_pin(self, state: PinState) -> Result<PioX<Output<PushPull>>, Self::Error> {
+                    unsafe {
+                        match self {
+                            $(PioX::$port(pin) => {
+                                (*$port::ptr()).mddr.write_with_zero(|w| w.bits(1 << pin.i)); // Disable open-drain/multi-drive
+                                (*$port::ptr()).oer.write_with_zero(|w| w.bits(1 << pin.i)); // Enable output mode
+                                (*$port::ptr()).per.write_with_zero(|w| w.bits(1 << pin.i)); // Enable pio mode (disables peripheral control of pin)
+                                match state {
+                                    PinState::Low => {
+                                        (*$port::ptr()).codr.write_with_zero(|w| w.bits(1 << pin.i) );
+                                    }
+                                    PinState::High => {
+                                        (*$port::ptr()).sodr.write_with_zero(|w| w.bits(1 << pin.i) );
+                                    }
+                                }
+
+                                Ok(PioX::$port([<$port Generic>] { i: pin.i, _mode: PhantomData }))
+                            })*
+                        }
                     }
                 }
             }
