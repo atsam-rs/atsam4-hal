@@ -86,6 +86,7 @@ pub mod adc;
 pub mod chipid;
 pub mod clock;
 pub mod delay;
+pub mod efc;
 pub mod gpio;
 #[cfg(feature = "atsam4s")]
 pub mod pdc;
