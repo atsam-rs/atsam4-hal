@@ -16,9 +16,11 @@ impl watchdog::Watchdog for Watchdog {
     /// Feeds an existing watchdog to ensure the processor isn't reset.
     /// Sometimes commonly referred to as "kicking" or "refreshing".
     fn feed(&mut self) {
-        self.wdt
-            .cr
-            .write_with_zero(|w| w.key().passwd().wdrstt().set_bit());
+        unsafe {
+            self.wdt
+                .cr
+                .write_with_zero(|w| w.key().passwd().wdrstt().set_bit());
+        }
     }
 }
 

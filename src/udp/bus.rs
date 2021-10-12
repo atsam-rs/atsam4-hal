@@ -53,19 +53,23 @@ impl UdpBus {
 
     /// Enables UDP MCK (from MCK)
     fn enable_periph_clk(&self) {
-        #[cfg(feature = "atsam4e")]
-        PMC::borrow_unchecked(|pmc| pmc.pmc_pcer1.write_with_zero(|w| w.pid35().set_bit()));
-        #[cfg(feature = "atsam4s")]
-        PMC::borrow_unchecked(|pmc| pmc.pmc_pcer1.write_with_zero(|w| w.pid34().set_bit()));
+        unsafe {
+            #[cfg(feature = "atsam4e")]
+            PMC::borrow_unchecked(|pmc| pmc.pmc_pcer1.write_with_zero(|w| w.pid35().set_bit()));
+            #[cfg(feature = "atsam4s")]
+            PMC::borrow_unchecked(|pmc| pmc.pmc_pcer1.write_with_zero(|w| w.pid34().set_bit()));
+        }
     }
 
     /// Disables UDP MCK (from MCK)
     /// Used when entering USB suspend state
     fn disable_periph_clk(&self) {
-        #[cfg(feature = "atsam4e")]
-        PMC::borrow_unchecked(|pmc| pmc.pmc_pcdr1.write_with_zero(|w| w.pid35().set_bit()));
-        #[cfg(feature = "atsam4s")]
-        PMC::borrow_unchecked(|pmc| pmc.pmc_pcdr1.write_with_zero(|w| w.pid34().set_bit()));
+        unsafe {
+            #[cfg(feature = "atsam4e")]
+            PMC::borrow_unchecked(|pmc| pmc.pmc_pcdr1.write_with_zero(|w| w.pid35().set_bit()));
+            #[cfg(feature = "atsam4s")]
+            PMC::borrow_unchecked(|pmc| pmc.pmc_pcdr1.write_with_zero(|w| w.pid34().set_bit()));
+        }
     }
 
     /// Disables each of the endpoints
@@ -111,7 +115,7 @@ impl UdpBus {
         PMC::borrow_unchecked(|pmc| pmc.pmc_fsmr.modify(|_, w| w.usbal().set_bit()));
 
         // Enable UDP Clock (UDPCK)
-        PMC::borrow_unchecked(|pmc| pmc.pmc_scer.write_with_zero(|w| w.udp().set_bit()));
+        PMC::borrow_unchecked(|pmc| unsafe { pmc.pmc_scer.write_with_zero(|w| w.udp().set_bit()) });
 
         // Enable integrated 1.5k pull-up on D+
         cortex_m::interrupt::free(|cs| {
@@ -232,11 +236,13 @@ impl UsbBus for UdpBus {
                 .modify(|_, w| unsafe { w.fen().set_bit().fadd().bits(0) });
 
             // Enable general UDP interrupts
-            self.udp
-                .borrow(cs)
-                .borrow()
-                .ier
-                .write_with_zero(|w| w.rxsusp().set_bit().sofint().set_bit());
+            unsafe {
+                self.udp
+                    .borrow(cs)
+                    .borrow()
+                    .ier
+                    .write_with_zero(|w| w.rxsusp().set_bit().sofint().set_bit());
+            }
         });
 
         // Reset endpoints
@@ -371,14 +377,16 @@ impl UsbBus for UdpBus {
                 .modify(|_, w| w.txvdis().set_bit());
         });
 
-        // Disable UDP MCK (from MCK)
-        #[cfg(feature = "atsam4e")]
-        PMC::borrow_unchecked(|pmc| pmc.pmc_pcdr1.write_with_zero(|w| w.pid35().set_bit()));
-        #[cfg(feature = "atsam4s")]
-        PMC::borrow_unchecked(|pmc| pmc.pmc_pcdr1.write_with_zero(|w| w.pid34().set_bit()));
+        unsafe {
+            // Disable UDP MCK (from MCK)
+            #[cfg(feature = "atsam4e")]
+            PMC::borrow_unchecked(|pmc| pmc.pmc_pcdr1.write_with_zero(|w| w.pid35().set_bit()));
+            #[cfg(feature = "atsam4s")]
+            PMC::borrow_unchecked(|pmc| pmc.pmc_pcdr1.write_with_zero(|w| w.pid34().set_bit()));
 
-        // Disable UDPCK (from PLL)
-        PMC::borrow_unchecked(|pmc| pmc.pmc_scer.write_with_zero(|w| w.udp().clear_bit()));
+            // Disable UDPCK (from PLL)
+            PMC::borrow_unchecked(|pmc| pmc.pmc_scer.write_with_zero(|w| w.udp().clear_bit()));
+        }
 
         // Disable PLLB (atsam4s only)
         #[cfg(feature = "atsam4s")]
@@ -394,14 +402,16 @@ impl UsbBus for UdpBus {
             wait_for_pllb_lock(pmc);
         });
 
-        // Enable UDPCK (from PLL)
-        PMC::borrow_unchecked(|pmc| pmc.pmc_scer.write_with_zero(|w| w.udp().set_bit()));
+        unsafe {
+            // Enable UDPCK (from PLL)
+            PMC::borrow_unchecked(|pmc| pmc.pmc_scer.write_with_zero(|w| w.udp().set_bit()));
 
-        // Enable UDP MCK (from MCK)
-        #[cfg(feature = "atsam4e")]
-        PMC::borrow_unchecked(|pmc| pmc.pmc_pcer1.write_with_zero(|w| w.pid35().set_bit()));
-        #[cfg(feature = "atsam4s")]
-        PMC::borrow_unchecked(|pmc| pmc.pmc_pcer1.write_with_zero(|w| w.pid34().set_bit()));
+            // Enable UDP MCK (from MCK)
+            #[cfg(feature = "atsam4e")]
+            PMC::borrow_unchecked(|pmc| pmc.pmc_pcer1.write_with_zero(|w| w.pid35().set_bit()));
+            #[cfg(feature = "atsam4s")]
+            PMC::borrow_unchecked(|pmc| pmc.pmc_pcer1.write_with_zero(|w| w.pid34().set_bit()));
+        }
 
         // Enable Transceiver
         cortex_m::interrupt::free(|cs| {
@@ -426,11 +436,13 @@ impl UsbBus for UdpBus {
         if imr.sofint().bit() && isr.sofint().bit() {
             cortex_m::interrupt::free(|cs| {
                 // Clear SOF interrupt
-                self.udp
-                    .borrow(cs)
-                    .borrow()
-                    .icr
-                    .write_with_zero(|w| w.sofint().set_bit());
+                unsafe {
+                    self.udp
+                        .borrow(cs)
+                        .borrow()
+                        .icr
+                        .write_with_zero(|w| w.sofint().set_bit());
+                }
 
                 // Check for sof_eop (Start of Frame End of Packet) errors
                 if self.udp.borrow(cs).borrow().frm_num.read().frm_err().bit() {
@@ -482,36 +494,36 @@ impl UsbBus for UdpBus {
             || imr.extrsm().bit() && isr.extrsm().bit()
         {
             cortex_m::interrupt::free(|cs| {
-                // Clear wakeup/resume interrputs
-                self.udp
-                    .borrow(cs)
-                    .borrow()
-                    .icr
-                    .write_with_zero(|w| w.wakeup().set_bit().rxrsm().set_bit().extrsm().set_bit());
+                unsafe {
+                    // Clear wakeup/resume interrputs
+                    self.udp.borrow(cs).borrow().icr.write_with_zero(|w| {
+                        w.wakeup().set_bit().rxrsm().set_bit().extrsm().set_bit()
+                    });
 
-                // Disable wakeup/resume interrputs
-                self.udp.borrow(cs).borrow().idr.write_with_zero(|w| {
-                    w.wakeup()
-                        .clear_bit()
-                        .rxrsm()
-                        .clear_bit()
-                        .extrsm()
-                        .clear_bit()
-                });
+                    // Disable wakeup/resume interrputs
+                    self.udp.borrow(cs).borrow().idr.write_with_zero(|w| {
+                        w.wakeup()
+                            .clear_bit()
+                            .rxrsm()
+                            .clear_bit()
+                            .extrsm()
+                            .clear_bit()
+                    });
 
-                // Ack suspend just in case (we're enabling it)
-                self.udp
-                    .borrow(cs)
-                    .borrow()
-                    .icr
-                    .write_with_zero(|w| w.rxsusp().set_bit());
+                    // Ack suspend just in case (we're enabling it)
+                    self.udp
+                        .borrow(cs)
+                        .borrow()
+                        .icr
+                        .write_with_zero(|w| w.rxsusp().set_bit());
 
-                // Enabling suspend and sof interrupts
-                self.udp
-                    .borrow(cs)
-                    .borrow()
-                    .ier
-                    .write_with_zero(|w| w.rxsusp().set_bit().sofint().set_bit());
+                    // Enabling suspend and sof interrupts
+                    self.udp
+                        .borrow(cs)
+                        .borrow()
+                        .ier
+                        .write_with_zero(|w| w.rxsusp().set_bit().sofint().set_bit());
+                }
             });
 
             defmt::info!("{} UdpBus::poll() -> Resume", frm_num());
@@ -521,26 +533,26 @@ impl UsbBus for UdpBus {
         // Process suspend interrupt
         if imr.rxsusp().bit() && isr.rxsusp().bit() {
             cortex_m::interrupt::free(|cs| {
-                // Clear Suspend interrput
-                self.udp
-                    .borrow(cs)
-                    .borrow()
-                    .icr
-                    .write_with_zero(|w| w.rxsusp().set_bit());
+                unsafe {
+                    // Clear Suspend interrput
+                    self.udp
+                        .borrow(cs)
+                        .borrow()
+                        .icr
+                        .write_with_zero(|w| w.rxsusp().set_bit());
 
-                // Disable Suspend interrupt
-                self.udp
-                    .borrow(cs)
-                    .borrow()
-                    .idr
-                    .write_with_zero(|w| w.rxsusp().clear_bit());
+                    // Disable Suspend interrupt
+                    self.udp
+                        .borrow(cs)
+                        .borrow()
+                        .idr
+                        .write_with_zero(|w| w.rxsusp().clear_bit());
 
-                // Enable Resume/External Resume/Wake up interrupts
-                self.udp
-                    .borrow(cs)
-                    .borrow()
-                    .ier
-                    .write_with_zero(|w| w.wakeup().set_bit().rxrsm().set_bit().extrsm().set_bit());
+                    // Enable Resume/External Resume/Wake up interrupts
+                    self.udp.borrow(cs).borrow().ier.write_with_zero(|w| {
+                        w.wakeup().set_bit().rxrsm().set_bit().extrsm().set_bit()
+                    });
+                }
             });
 
             // Disable UDP MCK (after this, cannot read from UDP registers)
@@ -553,7 +565,7 @@ impl UsbBus for UdpBus {
         // Check for bus reset interrupt
         if isr.endbusres().bit() {
             // Clear End of BUS Reset
-            cortex_m::interrupt::free(|cs| {
+            cortex_m::interrupt::free(|cs| unsafe {
                 self.udp
                     .borrow(cs)
                     .borrow()

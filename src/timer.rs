@@ -89,6 +89,7 @@ impl TimerCounter<$TC, $clock<Enabled>>
     /// while !tcc1.wait().is_ok() {}
     /// ```
     pub fn new(tc: $TC, clock: $clock<Enabled>) -> Self {
+        unsafe {
         // Disable write-protect mode
         tc.wpmr.write_with_zero(|w| w.wpkey().passwd().wpen().clear_bit());
 
@@ -96,6 +97,7 @@ impl TimerCounter<$TC, $clock<Enabled>>
         tc.ccr0.write_with_zero(|w| w.clkdis().set_bit());
         tc.ccr1.write_with_zero(|w| w.clkdis().set_bit());
         tc.ccr2.write_with_zero(|w| w.clkdis().set_bit());
+        }
 
         Self {
             clock,
@@ -135,9 +137,9 @@ impl<const CH: usize> TimerCounterChannel<$TC, CH> {
     ///       e.g. TC:1 CH:2 => 1 * 3 + 2 = 5
     pub fn enable_interrupt(&mut self) {
         match CH {
-            0 => $TC::borrow_unchecked(|tc| tc.ier0.write_with_zero(|w| w.cpcs().set_bit())),
-            1 => $TC::borrow_unchecked(|tc| tc.ier1.write_with_zero(|w| w.cpcs().set_bit())),
-            2 => $TC::borrow_unchecked(|tc| tc.ier2.write_with_zero(|w| w.cpcs().set_bit())),
+            0 => $TC::borrow_unchecked(|tc| unsafe { tc.ier0.write_with_zero(|w| w.cpcs().set_bit())}),
+            1 => $TC::borrow_unchecked(|tc| unsafe { tc.ier1.write_with_zero(|w| w.cpcs().set_bit())}),
+            2 => $TC::borrow_unchecked(|tc| unsafe { tc.ier2.write_with_zero(|w| w.cpcs().set_bit())}),
             _ => panic!("Invalid TimerCounterChannel: {}", CH),
         }
     }
@@ -145,9 +147,9 @@ impl<const CH: usize> TimerCounterChannel<$TC, CH> {
     /// Disables the interrupt for this TimerCounterChannel
     pub fn disable_interrupt(&mut self) {
         match CH {
-            0 => $TC::borrow_unchecked(|tc| tc.idr0.write_with_zero(|w| w.cpcs().set_bit())),
-            1 => $TC::borrow_unchecked(|tc| tc.idr1.write_with_zero(|w| w.cpcs().set_bit())),
-            2 => $TC::borrow_unchecked(|tc| tc.idr2.write_with_zero(|w| w.cpcs().set_bit())),
+            0 => $TC::borrow_unchecked(|tc| unsafe { tc.idr0.write_with_zero(|w| w.cpcs().set_bit())}),
+            1 => $TC::borrow_unchecked(|tc| unsafe { tc.idr1.write_with_zero(|w| w.cpcs().set_bit())}),
+            2 => $TC::borrow_unchecked(|tc| unsafe { tc.idr2.write_with_zero(|w| w.cpcs().set_bit())}),
             _ => panic!("Invalid TimerCounterChannel: {}", CH),
         }
     }
@@ -215,9 +217,9 @@ impl<const CH: usize> CountDown for TimerCounterChannel<$TC, CH> {
 
         // Setup count-down value
         match CH {
-            0 => $TC::borrow_unchecked(|tc| tc.rc0.write_with_zero(|w| unsafe { w.rc().bits(cycles) })),
-            1 => $TC::borrow_unchecked(|tc| tc.rc1.write_with_zero(|w| unsafe { w.rc().bits(cycles) })),
-            2 => $TC::borrow_unchecked(|tc| tc.rc2.write_with_zero(|w| unsafe { w.rc().bits(cycles) })),
+            0 => $TC::borrow_unchecked(|tc| unsafe { tc.rc0.write_with_zero(|w| w.rc().bits(cycles) )}),
+            1 => $TC::borrow_unchecked(|tc| unsafe { tc.rc1.write_with_zero(|w| w.rc().bits(cycles) )}),
+            2 => $TC::borrow_unchecked(|tc| unsafe { tc.rc2.write_with_zero(|w| w.rc().bits(cycles) )}),
             _ => panic!("Invalid TimerCounterChannel: {}", CH),
         }
 
@@ -226,9 +228,9 @@ impl<const CH: usize> CountDown for TimerCounterChannel<$TC, CH> {
 
         // Enable timer and start using software trigger
         match CH {
-            0 => $TC::borrow_unchecked(|tc| tc.ccr0.write_with_zero(|w| w.clken().set_bit().swtrg().set_bit())),
-            1 => $TC::borrow_unchecked(|tc| tc.ccr1.write_with_zero(|w| w.clken().set_bit().swtrg().set_bit())),
-            2 => $TC::borrow_unchecked(|tc| tc.ccr2.write_with_zero(|w| w.clken().set_bit().swtrg().set_bit())),
+            0 => $TC::borrow_unchecked(|tc| unsafe { tc.ccr0.write_with_zero(|w| w.clken().set_bit().swtrg().set_bit())}),
+            1 => $TC::borrow_unchecked(|tc| unsafe { tc.ccr1.write_with_zero(|w| w.clken().set_bit().swtrg().set_bit())}),
+            2 => $TC::borrow_unchecked(|tc| unsafe { tc.ccr2.write_with_zero(|w| w.clken().set_bit().swtrg().set_bit())}),
             _ => panic!("Invalid TimerCounterChannel: {}", CH),
         }
     }

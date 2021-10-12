@@ -1,4 +1,3 @@
-use crate::pac::generic::Variant::Val;
 use crate::pac::udp::csr;
 use crate::pac::udp::csr::EPTYPE_A;
 use crate::pac::UDP;
@@ -51,9 +50,8 @@ macro_rules! clear_ep {
         // Set
         $udp.rst_ep.modify(|_, w| w.$ep().set_bit());
         // Wait for clear to finish
-        while !$udp.rst_ep.read().$ep().bit()
-            && $udp.csr_mut()[$epnum].read().rxbytecnt().bits() != 0
-        {}
+        while !$udp.rst_ep.read().$ep().bit() && $udp.csr()[$epnum].read().rxbytecnt().bits() != 0 {
+        }
         // Clear
         $udp.rst_ep.modify(|_, w| w.$ep().clear_bit());
     }};
@@ -74,7 +72,7 @@ macro_rules! csr_wait {
             pub fn [<$field _set>](index: u8) {
                 UDP::borrow_unchecked(|udp| {
                     // Set bit
-                    udp.csr_mut()[index as usize]
+                    udp.csr()[index as usize]
                         .modify(|_, w| csr_no_change(w).$field().set_bit());
                     // Wait for bit to set (See Warning 40.7.10 atsam4s datasheet)
                     while !udp.csr()[index as usize].read().$field().bit() {}
@@ -90,7 +88,7 @@ macro_rules! csr_wait {
             pub fn [<$field _clear>](index: u8) {
                 UDP::borrow_unchecked(|udp| {
                     // Clear bit
-                    udp.csr_mut()[index as usize]
+                    udp.csr()[index as usize]
                         .modify(|_, w| csr_no_change(w).$field().clear_bit());
                     // Wait for bit to clear (See Warning 40.7.10 atsam4s datasheet)
                     while udp.csr()[index as usize].read().$field().bit() {}
@@ -107,7 +105,7 @@ macro_rules! csr_wait {
             pub fn [<$field _ $eptype_dir>](index: u8) {
                 UDP::borrow_unchecked(|udp| {
                     // Set bit
-                    udp.csr_mut()[index as usize]
+                    udp.csr()[index as usize]
                         .modify(|_, w| csr_no_change(w).$field().$eptype_dir());
                     // Wait for bit to set (See Warning 40.7.10 atsam4s datasheet)
                     while !udp.csr()[index as usize].read().$field().[<is_ $eptype_dir>]() {}
@@ -121,7 +119,7 @@ macro_rules! csr_wait {
 fn csr_clear(index: u8) {
     UDP::borrow_unchecked(|udp| {
         // Set bit
-        udp.csr_mut()[index as usize].modify(|_, w| {
+        udp.csr()[index as usize].modify(|_, w| {
             csr_no_change(w)
                 .dir()
                 .clear_bit()
@@ -361,33 +359,35 @@ impl Endpoint {
     /// Set interrupt (enable/disable)
     fn interrupt_set(&self, enable: bool) {
         // Enable interrupt for endpoint
-        UDP::borrow_unchecked(|udp| {
-            if enable {
-                match self.index {
-                    0 => udp.ier.write_with_zero(|w| w.ep0int().set_bit()),
-                    1 => udp.ier.write_with_zero(|w| w.ep1int().set_bit()),
-                    2 => udp.ier.write_with_zero(|w| w.ep2int().set_bit()),
-                    3 => udp.ier.write_with_zero(|w| w.ep3int().set_bit()),
-                    4 => udp.ier.write_with_zero(|w| w.ep4int().set_bit()),
-                    5 => udp.ier.write_with_zero(|w| w.ep5int().set_bit()),
-                    6 => udp.ier.write_with_zero(|w| w.ep6int().set_bit()),
-                    7 => udp.ier.write_with_zero(|w| w.ep7int().set_bit()),
-                    _ => {} // Invalid
+        unsafe {
+            UDP::borrow_unchecked(|udp| {
+                if enable {
+                    match self.index {
+                        0 => udp.ier.write_with_zero(|w| w.ep0int().set_bit()),
+                        1 => udp.ier.write_with_zero(|w| w.ep1int().set_bit()),
+                        2 => udp.ier.write_with_zero(|w| w.ep2int().set_bit()),
+                        3 => udp.ier.write_with_zero(|w| w.ep3int().set_bit()),
+                        4 => udp.ier.write_with_zero(|w| w.ep4int().set_bit()),
+                        5 => udp.ier.write_with_zero(|w| w.ep5int().set_bit()),
+                        6 => udp.ier.write_with_zero(|w| w.ep6int().set_bit()),
+                        7 => udp.ier.write_with_zero(|w| w.ep7int().set_bit()),
+                        _ => {} // Invalid
+                    }
+                } else {
+                    match self.index {
+                        0 => udp.idr.write_with_zero(|w| w.ep0int().set_bit()),
+                        1 => udp.idr.write_with_zero(|w| w.ep1int().set_bit()),
+                        2 => udp.idr.write_with_zero(|w| w.ep2int().set_bit()),
+                        3 => udp.idr.write_with_zero(|w| w.ep3int().set_bit()),
+                        4 => udp.idr.write_with_zero(|w| w.ep4int().set_bit()),
+                        5 => udp.idr.write_with_zero(|w| w.ep5int().set_bit()),
+                        6 => udp.idr.write_with_zero(|w| w.ep6int().set_bit()),
+                        7 => udp.idr.write_with_zero(|w| w.ep7int().set_bit()),
+                        _ => {} // Invalid
+                    }
                 }
-            } else {
-                match self.index {
-                    0 => udp.idr.write_with_zero(|w| w.ep0int().set_bit()),
-                    1 => udp.idr.write_with_zero(|w| w.ep1int().set_bit()),
-                    2 => udp.idr.write_with_zero(|w| w.ep2int().set_bit()),
-                    3 => udp.idr.write_with_zero(|w| w.ep3int().set_bit()),
-                    4 => udp.idr.write_with_zero(|w| w.ep4int().set_bit()),
-                    5 => udp.idr.write_with_zero(|w| w.ep5int().set_bit()),
-                    6 => udp.idr.write_with_zero(|w| w.ep6int().set_bit()),
-                    7 => udp.idr.write_with_zero(|w| w.ep7int().set_bit()),
-                    _ => {} // Invalid
-                }
-            }
-        });
+            });
+        }
     }
 
     /// Gets the poll interval for interrupt endpoints.
@@ -730,8 +730,9 @@ impl Endpoint {
             // Write data to fifo
             UDP::borrow_unchecked(|udp| {
                 for byte in data {
-                    udp.fdr[self.index as usize]
-                        .write_with_zero(|w| unsafe { w.fifo_data().bits(*byte) })
+                    unsafe {
+                        udp.fdr[self.index as usize].write_with_zero(|w| w.fifo_data().bits(*byte))
+                    }
                 }
             });
             self.txbanks_free -= 1;
@@ -780,7 +781,7 @@ impl Endpoint {
         }
 
         // Determine if we've been configured as a control endpoint
-        if csr.eptype().variant() == Val(EPTYPE_A::CTRL) {
+        if csr.eptype().variant() == Some(EPTYPE_A::CTRL) {
             // -- Setup Transaction --
             // * Hardware automatically acknowledges
             // * RXSETUP is set in CSR
@@ -882,7 +883,7 @@ impl Endpoint {
 
         // Make sure this is an Out endpoint
         match csr.eptype().variant() {
-            Val(EPTYPE_A::BULK_OUT) | Val(EPTYPE_A::INT_OUT) | Val(EPTYPE_A::ISO_OUT) => {}
+            Some(EPTYPE_A::BULK_OUT) | Some(EPTYPE_A::INT_OUT) | Some(EPTYPE_A::ISO_OUT) => {}
             _ => {
                 return Err(usb_device::UsbError::InvalidEndpoint);
             }

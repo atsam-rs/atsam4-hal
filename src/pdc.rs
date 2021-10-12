@@ -193,12 +193,12 @@ macro_rules! pdc_rx {
 
             /// Starts the PDC transfer
             pub fn start_rx_pdc(&mut self) {
-                self.$periph.ptcr.write_with_zero(|w| w.rxten().set_bit());
+                unsafe { self.$periph.ptcr.write_with_zero(|w| w.rxten().set_bit()) };
             }
 
             /// Stops the PDC transfer
             pub fn stop_rx_pdc(&mut self) {
-                self.$periph.ptcr.write_with_zero(|w| w.rxtdis().set_bit());
+                unsafe { self.$periph.ptcr.write_with_zero(|w| w.rxtdis().set_bit()) };
             }
 
             /// Returns `true` if the PDC is active and may be receiving data
@@ -215,23 +215,23 @@ macro_rules! pdc_rx {
             /// Enable ENDRX (End of Receive) interrupt
             /// Triggered when RCR reaches 0
             pub fn enable_endrx_interrupt(&mut self) {
-                self.$periph.ier.write_with_zero(|w| w.endrx().set_bit());
+                unsafe { self.$periph.ier.write_with_zero(|w| w.endrx().set_bit()) };
             }
 
             /// Disable ENDRX (End of Receive) interrupt
             pub fn disable_endrx_interrupt(&mut self) {
-                self.$periph.idr.write_with_zero(|w| w.endrx().set_bit());
+                unsafe { self.$periph.idr.write_with_zero(|w| w.endrx().set_bit()) };
             }
 
             /// Enable RXBUFF (Receive Buffer Full) interrupt
             /// Triggered when RCR and RNCR reach 0
             pub fn enable_rxbuff_interrupt(&mut self) {
-                self.$periph.ier.write_with_zero(|w| w.rxbuff().set_bit());
+                unsafe { self.$periph.ier.write_with_zero(|w| w.rxbuff().set_bit()) };
             }
 
             /// Disable RXBUFF (Receive Buffer Full) interrupt
             pub fn disable_rxbuff_interrupt(&mut self) {
-                self.$periph.idr.write_with_zero(|w| w.rxbuff().set_bit());
+                unsafe { self.$periph.idr.write_with_zero(|w| w.rxbuff().set_bit()) };
             }
         }
     };

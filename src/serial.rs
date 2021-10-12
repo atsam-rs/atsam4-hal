@@ -115,15 +115,15 @@ macro_rules! uarts {
                     }
 
                     fn reset_and_disable(uart: &mut $UART) {
-                        uart.cr.write_with_zero(|w| {
+                        unsafe { uart.cr.write_with_zero(|w| {
                             w.rstrx().set_bit().rsttx().set_bit().rxdis().set_bit().txdis().set_bit()
-                        });
+                        })};
                     }
 
                     fn enable(uart: &mut $UART) {
-                        uart.cr.write_with_zero(|w| {
+                        unsafe {uart.cr.write_with_zero(|w| {
                             w.rxen().set_bit().txen().set_bit()
-                        });
+                        })};
                     }
 
                     pub fn write_string_blocking(&mut self, data: &str) {
@@ -170,7 +170,7 @@ macro_rules! uarts {
 
                         // omitted: checks for other errors
                         if isr.txrdy().bit_is_set() {
-                            Ok(self.uart.thr.write_with_zero(|w| unsafe { w.txchr().bits(byte) }))
+                            unsafe { Ok(self.uart.thr.write_with_zero(|w| w.txchr().bits(byte) )) }
                         } else {
                             // No data available yet
                             Err(nb::Error::WouldBlock)

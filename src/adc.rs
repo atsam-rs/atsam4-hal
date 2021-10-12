@@ -193,15 +193,17 @@ impl Adc {
          *
          * adc_init(ADC, sysclk_get_cpu_hz(), 20000000, ADC_STARTUP_TIME_5);
          */
-        // Reset the controller (simulates hardware reset)
-        adc.cr.write_with_zero(|w| w.swrst().set_bit());
+        unsafe {
+            // Reset the controller (simulates hardware reset)
+            adc.cr.write_with_zero(|w| w.swrst().set_bit());
 
-        // Reset mode register (set all fields to 0)
-        adc.mr.write_with_zero(|w| w);
+            // Reset mode register (set all fields to 0)
+            adc.mr.write_with_zero(|w| w);
 
-        // Reset PDC transfer
-        adc.ptcr
-            .write_with_zero(|w| w.rxtdis().set_bit().txtdis().set_bit());
+            // Reset PDC transfer
+            adc.ptcr
+                .write_with_zero(|w| w.rxtdis().set_bit().txtdis().set_bit());
+        }
 
         // Setup prescalar and startup time
         let prescaler = (clock.frequency().0 / (2 * Hertz(20000000).0) - 1) as u8;
@@ -485,7 +487,7 @@ impl Adc {
     /// Autocalibration
     /// Wait will block until autocalibration is complete
     pub fn autocalibration(&mut self, wait: bool) {
-        self.adc.cr.write_with_zero(|w| w.autocal().set_bit());
+        unsafe { self.adc.cr.write_with_zero(|w| w.autocal().set_bit()) };
 
         if wait {
             while !self.calibration_ready() {}
@@ -535,7 +537,7 @@ impl Adc {
     }
 
     fn start_conversion(&mut self) {
-        self.adc.cr.write_with_zero(|w| w.start().set_bit());
+        unsafe { self.adc.cr.write_with_zero(|w| w.start().set_bit()) };
     }
 
     /// Enables the ADC pin channel
@@ -543,49 +545,53 @@ impl Adc {
     /// This is needed to determine the various gain+offset settings used
     /// See Section in 42.6.12 in the ATSAM4S datasheet for more details
     pub fn enable_channel<PIN: Channel<ADC, ID = u8>>(&mut self, _pin: &mut PIN) {
-        match PIN::channel() {
-            0 => self.adc.cher.write_with_zero(|w| w.ch0().set_bit()),
-            1 => self.adc.cher.write_with_zero(|w| w.ch1().set_bit()),
-            2 => self.adc.cher.write_with_zero(|w| w.ch2().set_bit()),
-            3 => self.adc.cher.write_with_zero(|w| w.ch3().set_bit()),
-            4 => self.adc.cher.write_with_zero(|w| w.ch4().set_bit()),
-            5 => self.adc.cher.write_with_zero(|w| w.ch5().set_bit()),
-            6 => self.adc.cher.write_with_zero(|w| w.ch6().set_bit()),
-            7 => self.adc.cher.write_with_zero(|w| w.ch7().set_bit()),
-            8 => self.adc.cher.write_with_zero(|w| w.ch8().set_bit()),
-            9 => self.adc.cher.write_with_zero(|w| w.ch9().set_bit()),
-            10 => self.adc.cher.write_with_zero(|w| w.ch10().set_bit()),
-            11 => self.adc.cher.write_with_zero(|w| w.ch11().set_bit()),
-            12 => self.adc.cher.write_with_zero(|w| w.ch12().set_bit()),
-            13 => self.adc.cher.write_with_zero(|w| w.ch13().set_bit()),
-            14 => self.adc.cher.write_with_zero(|w| w.ch14().set_bit()),
-            15 => self.adc.cher.write_with_zero(|w| w.ch15().set_bit()),
-            _ => {
-                panic!("Invalid channel: {}", PIN::channel());
+        unsafe {
+            match PIN::channel() {
+                0 => self.adc.cher.write_with_zero(|w| w.ch0().set_bit()),
+                1 => self.adc.cher.write_with_zero(|w| w.ch1().set_bit()),
+                2 => self.adc.cher.write_with_zero(|w| w.ch2().set_bit()),
+                3 => self.adc.cher.write_with_zero(|w| w.ch3().set_bit()),
+                4 => self.adc.cher.write_with_zero(|w| w.ch4().set_bit()),
+                5 => self.adc.cher.write_with_zero(|w| w.ch5().set_bit()),
+                6 => self.adc.cher.write_with_zero(|w| w.ch6().set_bit()),
+                7 => self.adc.cher.write_with_zero(|w| w.ch7().set_bit()),
+                8 => self.adc.cher.write_with_zero(|w| w.ch8().set_bit()),
+                9 => self.adc.cher.write_with_zero(|w| w.ch9().set_bit()),
+                10 => self.adc.cher.write_with_zero(|w| w.ch10().set_bit()),
+                11 => self.adc.cher.write_with_zero(|w| w.ch11().set_bit()),
+                12 => self.adc.cher.write_with_zero(|w| w.ch12().set_bit()),
+                13 => self.adc.cher.write_with_zero(|w| w.ch13().set_bit()),
+                14 => self.adc.cher.write_with_zero(|w| w.ch14().set_bit()),
+                15 => self.adc.cher.write_with_zero(|w| w.ch15().set_bit()),
+                _ => {
+                    panic!("Invalid channel: {}", PIN::channel());
+                }
             }
         }
     }
 
     pub fn disable_channel<PIN: Channel<ADC, ID = u8>>(&mut self, _pin: &mut PIN) {
-        match PIN::channel() {
-            0 => self.adc.chdr.write_with_zero(|w| w.ch0().set_bit()),
-            1 => self.adc.chdr.write_with_zero(|w| w.ch1().set_bit()),
-            2 => self.adc.chdr.write_with_zero(|w| w.ch2().set_bit()),
-            3 => self.adc.chdr.write_with_zero(|w| w.ch3().set_bit()),
-            4 => self.adc.chdr.write_with_zero(|w| w.ch4().set_bit()),
-            5 => self.adc.chdr.write_with_zero(|w| w.ch5().set_bit()),
-            6 => self.adc.chdr.write_with_zero(|w| w.ch6().set_bit()),
-            7 => self.adc.chdr.write_with_zero(|w| w.ch7().set_bit()),
-            8 => self.adc.chdr.write_with_zero(|w| w.ch8().set_bit()),
-            9 => self.adc.chdr.write_with_zero(|w| w.ch9().set_bit()),
-            10 => self.adc.chdr.write_with_zero(|w| w.ch10().set_bit()),
-            11 => self.adc.chdr.write_with_zero(|w| w.ch11().set_bit()),
-            12 => self.adc.chdr.write_with_zero(|w| w.ch12().set_bit()),
-            13 => self.adc.chdr.write_with_zero(|w| w.ch13().set_bit()),
-            14 => self.adc.chdr.write_with_zero(|w| w.ch14().set_bit()),
-            15 => self.adc.chdr.write_with_zero(|w| w.ch15().set_bit()),
-            _ => {
-                panic!("Invalid channel: {}", PIN::channel());
+        unsafe {
+            match PIN::channel() {
+                0 => self.adc.chdr.write_with_zero(|w| w.ch0().set_bit()),
+                1 => self.adc.chdr.write_with_zero(|w| w.ch1().set_bit()),
+                2 => self.adc.chdr.write_with_zero(|w| w.ch2().set_bit()),
+                3 => self.adc.chdr.write_with_zero(|w| w.ch3().set_bit()),
+                4 => self.adc.chdr.write_with_zero(|w| w.ch4().set_bit()),
+                5 => self.adc.chdr.write_with_zero(|w| w.ch5().set_bit()),
+                6 => self.adc.chdr.write_with_zero(|w| w.ch6().set_bit()),
+                7 => self.adc.chdr.write_with_zero(|w| w.ch7().set_bit()),
+                8 => self.adc.chdr.write_with_zero(|w| w.ch8().set_bit()),
+                9 => self.adc.chdr.write_with_zero(|w| w.ch9().set_bit()),
+                10 => self.adc.chdr.write_with_zero(|w| w.ch10().set_bit()),
+                11 => self.adc.chdr.write_with_zero(|w| w.ch11().set_bit()),
+                12 => self.adc.chdr.write_with_zero(|w| w.ch12().set_bit()),
+                13 => self.adc.chdr.write_with_zero(|w| w.ch13().set_bit()),
+                14 => self.adc.chdr.write_with_zero(|w| w.ch14().set_bit()),
+                15 => self.adc.chdr.write_with_zero(|w| w.ch15().set_bit()),
+                _ => {
+                    panic!("Invalid channel: {}", PIN::channel());
+                }
             }
         }
     }
@@ -595,50 +601,54 @@ impl Adc {
     /// has the tendency to lose samples. Instead each channel interrupt is used instead
     /// so that no samples are lost.
     fn enable_interrupts<PIN: Channel<ADC, ID = u8>>(&mut self, _pin: &mut PIN) {
-        match PIN::channel() {
-            0 => self.adc.ier.write_with_zero(|w| w.eoc0().set_bit()),
-            1 => self.adc.ier.write_with_zero(|w| w.eoc1().set_bit()),
-            2 => self.adc.ier.write_with_zero(|w| w.eoc2().set_bit()),
-            3 => self.adc.ier.write_with_zero(|w| w.eoc3().set_bit()),
-            4 => self.adc.ier.write_with_zero(|w| w.eoc4().set_bit()),
-            5 => self.adc.ier.write_with_zero(|w| w.eoc5().set_bit()),
-            6 => self.adc.ier.write_with_zero(|w| w.eoc6().set_bit()),
-            7 => self.adc.ier.write_with_zero(|w| w.eoc7().set_bit()),
-            8 => self.adc.ier.write_with_zero(|w| w.eoc8().set_bit()),
-            9 => self.adc.ier.write_with_zero(|w| w.eoc9().set_bit()),
-            10 => self.adc.ier.write_with_zero(|w| w.eoc10().set_bit()),
-            11 => self.adc.ier.write_with_zero(|w| w.eoc11().set_bit()),
-            12 => self.adc.ier.write_with_zero(|w| w.eoc12().set_bit()),
-            13 => self.adc.ier.write_with_zero(|w| w.eoc13().set_bit()),
-            14 => self.adc.ier.write_with_zero(|w| w.eoc14().set_bit()),
-            15 => self.adc.ier.write_with_zero(|w| w.eoc15().set_bit()),
-            _ => {
-                panic!("Invalid channel: {}", PIN::channel());
+        unsafe {
+            match PIN::channel() {
+                0 => self.adc.ier.write_with_zero(|w| w.eoc0().set_bit()),
+                1 => self.adc.ier.write_with_zero(|w| w.eoc1().set_bit()),
+                2 => self.adc.ier.write_with_zero(|w| w.eoc2().set_bit()),
+                3 => self.adc.ier.write_with_zero(|w| w.eoc3().set_bit()),
+                4 => self.adc.ier.write_with_zero(|w| w.eoc4().set_bit()),
+                5 => self.adc.ier.write_with_zero(|w| w.eoc5().set_bit()),
+                6 => self.adc.ier.write_with_zero(|w| w.eoc6().set_bit()),
+                7 => self.adc.ier.write_with_zero(|w| w.eoc7().set_bit()),
+                8 => self.adc.ier.write_with_zero(|w| w.eoc8().set_bit()),
+                9 => self.adc.ier.write_with_zero(|w| w.eoc9().set_bit()),
+                10 => self.adc.ier.write_with_zero(|w| w.eoc10().set_bit()),
+                11 => self.adc.ier.write_with_zero(|w| w.eoc11().set_bit()),
+                12 => self.adc.ier.write_with_zero(|w| w.eoc12().set_bit()),
+                13 => self.adc.ier.write_with_zero(|w| w.eoc13().set_bit()),
+                14 => self.adc.ier.write_with_zero(|w| w.eoc14().set_bit()),
+                15 => self.adc.ier.write_with_zero(|w| w.eoc15().set_bit()),
+                _ => {
+                    panic!("Invalid channel: {}", PIN::channel());
+                }
             }
         }
     }
 
     /// Disables the interrupts.
     fn disable_interrupts<PIN: Channel<ADC, ID = u8>>(&mut self, _pin: &mut PIN) {
-        match PIN::channel() {
-            0 => self.adc.idr.write_with_zero(|w| w.eoc0().set_bit()),
-            1 => self.adc.idr.write_with_zero(|w| w.eoc1().set_bit()),
-            2 => self.adc.idr.write_with_zero(|w| w.eoc2().set_bit()),
-            3 => self.adc.idr.write_with_zero(|w| w.eoc3().set_bit()),
-            4 => self.adc.idr.write_with_zero(|w| w.eoc4().set_bit()),
-            5 => self.adc.idr.write_with_zero(|w| w.eoc5().set_bit()),
-            6 => self.adc.idr.write_with_zero(|w| w.eoc6().set_bit()),
-            7 => self.adc.idr.write_with_zero(|w| w.eoc7().set_bit()),
-            8 => self.adc.idr.write_with_zero(|w| w.eoc8().set_bit()),
-            9 => self.adc.idr.write_with_zero(|w| w.eoc9().set_bit()),
-            10 => self.adc.idr.write_with_zero(|w| w.eoc10().set_bit()),
-            11 => self.adc.idr.write_with_zero(|w| w.eoc11().set_bit()),
-            12 => self.adc.idr.write_with_zero(|w| w.eoc12().set_bit()),
-            13 => self.adc.idr.write_with_zero(|w| w.eoc13().set_bit()),
-            14 => self.adc.idr.write_with_zero(|w| w.eoc14().set_bit()),
-            15 => self.adc.idr.write_with_zero(|w| w.eoc15().set_bit()),
-            _ => {
-                panic!("Invalid channel: {}", PIN::channel());
+        unsafe {
+            match PIN::channel() {
+                0 => self.adc.idr.write_with_zero(|w| w.eoc0().set_bit()),
+                1 => self.adc.idr.write_with_zero(|w| w.eoc1().set_bit()),
+                2 => self.adc.idr.write_with_zero(|w| w.eoc2().set_bit()),
+                3 => self.adc.idr.write_with_zero(|w| w.eoc3().set_bit()),
+                4 => self.adc.idr.write_with_zero(|w| w.eoc4().set_bit()),
+                5 => self.adc.idr.write_with_zero(|w| w.eoc5().set_bit()),
+                6 => self.adc.idr.write_with_zero(|w| w.eoc6().set_bit()),
+                7 => self.adc.idr.write_with_zero(|w| w.eoc7().set_bit()),
+                8 => self.adc.idr.write_with_zero(|w| w.eoc8().set_bit()),
+                9 => self.adc.idr.write_with_zero(|w| w.eoc9().set_bit()),
+                10 => self.adc.idr.write_with_zero(|w| w.eoc10().set_bit()),
+                11 => self.adc.idr.write_with_zero(|w| w.eoc11().set_bit()),
+                12 => self.adc.idr.write_with_zero(|w| w.eoc12().set_bit()),
+                13 => self.adc.idr.write_with_zero(|w| w.eoc13().set_bit()),
+                14 => self.adc.idr.write_with_zero(|w| w.eoc14().set_bit()),
+                15 => self.adc.idr.write_with_zero(|w| w.eoc15().set_bit()),
+                _ => {
+                    panic!("Invalid channel: {}", PIN::channel());
+                }
             }
         }
     }
