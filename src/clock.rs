@@ -50,15 +50,19 @@ fn setup_slow_clock(supc: &SUPC, slow_clock: SlowClock) -> Hertz {
         SlowClock::RcOscillator32Khz => {}
         SlowClock::Crystal32Khz => {
             // Enable crystal oscillator (also disables Slow RC Oscillator)
-            supc.cr
-                .write_with_zero(|w| w.key().passwd().xtalsel().crystal_sel());
+            unsafe {
+                supc.cr
+                    .write_with_zero(|w| w.key().passwd().xtalsel().crystal_sel());
+            }
         }
         SlowClock::OscillatorBypass32Khz => {
             // Enable bypass mode
             supc.mr.modify(|_, w| w.key().passwd().oscbypass().bypass());
             // Enable crystal oscillator (also disables Slow RC Oscillator)
-            supc.cr
-                .write_with_zero(|w| w.key().passwd().xtalsel().crystal_sel());
+            unsafe {
+                supc.cr
+                    .write_with_zero(|w| w.key().passwd().xtalsel().crystal_sel());
+            }
         }
     }
     // 32.768 kHz
@@ -594,11 +598,11 @@ macro_rules! peripheral_clocks {
                 pub fn into_enabled_clock(mut self) -> $PeripheralType<Enabled> {
                     if $i <= 31 {
                         let shift = $i;
-                        self.pcer0().write_with_zero(|w| unsafe { w.bits(1 << shift) });
+                        unsafe {self.pcer0().write_with_zero(|w| w.bits(1 << shift) )};
                     }
                     else {
                         let shift = ($i - 32);
-                        self.pcer1().write_with_zero(|w| unsafe { w.bits(1 << shift) });
+                        unsafe {self.pcer1().write_with_zero(|w| w.bits(1 << shift) )};
                     }
                     $PeripheralType { _state: PhantomData }
                 }
@@ -606,7 +610,7 @@ macro_rules! peripheral_clocks {
                 #[cfg(feature = "atsam4n")]
                 pub fn into_enabled_clock(mut self) -> $PeripheralType<Enabled> {
                     let shift = $i;
-                    self.pcer0().write_with_zero(|w| unsafe { w.bits(1 << shift) });
+                    unsafe {self.pcer0().write_with_zero(|w| w.bits(1 << shift) )};
                     $PeripheralType { _state: PhantomData }
                 }
 
@@ -614,11 +618,11 @@ macro_rules! peripheral_clocks {
                 pub fn into_disabled_clock(mut self) -> $PeripheralType<Disabled> {
                     if $i <= 31 {
                         let shift = $i;
-                        self.pcdr0().write_with_zero(|w| unsafe { w.bits(1 << shift) });
+                        unsafe {self.pcdr0().write_with_zero(|w| w.bits(1 << shift) )};
                     }
                     else {
                         let shift = ($i - 32);
-                        self.pcdr1().write_with_zero(|w| unsafe { w.bits(1 << shift) });
+                        unsafe {self.pcdr1().write_with_zero(|w| w.bits(1 << shift) )};
                     }
                     $PeripheralType { _state: PhantomData }
                 }
@@ -626,7 +630,7 @@ macro_rules! peripheral_clocks {
                 #[cfg(feature = "atsam4n")]
                 pub fn into_disabled_clock(mut self) -> $PeripheralType<Disabled> {
                     let shift = $i;
-                    self.pcdr0().write_with_zero(|w| unsafe { w.bits(1 << shift) });
+                    unsafe {self.pcdr0().write_with_zero(|w| w.bits(1 << shift) )};
                     $PeripheralType { _state: PhantomData }
                 }
 
