@@ -100,6 +100,7 @@ pub mod udp;
 pub mod watchdog;
 
 /// Borrows a peripheral without checking if it has already been taken
+/// # Safety
 unsafe trait BorrowUnchecked {
     fn borrow_unchecked<T>(f: impl FnOnce(&mut Self) -> T) -> T;
 }
