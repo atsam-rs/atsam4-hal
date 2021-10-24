@@ -113,13 +113,27 @@ const FLASH_PARAMS: FlashParameters = FlashParameters {
 };
 
 extern "C" {
-    /// In Application Programming (IAP) Function
-    /// atsam4 chips have a function built into ROM to handle writing to the FCR register
-    /// This is needed as any commands sent to this register must *not* be done from flash
-    /// as we may be writing to that very same flash with this command.
-    /// For more details see 24.5.4
-    /// <https://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-11100-32-bit%20Cortex-M4-Microcontroller-SAM4S_Datasheet.pdf>
-    fn iap_function(bank: u32, command: u32) -> u32;
+    /// RAM Function needed for certain EFC accesses (unique id and signature section)
+    /// It's currently not possible to do this with pure rust as there can be no flash accesses
+    /// while this function is executing.
+    /// See: https://github.com/rust-embedded/cortex-m-rt/issues/42#issuecomment-559061416
+    ///
+    /// Will always return 0 unless the input buf is null
+    fn efc_perform_read_sequence(
+        efc: *const u32,
+        cmd_st: u32,
+        cmd_sp: u32,
+        buf: *mut u32,
+        size: u32,
+        flash_addr: *mut u32,
+    ) -> u32;
+
+    /// RAM Function alternative to the iap_function
+    /// See 3.2.1.3 on how to use the iap_function (haven't had much success so far on atsam4s).
+    /// <http://ww1.microchip.com/downloads/en/AppNotes/Atmel-42141-SAM-AT02333-Safe-and-Secure-Bootloader-Implementation-for-SAM3-4_Application-Note.pdf>
+    ///
+    /// Returns the status of the transfer
+    fn efc_perform_fcr(efc: *const u32, fcr: u32) -> u32;
 }
 
 /// Interface to an EFC instance
@@ -129,6 +143,60 @@ extern "C" {
 /// - 8 or 16-bit boundaries must be filled with 0xFF (full 32-bits must be written to the buffer)
 /// - See Section 19.4.3.2
 /// <https://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-11158-32-bit%20Cortex-M4-Microcontroller-SAM4N16-SAM4N8_Datasheet.pdf>
+///
+/// Example memory.x configuration (atsam4s8b)
+/// ```
+/// MEMORY
+/// {
+///   FLASH (rx) : ORIGIN = 0x00400000, LENGTH = 512K
+///   RAM (xrw)  : ORIGIN = 0x20000000, LENGTH = 128K
+///   CS0 (xrw)  : ORIGIN = 0x60000000, LENGTH = 16M
+///   CS1 (xrw)  : ORIGIN = 0x61000000, LENGTH = 16M
+///   CS2 (xrw)  : ORIGIN = 0x62000000, LENGTH = 16M
+///   CS3 (xrw)  : ORIGIN = 0x63000000, LENGTH = 16M
+/// }
+///
+/// _flash = ORIGIN(FLASH);
+/// ```
+///
+/// ```rust
+/// // 512K flash (unfortunately we need this at compile-time, not link time)
+/// const FLASH_CONFIG_SIZE: usize = 524288 / core::mem::size_of::<u32>();
+/// extern "C" {
+///     #[link_name = "_flash"]
+///     static mut FLASH_CONFIG: [u32; FLASH_CONFIG_SIZE];
+/// }
+///
+/// use hal::efc::Efc;
+/// use atsam4_hal::pac::Peripherals;
+///
+/// let peripherals = Peripherals::take().unwrap();
+/// // Clock configuration will also do a small bit of the EFC init
+/// let _clocks = ClockController::new(
+///     peripherals.PMC,
+///     &peripherals.SUPC,
+///     &peripherals.EFC0,
+///     MainClock::Crystal12Mhz,
+///     SlowClock::RcOscillator32Khz,
+/// );
+///
+/// // Setup efc driver
+/// // FLASH_CONFIG indicates where the usable flash starts
+/// let mut efc = Efc::new(cx.device.EFC0, unsafe { &mut FLASH_CONFIG });
+///
+/// // Retrieve the uid from the efc
+/// let uid = efc.read_unique_id().unwrap();
+///
+/// // Erase user signature
+/// efc.erase_user_signature().unwrap();
+///
+/// // Write to the user signature (max 512 bytes)
+/// efc.write_user_signature(&[1,2,3]).unwrap();
+///
+/// // Read back the user signatfure
+/// let mut sig: [u32; 3];
+/// efc.read_user_signature(&mut sig, sig.len()).unwrap();
+/// ```
 pub struct Efc {
     #[cfg(any(feature = "atsam4e", feature = "atsam4n", feature = "atsam4s"))]
     efc: EFC,
@@ -420,7 +488,7 @@ impl Efc {
     }
 
     /// Read the flash user signature
-    pub fn read_user_signature(&self, bytes: &mut [u32], len: usize) -> Result<(), EfcError> {
+    pub fn read_user_signature(&self, data: &mut [u32], len: usize) -> Result<(), EfcError> {
         // Make sure we're only reading at most 512 bytes
         if len > USER_SIG_FLASH_SIZE as usize / core::mem::size_of::<u32>() {
             return Err(EfcError::InvalidUserSignatureSizeError);
@@ -431,20 +499,20 @@ impl Efc {
             0,
             efc::fcr::FCMD_AW::STUS,
             efc::fcr::FCMD_AW::SPUS,
-            bytes,
+            data,
             len,
         )
     }
 
     /// Write the flash user signature
-    pub fn write_user_signature(&mut self, bytes: &[u32]) -> Result<(), EfcError> {
+    pub fn write_user_signature(&mut self, data: &[u32]) -> Result<(), EfcError> {
         // Make sure the signature does not exceed the max size
-        if bytes.len() > USER_SIG_FLASH_SIZE as usize / core::mem::size_of::<u32>() {
+        if data.len() > USER_SIG_FLASH_SIZE as usize / core::mem::size_of::<u32>() {
             return Err(EfcError::InvalidUserSignatureSizeError);
         }
 
         // Must write signature in chunks of 32-bits (does not support 8 or 16-bit writes)
-        self.storage[..bytes.len()].clone_from_slice(bytes);
+        self.storage[..data.len()].clone_from_slice(data);
 
         // Send the write signature command
         self.efc_perform_command(0, efc::fcr::FCMD_AW::WUS, 0)
@@ -494,18 +562,39 @@ impl Efc {
 
     /// Convenience function to handle the IAP function
     ///
-    /// NOTE: This function uses the IAP function (which is contained in ROM)
+    /// NOTE: This function uses a RAM function written in C.
     fn efc_fcr_command(
         &self,
         bank: u8,
         command: efc::fcr::FCMD_AW,
         argument: u16,
     ) -> Result<(), EfcError> {
-        // Build command for the iap_function
+        // Build command for efc_perform_fcr (or possibly the iap_function)
         let fcr_cmd: u32 = ((efc::fcr::FKEY_AW::PASSWD as u32) << 24)
             | ((argument as u32) << 8)
             | (command as u32);
-        let status = interrupt::free(|_| unsafe { iap_function(bank as u32, fcr_cmd) });
+
+        // Select the flash bank
+        #[cfg(not(feature = "atsam4sd"))]
+        let efc_ptr = {
+            let _ = bank;
+            EFC::PTR as *const _
+        };
+        #[cfg(feature = "atsam4sd")]
+        let efc_ptr = if bank == 0 {
+            EFC::PTR as *const _
+        } else if bank == 1 {
+            EFC1::PTR as *const _
+        } else {
+            return Err(EfcError::InvalidFlashBank);
+        };
+
+        // Force processor to flush any pending flash transactions
+        cortex_m::asm::dsb();
+        cortex_m::asm::isb();
+
+        // Call RAM function
+        let status = interrupt::free(|_| unsafe { efc_perform_fcr(efc_ptr, fcr_cmd) });
 
         // Check for a command error
         if status & (1 << 1) != 0 {
@@ -523,7 +612,7 @@ impl Efc {
     /// Perform read sequence
     /// Supported sequences are read Unique ID and read User Signature
     ///
-    /// NOTE: This function uses the IAP function (which is contained in ROM)
+    /// NOTE: This function uses a RAM function written in C.
     fn efc_perform_read_sequence(
         &self,
         bank: u8,
@@ -537,51 +626,55 @@ impl Efc {
             return Err(EfcError::InvalidBufferSizeError);
         }
 
-        // Determine address offset
-        // NOTE: It's very uncommon to call this function on EFC1
-        #[cfg(feature = "atsam4sd")]
-        let mut bank_offset = 0;
+        // Run RAM function version of the command as we cannot read from flash for any reason
+        // until the EEFC mode sequence has finished.
         #[cfg(not(feature = "atsam4sd"))]
-        let bank_offset = 0;
-
-        // Disable Sequential Code Optimization
-        if bank == 0 {
-            self.efc.fmr.modify(|_, w| w.scod().set_bit());
-        }
+        let status = {
+            let _ = bank;
+            unsafe {
+                efc_perform_read_sequence(
+                    EFC::PTR as *const _,
+                    start_cmd as u32,
+                    stop_cmd as u32,
+                    bytes.as_mut_ptr(),
+                    len as u32,
+                    FLASH_PARAMS.flash0_addr as *mut _,
+                )
+            }
+        };
         #[cfg(feature = "atsam4sd")]
-        if bank == 1 {
-            self.efc1.fmr.modify(|_, w| w.scod().set_bit());
-            bank_offset = (FLASH_PARAMS.flash1_addr - FLASH_PARAMS.flash0_addr) as usize;
+        let status = {
+            unsafe {
+                if bank == 0 {
+                    efc_perform_read_sequence(
+                        EFC::PTR as *const _,
+                        start_cmd as u32,
+                        stop_cmd as u32,
+                        bytes.as_mut_ptr(),
+                        len as u32,
+                        FLASH_PARAMS.flash0_addr as *mut _,
+                    )
+                } else if bank == 1 {
+                    efc_perform_read_sequence(
+                        EFC1::PTR as *const _,
+                        start_cmd as u32,
+                        stop_cmd as u32,
+                        bytes.as_mut_ptr(),
+                        len as u32,
+                        FLASH_PARAMS.flash1_addr as *mut _,
+                    )
+                } else {
+                    return Err(EfcError::InvalidFlashBank);
+                }
+            }
+        };
+
+        if status != 0 {
+            // The only possible error is a null pointer check for bytes buffer
+            Err(EfcError::InvalidBufferSizeError)
+        } else {
+            Ok(())
         }
-
-        // Send the Start Read command
-        self.efc_fcr_command(bank, start_cmd, 0)?;
-
-        // Wait for FRDY
-        self.wait_ready();
-
-        // Copy the data from the initial flash address
-        for offset in (bank_offset..len).step_by(FLASH_READ_SIZE as usize) {
-            let word = self.storage[offset >> 2];
-            bytes[offset] = word;
-        }
-
-        // Stop the read mode
-        self.efc_fcr_command(bank, stop_cmd, 0)?;
-
-        // Wait for FRDY
-        self.wait_ready();
-
-        // Re-enable Sequential Code Optimization
-        if bank == 0 {
-            self.efc.fmr.modify(|_, w| w.scod().clear_bit());
-        }
-        #[cfg(feature = "atsam4sd")]
-        if bank == 1 {
-            self.efc1.fmr.modify(|_, w| w.scod().clear_bit());
-        }
-
-        Ok(())
     }
 }
 
@@ -801,4 +894,6 @@ pub enum EfcError {
     InvalidUserSignatureSizeError,
     /// Not within page bounds
     NotWithinFlashPageBoundsError,
+    /// Invalid flash bank
+    InvalidFlashBank,
 }
