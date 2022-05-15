@@ -1,6 +1,6 @@
 use crate::pac::CHIPID;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, defmt::Format)]
 pub enum EmbeddedProcessor {
     Arm946Es,
     Arm7Tdmi,
@@ -11,14 +11,14 @@ pub enum EmbeddedProcessor {
     CortexM4,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, defmt::Format)]
 pub enum Family {
     AtSam4e,
     AtSam4n,
     AtSam4s,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, defmt::Format)]
 pub enum Model {
     AtSam4e8c,
     AtSam4e8e,
@@ -49,7 +49,7 @@ pub enum Model {
     AtSam4sd32c,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, defmt::Format)]
 pub enum FlashMemoryType {
     Rom,
     Romless,
@@ -58,7 +58,7 @@ pub enum FlashMemoryType {
     RomFlash, // flash1_byte_size = ROM size, flash2_byte_size = Flash size
 }
 
-#[derive(Debug)]
+#[derive(Debug, defmt::Format)]
 pub struct ChipId {
     version: u8,
     embedded_processor: Option<EmbeddedProcessor>,

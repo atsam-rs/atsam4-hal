@@ -13,13 +13,13 @@ use {
 pub struct Uninitialized;
 pub struct Configured;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, defmt::Format)]
 pub enum WaitMode {
     Frozen,
     Ready,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, defmt::Format)]
 pub enum PageSize {
     FourBytes,
     EightBytes,
@@ -27,7 +27,7 @@ pub enum PageSize {
     ThirtyTwoBytes,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, defmt::Format)]
 pub enum AccessMode {
     ReadOnly,
     WriteOnly,
