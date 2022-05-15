@@ -872,7 +872,7 @@ impl NorFlash for Efc {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, defmt::Format)]
 pub enum EfcError {
     /// An operation was attempted on an unaligned boundary
     Unaligned,

@@ -17,7 +17,7 @@ use crate::gpio::{Pb2, Pb3};
 #[cfg(any(feature = "atsam4e", feature = "atsam4n"))]
 use crate::gpio::{Pa5, Pa6, PfC};
 
-#[derive(Debug)]
+#[derive(Debug, defmt::Format)]
 pub enum Parity {
     Even,
     Odd,
@@ -25,7 +25,7 @@ pub enum Parity {
     Mark,
 }
 
-#[derive(Debug)]
+#[derive(Debug, defmt::Format)]
 pub enum CharacterLength {
     FiveBits,
     SixBits,
@@ -33,14 +33,14 @@ pub enum CharacterLength {
     EightBits,
 }
 
-#[derive(Debug)]
+#[derive(Debug, defmt::Format)]
 pub enum StopBits {
     One,
     OnePointFive,
     Two,
 }
 
-#[derive(Debug)]
+#[derive(Debug, defmt::Format)]
 pub enum Error {
     /// Buffer overrun
     Overrun,
