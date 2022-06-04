@@ -26,7 +26,7 @@ use cortex_m::singleton;
 use embedded_dma::StaticWriteBuffer;
 use embedded_time::rate::Hertz;
 
-#[derive(PartialEq, Copy, Clone, Debug, defmt::Format)]
+#[derive(PartialEq, Eq, Copy, Clone, Debug, defmt::Format)]
 pub enum Powersaving {
     /// ADC core and reference voltage circuitry are kept on between conversions
     Normal,
@@ -36,7 +36,7 @@ pub enum Powersaving {
     Sleep,
 }
 
-#[derive(PartialEq, Copy, Clone, Debug, defmt::Format)]
+#[derive(PartialEq, Eq, Copy, Clone, Debug, defmt::Format)]
 pub enum SingleEndedGain {
     /// Single-ended gain = 1
     Gain1x = 1,
