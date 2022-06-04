@@ -868,10 +868,11 @@ impl Endpoint {
                 // Clear RX_DATA_BK0
                 rx_data_bk0_clear(self.index);
                 defmt::debug!(
-                    "{} Endpoint{}::read({:?}) OUT CSR:{:X}",
+                    "{} Endpoint{}::read({}, {:02X}) OUT CSR:{:X}",
                     frm_num(),
                     self.index,
-                    data,
+                    rxbytes,
+                    &data[0..rxbytes],
                     UDP::borrow_unchecked(|udp| udp.csr()[self.index as usize].read()).bits()
                 );
                 return Ok(rxbytes);
