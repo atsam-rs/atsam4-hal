@@ -51,6 +51,35 @@ impl UdpBus {
         }
     }
 
+    /// Enabled clocks for UDP
+    /// Useful for resume interrupts as well as remote wakeup
+    fn enable_pll_clk(&self) {
+        // Enable PLLB (atsam4s only)
+        #[cfg(feature = "atsam4s")]
+        PMC::borrow_unchecked(|pmc| {
+            reenable_pllb_clock(pmc);
+            wait_for_pllb_lock(pmc);
+        });
+
+        unsafe {
+            // Enable UDPCK (from PLL)
+            PMC::borrow_unchecked(|pmc| pmc.pmc_scer.write_with_zero(|w| w.udp().set_bit()));
+        }
+    }
+
+    /// Disable pll clocks for UDP
+    /// Used when suspending USB
+    fn disable_pll_clk(&self) {
+        unsafe {
+            // Disable UDPCK (from PLL)
+            PMC::borrow_unchecked(|pmc| pmc.pmc_scer.write_with_zero(|w| w.udp().clear_bit()));
+        }
+
+        // Disable PLLB (atsam4s only)
+        #[cfg(feature = "atsam4s")]
+        PMC::borrow_unchecked(|pmc| disable_pllb_clock(pmc));
+    }
+
     /// Enables UDP MCK (from MCK)
     fn enable_periph_clk(&self) {
         unsafe {
@@ -131,6 +160,53 @@ impl UdpBus {
                 self.endpoints[i].borrow(cs).borrow_mut().enable();
             }
         });
+    }
+
+    /// Enable/disable support for remote wakeup
+    pub fn remote_wakeup_enabled(&mut self, enable: bool) {
+        cortex_m::interrupt::free(|cs| {
+            // Enable/disable for remote wakeup support
+            self.udp.borrow(cs).borrow().glb_stat.modify(|_, w| {
+                if enable {
+                    w.rmwupe().set_bit()
+                } else {
+                    w.rmwupe().clear_bit()
+                }
+            })
+        });
+    }
+
+    /// Initiates the remote wakeup sequence
+    pub fn remote_wakeup(&self) {
+        cortex_m::interrupt::free(|cs| {
+            // Check if bus has been suspended
+            // NOTE: You must wait 5 ms between host suspending the bus and initiating a remote wakeup
+            // The transceiver is disabled on bus suspend, so this is a reliable check
+            //
+            // NOTE: Normally, you have to re-enable UDP MCK clock to read/write from registers.
+            //       However, it seems like the reading is cached/doesn't update when disabled
+            //       so we don't need to enable the clocks until after we're sure we're doing a
+            //       remote wakeup. This makes the call safer/faster.
+            if !self.udp.borrow(cs).borrow().txvc.read().txvdis().bit() {
+                defmt::debug!("Device not suspended, ignoring wakeup.");
+                return;
+            } else {
+                defmt::info!("Waking USB host");
+            }
+
+            // Enable PLL clocks
+            self.enable_pll_clk();
+
+            // Enable UDP MCK (from MCK)
+            self.enable_periph_clk();
+
+            // Initiate remote wakeup
+            self.udp
+                .borrow(cs)
+                .borrow()
+                .glb_stat
+                .modify(|_, w| w.esr().set_bit());
+        })
     }
 }
 
@@ -218,15 +294,11 @@ impl UsbBus for UdpBus {
                 .modify(|_, w| w.txvdis().clear_bit());
 
             // Disable address and configured state
-            // Make sure remote wakeup is enabled
-            self.udp.borrow(cs).borrow().glb_stat.modify(|_, w| {
-                w.confg()
-                    .clear_bit()
-                    .fadden()
-                    .clear_bit()
-                    .rmwupe()
-                    .set_bit()
-            });
+            self.udp
+                .borrow(cs)
+                .borrow()
+                .glb_stat
+                .modify(|_, w| w.confg().clear_bit().fadden().clear_bit());
 
             // Set Device Address to 0 and enable FEN
             self.udp
@@ -377,41 +449,17 @@ impl UsbBus for UdpBus {
                 .modify(|_, w| w.txvdis().set_bit());
         });
 
-        unsafe {
-            // Disable UDP MCK (from MCK)
-            #[cfg(feature = "atsam4e")]
-            PMC::borrow_unchecked(|pmc| pmc.pmc_pcdr1.write_with_zero(|w| w.pid35().set_bit()));
-            #[cfg(feature = "atsam4s")]
-            PMC::borrow_unchecked(|pmc| pmc.pmc_pcdr1.write_with_zero(|w| w.pid34().set_bit()));
-
-            // Disable UDPCK (from PLL)
-            PMC::borrow_unchecked(|pmc| pmc.pmc_scer.write_with_zero(|w| w.udp().clear_bit()));
-        }
-
-        // Disable PLLB (atsam4s only)
-        #[cfg(feature = "atsam4s")]
-        PMC::borrow_unchecked(|pmc| disable_pllb_clock(pmc));
+        // Disable UDP MCK (from MCK)
+        self.disable_periph_clk();
+        self.disable_pll_clk();
     }
 
     fn resume(&self) {
         defmt::trace!("{} UdpBus::resume()", frm_num());
-        // Enable PLLB (atsam4s only)
-        #[cfg(feature = "atsam4s")]
-        PMC::borrow_unchecked(|pmc| {
-            reenable_pllb_clock(pmc);
-            wait_for_pllb_lock(pmc);
-        });
+        self.enable_pll_clk();
 
-        unsafe {
-            // Enable UDPCK (from PLL)
-            PMC::borrow_unchecked(|pmc| pmc.pmc_scer.write_with_zero(|w| w.udp().set_bit()));
-
-            // Enable UDP MCK (from MCK)
-            #[cfg(feature = "atsam4e")]
-            PMC::borrow_unchecked(|pmc| pmc.pmc_pcer1.write_with_zero(|w| w.pid35().set_bit()));
-            #[cfg(feature = "atsam4s")]
-            PMC::borrow_unchecked(|pmc| pmc.pmc_pcer1.write_with_zero(|w| w.pid34().set_bit()));
-        }
+        // Enable UDP MCK (from MCK)
+        self.enable_periph_clk();
 
         // Enable Transceiver
         cortex_m::interrupt::free(|cs| {
@@ -555,9 +603,6 @@ impl UsbBus for UdpBus {
                 }
             });
 
-            // Disable UDP MCK (after this, cannot read from UDP registers)
-            self.disable_periph_clk();
-
             defmt::info!("{} UdpBus::poll() -> Suspend", frm_num());
             return PollResult::Suspend;
         }
@@ -578,29 +623,6 @@ impl UsbBus for UdpBus {
         }
 
         PollResult::None
-    }
-
-    /// Initiates the remote wakeup sequenec
-    fn remote_wakeup(&self) -> usb_device::Result<()> {
-        // Enable UDP MCK (from MCK)
-        self.enable_periph_clk();
-
-        cortex_m::interrupt::free(|cs| {
-            // Check if bus has been suspended
-            // NOTE: You must wait 5 ms between host suspending the bus and initiating a remote wakeup
-            // The transceiver is disabled on bus suspend, so this is a reliable check
-            if !self.udp.borrow(cs).borrow().txvc.read().txvdis().bit() {
-                return Err(usb_device::UsbError::NotSuspended);
-            }
-
-            // Initiate remote wakeup
-            self.udp
-                .borrow(cs)
-                .borrow()
-                .glb_stat
-                .modify(|_, w| w.esr().set_bit());
-            Ok(())
-        })
     }
 
     /// Simulates disconnection from the USB bus
