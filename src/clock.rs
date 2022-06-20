@@ -12,9 +12,9 @@ use crate::pac::EFC0;
 use crate::pac::EFC1;
 
 use core::marker::PhantomData;
-use embedded_time::rate::Hertz;
+use fugit::{HertzU32 as Hertz, RateExtU32};
 
-static mut MASTER_CLOCK_FREQUENCY: Hertz = Hertz(0);
+static mut MASTER_CLOCK_FREQUENCY: Hertz = Hertz::from_raw(0);
 
 #[cfg(all(feature = "atsam4s", feature = "usb"))]
 static mut PLLB_MULTIPLIER: u16 = 0;
@@ -66,7 +66,7 @@ fn setup_slow_clock(supc: &SUPC, slow_clock: SlowClock) -> Hertz {
         }
     }
     // 32.768 kHz
-    Hertz(32768)
+    32768.Hz()
 }
 
 fn setup_main_clock(pmc: &PMC, main_clock: MainClock) -> Hertz {
@@ -215,15 +215,15 @@ fn calculate_master_clock_frequency(pmc: &PMC) -> Hertz {
         }
         2 => {
             // PLL
-            let mut mclk_freq: u32 = match pmc.ckgr_mor.read().moscsel().bit_is_set() {
-                true => 12000000,
+            let mut mclk_freq = match pmc.ckgr_mor.read().moscsel().bit_is_set() {
+                true => 12_u32.MHz(),
                 false => {
                     if pmc.ckgr_mor.read().moscrcf().is_12_mhz() {
-                        12000000
+                        12_u32.MHz()
                     } else if pmc.ckgr_mor.read().moscrcf().is_8_mhz() {
-                        8000000
+                        8_u32.MHz()
                     } else if pmc.ckgr_mor.read().moscrcf().is_4_mhz() {
-                        4000000
+                        4_u32.MHz()
                     } else {
                         panic!("Unexpected value detected read from pmc.ckgr_mor.moscrcf")
                     }
@@ -244,23 +244,23 @@ fn calculate_master_clock_frequency(pmc: &PMC) -> Hertz {
     // Factor in the prescaler
     mclk_freq = match pmc.pmc_mckr.read().pres().bits() {
         7 => mclk_freq / 3, // Special case for a 3 prescaler
-        prescaler => mclk_freq >> prescaler,
+        prescaler => (mclk_freq.raw() >> prescaler).Hz(),
     };
 
-    Hertz(mclk_freq)
+    mclk_freq
 }
 
 fn get_flash_wait_states_for_clock_frequency(clock_frequency: Hertz) -> u8 {
     match clock_frequency {
-        c if c.0 < 20000000 => 0,
-        c if c.0 < 40000000 => 1,
-        c if c.0 < 60000000 => 2,
-        c if c.0 < 80000000 => 3,
-        c if c.0 < 100000000 => 4,
-        c if c.0 < 123000000 => 5,
+        c if c < 20_u32.MHz::<1, 1>() => 0,
+        c if c < 40_u32.MHz::<1, 1>() => 1,
+        c if c < 60_u32.MHz::<1, 1>() => 2,
+        c if c < 80_u32.MHz::<1, 1>() => 3,
+        c if c < 100_u32.MHz::<1, 1>() => 4,
+        c if c < 123_u32.MHz::<1, 1>() => 5,
         _ => panic!(
             "Invalid frequency provided to get_flash_wait_states(): {} ",
-            clock_frequency.0
+            clock_frequency
         ),
     }
 }

@@ -2,8 +2,9 @@ use crate::hal::timer::{CountDown, Periodic};
 use crate::BorrowUnchecked;
 use core::marker::PhantomData;
 use cortex_m::{interrupt, peripheral::DWT};
-use embedded_time::duration::*;
-use embedded_time::rate::*;
+use fugit::{
+    HertzU32 as Hertz, RateExtU32, TimerDurationU32 as TimerDuration, TimerRateU32 as TimerRate,
+};
 use void::Void;
 
 use crate::pac::TC0;
@@ -27,6 +28,21 @@ pub enum ClockSource {
     Slck32768Hz = 4,
 }
 
+impl ClockSource {
+    /// Determine divider using ClockSource
+    pub const fn div(&self) -> u32 {
+        match self {
+            ClockSource::MckDiv2 => 2,
+            ClockSource::MckDiv8 => 8,
+            ClockSource::MckDiv32 => 32,
+            ClockSource::MckDiv128 => 128,
+            ClockSource::Slck32768Hz => {
+                panic!("Invalid, must set frequency manually");
+            }
+        }
+    }
+}
+
 /// Hardware timers for atsam4 can be 16 or 32-bit
 /// depending on the hardware..
 /// It is also possible to chain TC (timer channels)
@@ -41,13 +57,13 @@ pub struct TimerCounter<TC, CLK> {
     _tc: TC,
 }
 
-pub struct TimerCounterChannels<TC> {
-    pub ch0: TimerCounterChannel<TC, 0>,
-    pub ch1: TimerCounterChannel<TC, 1>,
-    pub ch2: TimerCounterChannel<TC, 2>,
+pub struct TimerCounterChannels<TC, const FREQ1: u32, const FREQ2: u32, const FREQ3: u32> {
+    pub ch0: TimerCounterChannel<TC, 0, FREQ1>,
+    pub ch1: TimerCounterChannel<TC, 1, FREQ2>,
+    pub ch2: TimerCounterChannel<TC, 2, FREQ3>,
 }
 
-pub struct TimerCounterChannel<TC, const CH: usize> {
+pub struct TimerCounterChannel<TC, const CH: u8, const FREQ: u32> {
     freq: Hertz,
     source: ClockSource,
     _mode: PhantomData<TC>,
@@ -81,12 +97,12 @@ impl TimerCounter<$TC, $clock<Enabled>>
     ///
     /// let mut tcc0 = tc0_chs.ch0;
     /// tcc0.clock_input(ClockSource::Slck32768Hz);
-    /// tcc0.start(500_000_000u32.nanoseconds());
+    /// tcc0.start(500_u32.millis());
     /// while !tcc0.wait().is_ok() {}
     ///
     /// let mut tcc1 = tc0_chs.ch1;
     /// tcc1.clock_input(ClockSource::MckDiv2);
-    /// tcc1.start(17u32.nanoseconds()); // Assuming MCK is 120 MHz or faster
+    /// tcc1.start(17_u32.nanos()); // Assuming MCK is 120 MHz or faster
     /// while !tcc1.wait().is_ok() {}
     /// ```
     pub fn new(tc: $TC, clock: $clock<Enabled>) -> Self {
@@ -108,10 +124,10 @@ impl TimerCounter<$TC, $clock<Enabled>>
 
     /// Splits the TimerCounter module into 3 channels
     /// Defaults to MckDiv2 clock source
-    pub fn split(self) -> TimerCounterChannels<$TC> {
+    pub fn split<const FREQ1: u32, const FREQ2: u32, const FREQ3: u32>(self) -> TimerCounterChannels<$TC, FREQ1, FREQ2, FREQ3> {
         let freq = self.clock.frequency();
         let source = ClockSource::MckDiv2;
-        TimerCounterChannels {
+        TimerCounterChannels::<$TC, FREQ1, FREQ2, FREQ3> {
             ch0: TimerCounterChannel { freq, source, _mode: PhantomData },
             ch1: TimerCounterChannel { freq, source, _mode: PhantomData },
             ch2: TimerCounterChannel { freq, source, _mode: PhantomData },
@@ -119,7 +135,7 @@ impl TimerCounter<$TC, $clock<Enabled>>
     }
 }
 
-impl<const CH: usize> TimerCounterChannel<$TC, CH> {
+impl<const CH: u8, const FREQ: u32> TimerCounterChannel<$TC, CH, FREQ> {
     /// Set the input clock
     pub fn clock_input(&mut self, source: ClockSource) {
         self.source = source;
@@ -165,29 +181,46 @@ impl<const CH: usize> TimerCounterChannel<$TC, CH> {
         }
     }
 }
-impl<const CH: usize> Periodic for TimerCounterChannel<$TC, CH> {}
-impl<const CH: usize> CountDown for TimerCounterChannel<$TC, CH> {
-    type Time = Nanoseconds;
+impl<const CH: u8, const FREQ: u32> Periodic for TimerCounterChannel<$TC, CH, FREQ> {}
+impl<const CH: u8, const FREQ: u32> CountDown for TimerCounterChannel<$TC, CH, FREQ> {
+    type Time = TimerDuration<FREQ>;
 
     fn start<T>(&mut self, timeout: T)
     where
         T: Into<Self::Time>,
     {
         // Determine the cycle count
-        let timeout: Nanoseconds = timeout.into();
-        let rate: Hertz = timeout.to_rate().unwrap();
+        let timeout: TimerDuration<FREQ> = timeout.into();
+        let rate: Hertz = timeout.into_rate();
 
-        let src_freq = match self.source {
-            ClockSource::MckDiv2 => self.freq / 2,
-            ClockSource::MckDiv8 => self.freq / 8,
-            ClockSource::MckDiv32 => self.freq / 32,
-            ClockSource::MckDiv128 => self.freq / 128,
-            ClockSource::Slck32768Hz => 32768_u32.Hz(),
-        };
+        // Make sure the divider is set correctly for the given frequency
+        let freq: TimerRate<FREQ> = FREQ.Hz();
+        match self.source {
+            ClockSource::MckDiv2 => {
+                let div_freq = self.freq / 2;
+                assert_eq!(freq, div_freq, "FREQ({}) != self.freq / 2 ({})", freq, div_freq);
+            }
+            ClockSource::MckDiv8 => {
+                let div_freq = self.freq / 8;
+                assert_eq!(freq, div_freq, "FREQ({}) != self.freq / 8 ({})", freq, div_freq);
+            }
+            ClockSource::MckDiv32 => {
+                let div_freq = self.freq / 32;
+                assert_eq!(freq, div_freq, "FREQ({}) != self.freq / 32 ({})", freq, div_freq);
+            }
+            ClockSource::MckDiv128 => {
+                let div_freq = self.freq / 128;
+                assert_eq!(freq, div_freq, "FREQ({}) != self.freq / 128 ({})", freq, div_freq);
+            }
+            ClockSource::Slck32768Hz => {
+                let div_freq = 32768_u32.Hz::<1, 1>();
+                assert_eq!(freq, div_freq, "FREQ({}) != {}", freq, div_freq);
+            }
+        }
 
         // Check if timeout is too fast
-        if rate > src_freq {
-            panic!("{} Hz is too fast. Max {} Hz.", rate, src_freq);
+        if rate > freq {
+            panic!("{} is too fast. Max {}", rate, freq);
         }
 
         // atsam4e supports 32-bits clock timers
@@ -195,14 +228,14 @@ impl<const CH: usize> CountDown for TimerCounterChannel<$TC, CH> {
         let max_counter = u32::max_value();
         // atsam4n and atsam4s support 16-bit clock timers
         #[cfg(any(feature = "atsam4n", feature = "atsam4s"))]
-        let max_counter = u16::max_value();
+        let max_counter: u32 = u16::max_value() as u32;
 
         // Compute cycles
-        let cycles = src_freq.0 / rate.0;
+        let cycles = freq / rate;
 
         // Check if timeout too slow
         if cycles > max_counter.into() {
-            let min_freq = src_freq / max_counter.into();
+            let min_freq: TimerRate<FREQ> = freq / max_counter;
             panic!("{} Hz is too slow. Min {} Hz.", rate, min_freq);
         }
 

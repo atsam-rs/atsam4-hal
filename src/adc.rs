@@ -24,7 +24,7 @@ use core::marker::PhantomData;
 use core::sync::atomic::{compiler_fence, Ordering};
 use cortex_m::singleton;
 use embedded_dma::WriteBuffer;
-use embedded_time::rate::Hertz;
+use fugit::RateExtU32;
 
 #[derive(PartialEq, Eq, Copy, Clone, Debug, defmt::Format)]
 pub enum Powersaving {
@@ -206,7 +206,7 @@ impl Adc {
         }
 
         // Setup prescalar and startup time
-        let prescaler = (clock.frequency().0 / (2 * Hertz(20000000).0) - 1) as u8;
+        let prescaler = (clock.frequency() / (2 * 20_u32.MHz::<1, 1>()) - 1) as u8;
         adc.mr
             .modify(|_, w| unsafe { w.prescal().bits(prescaler).startup().sut80() });
 

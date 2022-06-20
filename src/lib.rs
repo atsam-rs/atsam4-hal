@@ -18,11 +18,7 @@
 //!
 
 //#![deny(missing_docs)]
-//#![deny(warnings)]
 #![no_std]
-// Needed to quiet names such as NCS1 and UART0Clock (which now throw linting errors)
-// These errors seem to have been removed in nightly, so I suspect they may not stay.
-#![allow(clippy::upper_case_acronyms)]
 
 pub extern crate embedded_hal as hal;
 pub use hal::digital::v2::*;
@@ -78,8 +74,6 @@ pub use atsam4sd32c_pac as pac;
 
 use core::mem;
 
-pub use embedded_time as time;
-
 // NOTE: In ASF atsam4s uses sam/drivers/adc/adc.c whereas atsam4n uses sam/drivers/adc/adc2.c
 #[cfg(feature = "atsam4s")]
 pub mod adc;
@@ -98,6 +92,8 @@ pub mod timer;
 #[cfg(all(feature = "usb", any(feature = "atsam4e", feature = "atsam4s")))]
 pub mod udp;
 pub mod watchdog;
+
+mod sealed;
 
 /// Borrows a peripheral without checking if it has already been taken
 /// # Safety

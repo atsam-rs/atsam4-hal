@@ -633,7 +633,7 @@ impl UsbBus for UdpBus {
 
         // Need to wait for the USB device to disconnect
         let freq = crate::clock::get_master_clock_frequency();
-        cortex_m::asm::delay(freq.0 / 1000); // 1 ms
+        cortex_m::asm::delay((freq / 1000).raw()); // 1 ms
 
         self._enable();
         Ok(())

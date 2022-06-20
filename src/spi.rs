@@ -9,7 +9,7 @@ use embedded_dma::{ReadBuffer, WriteBuffer};
 use paste::paste;
 
 pub use embedded_hal::spi;
-pub use embedded_time::rate::{Hertz, Kilohertz, Megahertz};
+pub use fugit::HertzU32 as Hertz;
 
 /// u8 that can convert back and forth with u16
 /// Needed for some of the register bit fields
@@ -176,7 +176,7 @@ impl ChipSelectSettings {
 
         // Calculate baud divider
         // (f_periph + baud - 1) / baud
-        let scbr = ((pclk.0 + baud.0 - 1) / baud.0) as u8;
+        let scbr = ((pclk.raw() + baud.raw() - 1) / baud.raw()) as u8;
         if scbr < 1 {
             panic!("scbr must be greater than 0: {}", scbr);
         }
