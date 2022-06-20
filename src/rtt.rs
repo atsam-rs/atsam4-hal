@@ -1,7 +1,6 @@
 use crate::hal::timer::{CountDown, Periodic};
 use crate::pac::RTT;
-use embedded_time::duration::*;
-use embedded_time::rate::*;
+use fugit::{ExtU32, TimerDurationU32 as TimerDuration};
 use void::Void;
 
 /// RTT (Real-time Timer) can be configured in one of
@@ -14,14 +13,15 @@ use void::Void;
 ///    separately. This requires the RTC module is setup and enabled.
 ///
 /// (1) is independent of (2), except that the 16-bit prescaler is shared.
-pub struct RealTimeTimer {
+const SLCK_FREQ: u32 = 32_768;
+pub struct RealTimeTimer<const PRESCALER: usize, const RTC1HZ: bool> {
     rtt: RTT,
-    rtc1hz: bool, // rtc1hz is write-only, so we have to store it
 }
 
-impl Periodic for RealTimeTimer {}
-impl CountDown for RealTimeTimer {
-    type Time = Microseconds;
+impl<const PRESCALER: usize, const RTC1HZ: bool> Periodic for RealTimeTimer<PRESCALER, RTC1HZ> {}
+impl<const PRESCALER: usize, const RTC1HZ: bool> CountDown for RealTimeTimer<PRESCALER, RTC1HZ> {
+    // Create a frequency base using the prescaler
+    type Time = TimerDuration<SLCK_FREQ>;
 
     fn start<T>(&mut self, timeout: T)
     where
@@ -34,26 +34,36 @@ impl CountDown for RealTimeTimer {
         let rtt_mr = self.rtt.mr.read();
         let almien = rtt_mr.almien().bit_is_set();
         let rttincien = rtt_mr.rttincien().bit_is_set();
-
-        // Determine set prescaler
-        let prescaler = self.rtt.mr.read().rtpres().bits();
+        let timeout: TimerDuration<SLCK_FREQ> = timeout.into();
 
         // Calculate the prescaler period
-        let period: Microseconds = if self.rtc1hz {
-            1_u32.Hz().to_duration().unwrap()
+        let period: Self::Time = if RTC1HZ {
+            // When using RTC1HZ, PRESCALER must be set to 32768
+            assert_eq!(
+                PRESCALER,
+                (u16::MAX / 2) as usize,
+                "Prescaler must be set to 32768 for RTC1HZ"
+            );
+            1.secs()
         } else {
-            let slck_duration: Microseconds = 32_768_u32.Hz().to_duration().unwrap();
-            match prescaler {
+            let slck_duration: TimerDuration<SLCK_FREQ> = TimerDuration::from_ticks(1);
+            match PRESCALER {
                 0 => slck_duration * 2_u32.pow(16),
-                1 | 2 => 1_u32.Hz().to_duration().unwrap(), // Invalid
-                _ => slck_duration * prescaler.into(),
+                1 | 2 => {
+                    panic!("Invalid prescaler");
+                }
+                _ => slck_duration * PRESCALER as u32,
             }
         };
 
         // Determine alarm value
-        let timeout: u32 = timeout.into().integer();
-        let period: u32 = period.integer();
         let alarmv = timeout / period;
+        defmt::trace!(
+            "RTT: timeout:{:?} period:{:?} alarmv:{:?}",
+            timeout,
+            period,
+            alarmv
+        );
 
         // ALMIEN must be disabled when setting a new alarm value
         if almien {
@@ -99,7 +109,7 @@ impl CountDown for RealTimeTimer {
     }
 }
 
-impl RealTimeTimer {
+impl<const PRESCALER: usize, const RTC1HZ: bool> RealTimeTimer<PRESCALER, RTC1HZ> {
     /// RTT is simple to initialize as it requires no other setup.
     /// (with the exception of using a 32.768 kHz crystal).
     /// Both the internal RC counters (32.768 kHz and 1 Hz) require
@@ -121,27 +131,28 @@ impl RealTimeTimer {
     ///     109.2266  hours
     ///       4.55111 days
     ///
-    /// If the rtc1hz is enabled, a 1 Hz signal is used for the 32-bit
+    /// If the RTC1HZ is enabled, a 1 Hz signal is used for the 32-bit
     /// alarm. The prescaler is still active and can be triggered from
     /// the prescaler increment interrupt.
+    /// This is a calibrated source and is optimized for 1 Hz (if you don't have
+    /// a physical 32.768 Hz crystal).
     ///
     /// ```rust
-    /// let prescaler = 3;
-    /// let rtc1hz = false;
-    /// let mut rtt = RealTimeTimer::new(peripherals.RTT, prescaler, rtc1hz);
+    /// const PRESCALER: usize = 3;
+    /// let mut rtt = RealTimeTimer::<PRESCALER, false>::new(peripherals.RTT);
     /// // Set Wait for 1 second
-    /// rtt.start(1_000_000u32.microseconds());
+    /// rtt.start(1_000_000u32.micros());
     /// // Wait for 1 second
     /// while !rtt.wait().is_ok() {}
     /// // Wait for 1 second again
     /// while !rtt.wait().is_ok() {}
     /// ```
-    pub fn new(rtt: RTT, prescaler: u16, rtc1hz: bool) -> Self {
-        // Panic if prescaler set to 1 or 2
-        match prescaler {
-            1 | 2 => panic!("RTT prescaler cannot be set to 1 or 2"),
-            _ => {}
-        }
+    pub fn new(rtt: RTT) -> Self {
+        // Compile-time check to make sure the prescaler is not set to 1 or 2
+        crate::sealed::not_one_or_two::<PRESCALER>();
+
+        // Compile-time check to make sure prescalar is u16
+        crate::sealed::smaller_than_or_eq::<PRESCALER, { u16::MAX as usize }>();
 
         // Disable timer while reconfiguring and prescaler interrupt before setting RTPRES
         rtt.mr
@@ -151,14 +162,14 @@ impl RealTimeTimer {
         // NOTE: rtc1hz is write-only on some MCUs
         rtt.mr.modify(|_, w| unsafe {
             w.rtpres()
-                .bits(prescaler)
+                .bits(PRESCALER as u16)
                 .rtc1hz()
-                .bit(rtc1hz)
+                .bit(RTC1HZ)
                 .rttrst()
                 .set_bit()
         });
 
-        Self { rtt, rtc1hz }
+        Self { rtt }
     }
 
     /// Enable the interrupt generation for the 32-bit register

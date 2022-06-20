@@ -6,7 +6,6 @@ use {
     crate::gpio::{Pa10, Pa9, PfA},
     crate::pac::{UART0, UART1},
     core::marker::PhantomData,
-    embedded_time::rate::BitsPerSecond,
     hal::{serial::Read, serial::Write},
     paste::paste,
 };
@@ -72,12 +71,12 @@ macro_rules! uarts {
                         clock: [<$Uart Clock>]<Enabled>,
                         _rx_pin: $pin_rx,
                         _tx_pin: $pin_tx,
-                        baud_rate: BitsPerSecond,
+                        baud_rate: u32,
                         parity: Option<Parity>,
                     ) -> Self {
                         Self::reset_and_disable(&mut uart);
 
-                        let clock_divisor:u32 = (clock.frequency().0 / baud_rate.0) / 16;
+                        let clock_divisor:u32 = ((clock.frequency() / baud_rate) / 16).raw();
                         if !(1..=65535).contains(&clock_divisor) {
                             panic!("Unsupported baud_rate specified for serial device (cd = {})", clock_divisor);
                         }
