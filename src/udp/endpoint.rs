@@ -673,10 +673,10 @@ impl Endpoint {
     /// Note: USB bus implementation errors are directly passed through, so be prepared to handle
     /// other errors as well.
     ///
-    /// * [`WouldBlock`](crate::UsbError::WouldBlock) - The transmission buffer of the USB
+    /// * [`WouldBlock`](usb_device::UsbError::WouldBlock) - The transmission buffer of the USB
     ///   peripheral is full and the packet cannot be sent now. A peripheral may or may not support
     ///   concurrent transmission of packets.
-    /// * [`BufferOverflow`](crate::UsbError::BufferOverflow) - The data is longer than the
+    /// * [`BufferOverflow`](usb_device::UsbError::BufferOverflow) - The data is longer than the
     ///   `max_packet_size` specified when allocating the endpoint. This is generally an error in
     ///   the class implementation.
     pub fn write(&mut self, data: &[u8]) -> usb_device::Result<usize> {
@@ -761,10 +761,10 @@ impl Endpoint {
     /// Note: USB bus implementation errors are directly passed through, so be prepared to handle
     /// other errors as well.
     ///
-    /// * [`WouldBlock`](crate::UsbError::WouldBlock) - There is no packet to be read. Note that
+    /// * [`WouldBlock`](usb_device::UsbError::WouldBlock) - There is no packet to be read. Note that
     ///   this is different from a received zero-length packet, which is valid and significant in
     ///   USB. A zero-length packet will return `Ok(0)`.
-    /// * [`BufferOverflow`](crate::UsbError::BufferOverflow) - The received packet is too long to
+    /// * [`BufferOverflow`](usb_device::UsbError::BufferOverflow) - The received packet is too long to
     ///   fit in `data`. This is generally an error in the class implementation.
     pub fn read(&mut self, data: &mut [u8]) -> usb_device::Result<usize> {
         let csr = UDP::borrow_unchecked(|udp| udp.csr()[self.index as usize].read());
