@@ -19,7 +19,9 @@ use crate::pac::EFC0 as EFC;
 use crate::pac::EFC1;
 
 use cortex_m::interrupt;
-use embedded_storage::nor_flash::{NorFlash, ReadNorFlash};
+use embedded_storage::nor_flash::{
+    ErrorType, NorFlash, NorFlashError, NorFlashErrorKind, ReadNorFlash,
+};
 
 // Common EEFC constants for sam4-hal
 const FLASH_PAGE_SIZE: u32 = 512;
@@ -678,9 +680,11 @@ impl Efc {
     }
 }
 
-impl ReadNorFlash for Efc {
+impl ErrorType for Efc {
     type Error = EfcError;
+}
 
+impl ReadNorFlash for Efc {
     const READ_SIZE: usize = FLASH_READ_SIZE as usize;
 
     /// Reads from atsam4 internal flash
@@ -896,4 +900,22 @@ pub enum EfcError {
     NotWithinFlashPageBoundsError,
     /// Invalid flash bank
     InvalidFlashBank,
+}
+
+impl NorFlashError for EfcError {
+    fn kind(&self) -> NorFlashErrorKind {
+        match self {
+            EfcError::AddressBoundsError => NorFlashErrorKind::OutOfBounds,
+            EfcError::CommandError => NorFlashErrorKind::Other,
+            EfcError::FlashError => NorFlashErrorKind::Other,
+            EfcError::InvalidBufferSizeError => NorFlashErrorKind::Other,
+            EfcError::InvalidFlashBank => NorFlashErrorKind::Other,
+            EfcError::InvalidGpnvmBitError => NorFlashErrorKind::Other,
+            EfcError::InvalidUserSignatureSizeError => NorFlashErrorKind::Other,
+            EfcError::LockError => NorFlashErrorKind::Other,
+            EfcError::NotWithinFlashPageBoundsError => NorFlashErrorKind::Other,
+            EfcError::Unaligned => NorFlashErrorKind::NotAligned,
+            EfcError::UnsupportedCommandError => NorFlashErrorKind::Other,
+        }
+    }
 }

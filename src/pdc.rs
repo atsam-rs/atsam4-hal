@@ -1,13 +1,11 @@
 //! PDC Traits for use with PDC-enabled peripherals
 //!
 //! Common interface to use with PDC enabled peripherals
-//!
-//! TODO: Currently only implements Rx mode (e.g. Adc)
 
 use core::marker::PhantomData;
 use core::sync::atomic::{self, compiler_fence, Ordering};
 use core::{mem, ptr};
-use embedded_dma::{StaticReadBuffer, StaticWriteBuffer};
+use embedded_dma::{ReadBuffer, WriteBuffer};
 
 /// Read transfer
 pub struct R;
@@ -41,7 +39,7 @@ pub trait Transmit {
 /// Trait for DMA readings from peripheral to memory.
 pub trait ReadDma<B, RS>: Receive
 where
-    B: StaticWriteBuffer<Word = RS>,
+    B: WriteBuffer<Word = RS>,
     Self: core::marker::Sized + TransferPayload,
 {
     fn read(self, buffer: B) -> Transfer<W, B, Self>;
@@ -50,7 +48,7 @@ where
 /// Trait for DMA readings from peripheral to memory, start paused.
 pub trait ReadDmaPaused<B, RS>: Receive
 where
-    B: StaticWriteBuffer<Word = RS>,
+    B: WriteBuffer<Word = RS>,
     Self: core::marker::Sized + TransferPayload,
 {
     fn read_paused(self, buffer: B) -> Transfer<W, B, Self>;
@@ -59,7 +57,7 @@ where
 /// Trait for DMA writing from memory to peripheral.
 pub trait WriteDma<B, TS>: Transmit
 where
-    B: StaticReadBuffer<Word = TS>,
+    B: ReadBuffer<Word = TS>,
     Self: core::marker::Sized + TransferPayload,
 {
     fn write(self, buffer: B) -> Transfer<R, B, Self>;
@@ -68,8 +66,8 @@ where
 /// Trait for DMA simultaneously reading and writing within one synchronous operation. Panics if both buffers are not of equal length.
 pub trait ReadWriteDma<RXB, TXB, TS>: Transmit + Receive
 where
-    RXB: StaticWriteBuffer<Word = TS>,
-    TXB: StaticReadBuffer<Word = TS>,
+    RXB: WriteBuffer<Word = TS>,
+    TXB: ReadBuffer<Word = TS>,
     Self: core::marker::Sized + TransferPayload,
 {
     fn read_write(self, rx_buffer: RXB, tx_buffer: TXB) -> Transfer<W, (RXB, TXB), Self>;
@@ -79,8 +77,8 @@ where
 /// Panics if the buffer(s) are too small
 pub trait ReadWriteDmaLen<RXB, TXB, TS>: Transmit + Receive
 where
-    RXB: StaticWriteBuffer<Word = TS>,
-    TXB: StaticReadBuffer<Word = TS>,
+    RXB: WriteBuffer<Word = TS>,
+    TXB: ReadBuffer<Word = TS>,
     Self: core::marker::Sized + TransferPayload,
 {
     fn read_write_len(

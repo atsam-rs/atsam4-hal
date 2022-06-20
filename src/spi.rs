@@ -5,7 +5,7 @@ use crate::pac::SPI;
 use crate::pdc::*;
 use core::marker::PhantomData;
 use core::sync::atomic::{compiler_fence, Ordering};
-use embedded_dma::{StaticReadBuffer, StaticWriteBuffer};
+use embedded_dma::{ReadBuffer, WriteBuffer};
 use paste::paste;
 
 pub use embedded_hal::spi;
@@ -843,13 +843,13 @@ macro_rules! spi_pdc {
             impl<B> ReadDma<B, $Framesize> for SpiRxDma<$Mode, $Framesize>
             where
                 Self: TransferPayload,
-                B: StaticWriteBuffer<Word = $Framesize>,
+                B: WriteBuffer<Word = $Framesize>,
             {
                 /// Assigns the buffer, enables PDC and starts SPI transaction
                 fn read(mut self, mut buffer: B) -> Transfer<W, B, Self> {
                     // NOTE(unsafe) We own the buffer now and we won't call other `&mut` on it
                     // until the end of the transfer.
-                    let (ptr, len) = unsafe { buffer.static_write_buffer() };
+                    let (ptr, len) = unsafe { buffer.write_buffer() };
                     self.payload.spi.set_receive_address(ptr as u32);
                     self.payload.spi.set_receive_counter(len as u16);
 
@@ -883,13 +883,13 @@ macro_rules! spi_pdc {
             impl<B> WriteDma<B, $Framesize> for SpiTxDma<$Mode, $Framesize>
             where
                 Self: TransferPayload,
-                B: StaticReadBuffer<Word = $Framesize>,
+                B: ReadBuffer<Word = $Framesize>,
             {
                 /// Assigns the write buffer, enables PDC and starts SPI transaction
                 fn write(mut self, buffer: B) -> Transfer<R, B, Self> {
                     // NOTE(unsafe) We own the buffer now and we won't call other `&mut` on it
                     // until the end of the transfer.
-                    let (ptr, len) = unsafe { buffer.static_read_buffer() };
+                    let (ptr, len) = unsafe { buffer.read_buffer() };
                     self.payload.spi.set_transmit_address(ptr as u32);
                     self.payload.spi.set_transmit_counter(len as u16);
 
@@ -923,17 +923,17 @@ macro_rules! spi_pdc {
             impl<RXB, TXB> ReadWriteDma<RXB, TXB, $Framesize> for SpiRxTxDma<$Mode, $Framesize>
             where
                 Self: TransferPayload,
-                RXB: StaticWriteBuffer<Word = $Framesize>,
-                TXB: StaticReadBuffer<Word = $Framesize>,
+                RXB: WriteBuffer<Word = $Framesize>,
+                TXB: ReadBuffer<Word = $Framesize>,
             {
                 fn read_write(mut self, mut rx_buffer: RXB, tx_buffer: TXB) -> Transfer<W, (RXB, TXB), Self> {
                     // NOTE(unsafe) We own the buffer now and we won't call other `&mut` on it
                     // until the end of the transfer.
-                    let (ptr, rx_len) = unsafe { rx_buffer.static_write_buffer() };
+                    let (ptr, rx_len) = unsafe { rx_buffer.write_buffer() };
                     self.payload.spi.set_receive_address(ptr as u32);
                     self.payload.spi.set_receive_counter(rx_len as u16);
 
-                    let (ptr, tx_len) = unsafe { tx_buffer.static_read_buffer() };
+                    let (ptr, tx_len) = unsafe { tx_buffer.read_buffer() };
                     self.payload.spi.set_transmit_address(ptr as u32);
                     self.payload.spi.set_transmit_counter(tx_len as u16);
 
@@ -951,21 +951,21 @@ macro_rules! spi_pdc {
             impl<RXB, TXB> ReadWriteDmaLen<RXB, TXB, $Framesize> for SpiRxTxDma<$Mode, $Framesize>
             where
                 Self: TransferPayload,
-                RXB: StaticWriteBuffer<Word = $Framesize>,
-                TXB: StaticReadBuffer<Word = $Framesize>,
+                RXB: WriteBuffer<Word = $Framesize>,
+                TXB: ReadBuffer<Word = $Framesize>,
             {
                 /// Same as read_write(), but allows for a specified length
                 fn read_write_len(mut self, mut rx_buffer: RXB, rx_buf_len: usize, tx_buffer: TXB, tx_buf_len: usize) -> Transfer<W, (RXB, TXB), Self> {
                     // NOTE(unsafe) We own the buffer now and we won't call other `&mut` on it
                     // until the end of the transfer.
-                    let (ptr, rx_len) = unsafe { rx_buffer.static_write_buffer() };
+                    let (ptr, rx_len) = unsafe { rx_buffer.write_buffer() };
                     self.payload.spi.set_receive_address(ptr as u32);
                     self.payload.spi.set_receive_counter(rx_buf_len as u16);
                     if rx_len < rx_buf_len {
                         panic!("rx_len: {} < rx_buf_len: {}", rx_len, rx_buf_len);
                     }
 
-                    let (ptr, tx_len) = unsafe { tx_buffer.static_read_buffer() };
+                    let (ptr, tx_len) = unsafe { tx_buffer.read_buffer() };
                     self.payload.spi.set_transmit_address(ptr as u32);
                     self.payload.spi.set_transmit_counter(tx_buf_len as u16);
                     if tx_len < tx_buf_len {
