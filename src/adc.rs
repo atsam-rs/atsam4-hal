@@ -23,7 +23,7 @@ use crate::pdc::*;
 use core::marker::PhantomData;
 use core::sync::atomic::{compiler_fence, Ordering};
 use cortex_m::singleton;
-use embedded_dma::StaticWriteBuffer;
+use embedded_dma::WriteBuffer;
 use embedded_time::rate::Hertz;
 
 #[derive(PartialEq, Eq, Copy, Clone, Debug, defmt::Format)]
@@ -1060,13 +1060,13 @@ impl<MODE> Receive for AdcDma<MODE> {
 impl<B, MODE> ReadDma<B, u16> for AdcDma<MODE>
 where
     Self: TransferPayload,
-    B: StaticWriteBuffer<Word = u16>,
+    B: WriteBuffer<Word = u16>,
 {
     /// Assigns the buffer, enables PDC and starts ADC conversion
     fn read(mut self, mut buffer: B) -> Transfer<W, B, Self> {
         // NOTE(unsafe) We own the buffer now and we won't call other `&mut` on it
         // until the end of the transfer.
-        let (ptr, len) = unsafe { buffer.static_write_buffer() };
+        let (ptr, len) = unsafe { buffer.write_buffer() };
         self.payload.adc.set_receive_address(ptr as u32);
         self.payload.adc.set_receive_counter(len as u16);
 
@@ -1080,7 +1080,7 @@ where
 impl<B, MODE> ReadDmaPaused<B, u16> for AdcDma<MODE>
 where
     Self: TransferPayload,
-    B: StaticWriteBuffer<Word = u16>,
+    B: WriteBuffer<Word = u16>,
 {
     /// Assigns the buffer, prepares PDC but does not enable the PDC
     /// Useful when there is strict timing on when the ADC conversion should start
@@ -1089,7 +1089,7 @@ where
     fn read_paused(mut self, mut buffer: B) -> Transfer<W, B, Self> {
         // NOTE(unsafe) We own the buffer now and we won't call other `&mut` on it
         // until the end of the transfer.
-        let (ptr, len) = unsafe { buffer.static_write_buffer() };
+        let (ptr, len) = unsafe { buffer.write_buffer() };
         self.payload.adc.set_receive_address(ptr as u32);
         self.payload.adc.set_receive_counter(len as u16);
 

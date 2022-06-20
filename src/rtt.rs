@@ -51,8 +51,8 @@ impl CountDown for RealTimeTimer {
         };
 
         // Determine alarm value
-        let timeout: u32 = *timeout.into().integer();
-        let period: u32 = *period.integer();
+        let timeout: u32 = timeout.into().integer();
+        let period: u32 = period.integer();
         let alarmv = timeout / period;
 
         // ALMIEN must be disabled when setting a new alarm value
