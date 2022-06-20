@@ -4,6 +4,9 @@ This repository holds the Hardware Abstraction Layer Crate for the Microchip/Atm
 
 [![Build Status](https://github.com/atsam4-rs/atsam4-hal/workflows/Rust/badge.svg)](https://github.com/atsam4-rs/atsam4-hal/actions)
 [![Docs](https://docs.rs/atsam4-hal/badge.svg)](https://docs.rs/atsam4-hal/latest/)
+[![Crates.io](https://img.shields.io/crates/v/atsam4-hal.svg)](https://crates.io/crates/atsam4-hal)
+[![Crates.io](https://img.shields.io/crates/l/atsam4-hal.svg)](https://crates.io/crates/atsam4-hal)
+[![Crates.io](https://img.shields.io/crates/d/atsam4-hal.svg)](https://crates.io/crates/atsam4-hal)
 
 NOTE: This crate is still under active development.   Currently only the ATSAM4E, ATSAM4N and ATSAM4S are supported.
 
