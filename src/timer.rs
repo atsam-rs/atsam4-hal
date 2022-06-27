@@ -13,11 +13,11 @@ use crate::pac::TC1;
 #[cfg(feature = "atsam4e_e")]
 use crate::pac::TC2;
 
+use crate::clock::{Enabled, Tc0Clock, Tc1Clock, Tc2Clock};
 #[cfg(any(feature = "atsam4e_e", feature = "atsam4n_c", feature = "atsam4s_c"))]
-use crate::clock::Tc1Clock;
+use crate::clock::{Tc3Clock, Tc4Clock, Tc5Clock};
 #[cfg(feature = "atsam4e_e")]
-use crate::clock::Tc2Clock;
-use crate::clock::{Enabled, Tc0Clock};
+use crate::clock::{Tc6Clock, Tc7Clock, Tc8Clock};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, defmt::Format)]
 pub enum ClockSource {
@@ -52,29 +52,37 @@ impl ClockSource {
 /// the `CountDown` embedded_hal timer traits.
 /// Before a hardware timer can be used, it must first
 /// have a clock configured.
-pub struct TimerCounter<TC, CLK> {
-    clock: CLK,
+pub struct TimerCounter<TC> {
     _tc: TC,
 }
 
-pub struct TimerCounterChannels<TC, const FREQ1: u32, const FREQ2: u32, const FREQ3: u32> {
-    pub ch0: TimerCounterChannel<TC, 0, FREQ1>,
-    pub ch1: TimerCounterChannel<TC, 1, FREQ2>,
-    pub ch2: TimerCounterChannel<TC, 2, FREQ3>,
+pub struct TimerCounterChannels<
+    TC,
+    CLK1,
+    CLK2,
+    CLK3,
+    const FREQ1: u32,
+    const FREQ2: u32,
+    const FREQ3: u32,
+> {
+    pub ch0: TimerCounterChannel<TC, CLK1, 0, FREQ1>,
+    pub ch1: TimerCounterChannel<TC, CLK2, 1, FREQ2>,
+    pub ch2: TimerCounterChannel<TC, CLK3, 2, FREQ3>,
 }
 
-pub struct TimerCounterChannel<TC, const CH: u8, const FREQ: u32> {
+pub struct TimerCounterChannel<TC, CLK, const CH: u8, const FREQ: u32> {
     freq: Hertz,
     source: ClockSource,
+    _clock: PhantomData<CLK>,
     _mode: PhantomData<TC>,
 }
 
 macro_rules! tc {
-    ($($TYPE:ident: ($TC:ident, $clock:ident),)+) => {
+    ($($TYPE:ident: ($TC:ident, $clock1:ident, $clock2:ident, $clock3:ident),)+) => {
         $(
-pub type $TYPE = TimerCounter<$TC, $clock<Enabled>>;
+pub type $TYPE = TimerCounter<$TC>;
 
-impl TimerCounter<$TC, $clock<Enabled>>
+impl TimerCounter<$TC>
 {
     /// Configure this timer counter block.
     /// Each TC block has 3 channels
@@ -92,8 +100,12 @@ impl TimerCounter<$TC, $clock<Enabled>>
     ///     SlowClock::RcOscillator32Khz,
     /// );
     ///
-    /// let mut tc0 = TimerCounter::new(TC0, clocks.peripheral_clocks.tc_0.into_enabled_clock());
-    /// let tc0_chs = tc0.split();
+    /// let mut tc0 = TimerCounter::new(TC0);
+    /// let tc0_chs = tc0.split(
+    ///     clocks.peripheral_clocks.tc_0.into_enabled_clock(),
+    ///     clocks.peripheral_clocks.tc_1.into_enabled_clock(),
+    ///     clocks.peripheral_clocks.tc_2.into_enabled_clock(),
+    /// );
     ///
     /// let mut tcc0 = tc0_chs.ch0;
     /// tcc0.clock_input(ClockSource::Slck32768Hz);
@@ -105,7 +117,7 @@ impl TimerCounter<$TC, $clock<Enabled>>
     /// tcc1.start(17_u32.nanos()); // Assuming MCK is 120 MHz or faster
     /// while !tcc1.wait().is_ok() {}
     /// ```
-    pub fn new(tc: $TC, clock: $clock<Enabled>) -> Self {
+    pub fn new(tc: $TC) -> Self {
         unsafe {
         // Disable write-protect mode
         tc.wpmr.write_with_zero(|w| w.wpkey().passwd().wpen().clear_bit());
@@ -117,25 +129,24 @@ impl TimerCounter<$TC, $clock<Enabled>>
         }
 
         Self {
-            clock,
             _tc: tc,
         }
     }
 
     /// Splits the TimerCounter module into 3 channels
     /// Defaults to MckDiv2 clock source
-    pub fn split<const FREQ1: u32, const FREQ2: u32, const FREQ3: u32>(self) -> TimerCounterChannels<$TC, FREQ1, FREQ2, FREQ3> {
-        let freq = self.clock.frequency();
+    pub fn split<const FREQ1: u32, const FREQ2: u32, const FREQ3: u32>(self, clock1: $clock1<Enabled>, _clock2: $clock2<Enabled>, _clock3: $clock3<Enabled>) -> TimerCounterChannels<$TC, $clock1<Enabled>, $clock2<Enabled>, $clock3<Enabled>, FREQ1, FREQ2, FREQ3> {
+        let freq = clock1.frequency();
         let source = ClockSource::MckDiv2;
-        TimerCounterChannels::<$TC, FREQ1, FREQ2, FREQ3> {
-            ch0: TimerCounterChannel { freq, source, _mode: PhantomData },
-            ch1: TimerCounterChannel { freq, source, _mode: PhantomData },
-            ch2: TimerCounterChannel { freq, source, _mode: PhantomData },
+        TimerCounterChannels::<$TC, $clock1<Enabled>, $clock2<Enabled>, $clock3<Enabled>, FREQ1, FREQ2, FREQ3> {
+            ch0: TimerCounterChannel { _clock: PhantomData, freq, source, _mode: PhantomData },
+            ch1: TimerCounterChannel { _clock: PhantomData, freq, source, _mode: PhantomData },
+            ch2: TimerCounterChannel { _clock: PhantomData, freq, source, _mode: PhantomData },
         }
     }
 }
 
-impl<const CH: u8, const FREQ: u32> TimerCounterChannel<$TC, CH, FREQ> {
+impl<CLK, const CH: u8, const FREQ: u32> TimerCounterChannel<$TC, CLK, CH, FREQ> {
     /// Set the input clock
     pub fn clock_input(&mut self, source: ClockSource) {
         self.source = source;
@@ -181,8 +192,8 @@ impl<const CH: u8, const FREQ: u32> TimerCounterChannel<$TC, CH, FREQ> {
         }
     }
 }
-impl<const CH: u8, const FREQ: u32> Periodic for TimerCounterChannel<$TC, CH, FREQ> {}
-impl<const CH: u8, const FREQ: u32> CountDown for TimerCounterChannel<$TC, CH, FREQ> {
+impl<CLK, const CH: u8, const FREQ: u32> Periodic for TimerCounterChannel<$TC, CLK, CH, FREQ> {}
+impl<CLK, const CH: u8, const FREQ: u32> CountDown for TimerCounterChannel<$TC, CLK, CH, FREQ> {
     type Time = TimerDuration<FREQ>;
 
     fn start<T>(&mut self, timeout: T)
@@ -287,17 +298,17 @@ impl<const CH: u8, const FREQ: u32> CountDown for TimerCounterChannel<$TC, CH, F
 }
 
 tc! {
-    TimerCounter0: (TC0, Tc0Clock),
+    TimerCounter0: (TC0, Tc0Clock, Tc1Clock, Tc2Clock),
 }
 
 #[cfg(any(feature = "atsam4e_e", feature = "atsam4n_c", feature = "atsam4s_c"))]
 tc! {
-    TimerCounter1: (TC1, Tc1Clock),
+    TimerCounter1: (TC1, Tc3Clock, Tc4Clock, Tc5Clock),
 }
 
 #[cfg(feature = "atsam4e_e")]
 tc! {
-    TimerCounter2: (TC2, Tc2Clock),
+    TimerCounter2: (TC2, Tc6Clock, Tc7Clock, Tc8Clock),
 }
 
 // Adapted from https://github.com/BlackbirdHQ/atat/blob/master/atat/examples/common/timer.rs
