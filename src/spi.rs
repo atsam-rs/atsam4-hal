@@ -307,6 +307,11 @@ impl<FRAMESIZE> SpiMaster<FRAMESIZE> {
                 PeripheralSelectMode::ChipSelectDecode => (true, true),
             };
 
+            // Clear spi protection mode register
+            // (needed before writing to SPI_MR and SPI_CSRx)
+            spi.wpmr
+                .write_with_zero(|w| w.wpkey().bits(0x535049).wpen().clear_bit());
+
             // Setup SPI Master
             // Master Mode
             // Variable Peripheral Select (more flexible and less initial options to set)
@@ -542,20 +547,25 @@ impl<FRAMESIZE> spi::FullDuplex<FRAMESIZE> for SpiMaster<FRAMESIZE>
 where
     FRAMESIZE: Copy + From<SpiU16>,
     SpiU16: From<FRAMESIZE> + From<SpiU8>,
+    u8: From<FRAMESIZE>,
 {
     type Error = Error;
 
     fn read(&mut self) -> nb::Result<FRAMESIZE, Error> {
         let sr = self.spi.sr.read();
+        //defmt::trace!("Read: {}", sr.rdrf().bit_is_set());
 
         // Check for errors (return error)
         // Check for data to read (and read it)
         // Return WouldBlock if no data available
         Err(if sr.ovres().bit_is_set() {
+            defmt::trace!("Send overrun");
             nb::Error::Other(Error::Overrun)
         } else if sr.modf().bit_is_set() {
+            defmt::trace!("Mode fault");
             nb::Error::Other(Error::ModeFault)
         } else if sr.spiens().bit_is_clear() {
+            defmt::trace!("SPI disabled");
             nb::Error::Other(Error::SpiDisabled)
         } else if sr.rdrf().bit_is_set() {
             let rdr = self.spi.rdr.read();
@@ -575,15 +585,20 @@ where
 
     fn send(&mut self, byte: FRAMESIZE) -> nb::Result<(), Error> {
         let sr = self.spi.sr.read();
+        //let data: u8 = byte.into();
+        //defmt::trace!("Send: {} {}", data, sr.tdre().bit_is_set());
 
         // Check for errors (return error)
         // Make sure buffer is empty (then write if available)
         // Return WouldBlock if buffer is full
         Err(if sr.ovres().bit_is_set() {
+            defmt::trace!("Send overrun");
             nb::Error::Other(Error::Overrun)
         } else if sr.modf().bit_is_set() {
+            defmt::trace!("Send mode fault");
             nb::Error::Other(Error::ModeFault)
         } else if sr.spiens().bit_is_clear() {
+            defmt::trace!("Send spi disabled");
             nb::Error::Other(Error::SpiDisabled)
         } else if sr.tdre().bit_is_set() {
             // Fixed Mode
@@ -605,6 +620,7 @@ impl<FRAMESIZE> crate::hal::blocking::spi::transfer::Default<FRAMESIZE> for SpiM
 where
     FRAMESIZE: Copy + From<SpiU16>,
     SpiU16: From<FRAMESIZE> + From<SpiU8>,
+    u8: From<FRAMESIZE>,
 {
 }
 
