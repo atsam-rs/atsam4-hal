@@ -595,7 +595,7 @@ macro_rules! peripheral_clocks {
                 }
 
                 #[cfg(not(feature = "atsam4n"))]
-                pub fn into_enabled_clock(mut self) -> $PeripheralType<Enabled> {
+                pub fn into_enabled_clock(&mut self) -> $PeripheralType<Enabled> {
                     if $i <= 31 {
                         let shift = $i;
                         unsafe {self.pcer0().write_with_zero(|w| w.bits(1 << shift) )};
@@ -608,14 +608,14 @@ macro_rules! peripheral_clocks {
                 }
 
                 #[cfg(feature = "atsam4n")]
-                pub fn into_enabled_clock(mut self) -> $PeripheralType<Enabled> {
+                pub fn into_enabled_clock(&mut self) -> $PeripheralType<Enabled> {
                     let shift = $i;
                     unsafe {self.pcer0().write_with_zero(|w| w.bits(1 << shift) )};
                     $PeripheralType { _state: PhantomData }
                 }
 
                 #[cfg(not(feature = "atsam4n"))]
-                pub fn into_disabled_clock(mut self) -> $PeripheralType<Disabled> {
+                pub fn into_disabled_clock(&mut self) -> $PeripheralType<Disabled> {
                     if $i <= 31 {
                         let shift = $i;
                         unsafe {self.pcdr0().write_with_zero(|w| w.bits(1 << shift) )};
@@ -628,7 +628,7 @@ macro_rules! peripheral_clocks {
                 }
 
                 #[cfg(feature = "atsam4n")]
-                pub fn into_disabled_clock(mut self) -> $PeripheralType<Disabled> {
+                pub fn into_disabled_clock(&mut self) -> $PeripheralType<Disabled> {
                     let shift = $i;
                     unsafe {self.pcdr0().write_with_zero(|w| w.bits(1 << shift) )};
                     $PeripheralType { _state: PhantomData }
