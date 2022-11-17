@@ -5,10 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## 0.2.2 (2022-11-17)
-
-<csr-id-3fc93f3b35c036146a910e5802f85b6df59882df/>
-<csr-id-196a4a11fb71788650f295473a05eb0cf0242110/>
+## 0.2.3 (2022-11-17)
 
 ### Other
 
@@ -19,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 122 commits contributed to the release over the course of 848 calendar days.
+ - 123 commits contributed to the release over the course of 848 calendar days.
  - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
@@ -30,11 +27,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
-    - Add generated CHANGELOG.md ([`91daad4`](https://github.com/atsam-rs/atsam4-hal/commit/91daad4ab7c3876e5ae9af35f0975c5d6a443ae5))
-    - Allow conversion of clock without ownership change ([`a747ebc`](https://github.com/atsam-rs/atsam4-hal/commit/a747ebcd2d7379ccae1a61e75834cb6ff30e62c3))
-    - Increment to v0.2.2 ([`ceaff30`](https://github.com/atsam-rs/atsam4-hal/commit/ceaff30d6c493fb597633c3126319ee852c30aa4))
-    - Small fixes and debugging for spi ([`3921463`](https://github.com/atsam-rs/atsam4-hal/commit/392146311043e8760fac6e30dd9a60065504446f))
-    - Update usb-device to 0.2.9 ([`8fd1dad`](https://github.com/atsam-rs/atsam4-hal/commit/8fd1dad69c76b3ebe08f1de54470e89ee67ccb2a))
+    - Release atsam4-hal v0.2.2 ([`4257688`](https://github.com/atsam-rs/atsam4-hal/commit/425768807b13243c7e19d907e8bb785b0a77641c))
+    - Add generated CHANGELOG.md ([`cd5d187`](https://github.com/atsam-rs/atsam4-hal/commit/cd5d18788ab3a7332f8fc404a63d7e8b862b3ba4))
+    - Allow conversion of clock without ownership change ([`414e063`](https://github.com/atsam-rs/atsam4-hal/commit/414e063119c8c4671b0661e8c6a5f2ca0bd3b120))
+    - Increment to v0.2.2 ([`bafdf14`](https://github.com/atsam-rs/atsam4-hal/commit/bafdf14f49d4402207fe7ef93b57c4560da2bb35))
+    - Small fixes and debugging for spi ([`dd27c96`](https://github.com/atsam-rs/atsam4-hal/commit/dd27c96e1b395fc05372ae1f2b4aa32b735a6795))
+    - Update usb-device to 0.2.9 ([`a86785a`](https://github.com/atsam-rs/atsam4-hal/commit/a86785a681a50501f3d402bed4b1eef0fe8af221))
     - [TC] Fix clock enable for channels other than 0 ([`caae5ec`](https://github.com/atsam-rs/atsam4-hal/commit/caae5ec819f6db1bcd1a34d6b683fadc8ba11861))
     - Replace embedded-time with fugit ([`2b46f90`](https://github.com/atsam-rs/atsam4-hal/commit/2b46f90f90f0a3f50412f2e04966098a05cea251))
     - Fix udp documentation warnings ([`1ac0136`](https://github.com/atsam-rs/atsam4-hal/commit/1ac0136e9cdb11e5a28e0abfccf8b213c52fbc36))
@@ -153,4 +151,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - WIP ([`92aca1a`](https://github.com/atsam-rs/atsam4-hal/commit/92aca1a6282e58e183b0a9bbfeb7d675780e8fa2))
     - Initial skeleton checkin.  No working code yet. ([`9d5ec8d`](https://github.com/atsam-rs/atsam4-hal/commit/9d5ec8dcd0b1f17b8f860299aa84d835f520a9b3))
 </details>
+
+## 0.2.2 (2022-11-17)
+
+<csr-id-3fc93f3b35c036146a910e5802f85b6df59882df/>
+<csr-id-196a4a11fb71788650f295473a05eb0cf0242110/>
+
+### Other
+
+ - <csr-id-3fc93f3b35c036146a910e5802f85b6df59882df/> Refactoring GPIO and added StaticMemoryController prototype.
+ - <csr-id-196a4a11fb71788650f295473a05eb0cf0242110/> First partially working gpio.
 
