@@ -5,7 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 0.2.2 (2022-11-17)
+
+<csr-id-3fc93f3b35c036146a910e5802f85b6df59882df/>
+<csr-id-196a4a11fb71788650f295473a05eb0cf0242110/>
 
 ### Other
 
@@ -16,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 121 commits contributed to the release over the course of 828 calendar days.
+ - 122 commits contributed to the release over the course of 848 calendar days.
  - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
@@ -27,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Add generated CHANGELOG.md ([`91daad4`](https://github.com/atsam-rs/atsam4-hal/commit/91daad4ab7c3876e5ae9af35f0975c5d6a443ae5))
     - Allow conversion of clock without ownership change ([`a747ebc`](https://github.com/atsam-rs/atsam4-hal/commit/a747ebcd2d7379ccae1a61e75834cb6ff30e62c3))
     - Increment to v0.2.2 ([`ceaff30`](https://github.com/atsam-rs/atsam4-hal/commit/ceaff30d6c493fb597633c3126319ee852c30aa4))
     - Small fixes and debugging for spi ([`3921463`](https://github.com/atsam-rs/atsam4-hal/commit/392146311043e8760fac6e30dd9a60065504446f))
