@@ -264,7 +264,7 @@ impl Efc {
             let offset = (address - FLASH_PARAMS.flash1_addr) % FLASH_PAGE_SIZE;
             Ok((page as u16, offset as u16, bank))
         } else {
-            let bank = if gpnvm2 { 1 } else { 0 }; // Swap banks
+            let bank = u8::from(gpnvm2);
             let page = (address - FLASH_PARAMS.flash0_addr) / FLASH_PAGE_SIZE;
             let offset = (address - FLASH_PARAMS.flash0_addr) % FLASH_PAGE_SIZE;
             Ok((page as u16, offset as u16, bank))

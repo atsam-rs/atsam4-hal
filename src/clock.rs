@@ -946,6 +946,7 @@ impl ClockController {
         match main_clock {
             // TODO (HaaTa): Does USB even work without a crystal oscillator?
             //               The bootloader requires an external oscillator for USB to work.
+            #[cfg(not(feature = "atsam4n"))]
             MainClock::RcOscillator4Mhz => {}
             MainClock::RcOscillator8Mhz => {}
             MainClock::RcOscillator12Mhz => {}
