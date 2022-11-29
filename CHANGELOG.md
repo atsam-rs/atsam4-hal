@@ -5,22 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## 0.2.4 (2022-11-29)
+## 0.2.5 (2022-11-29)
 
 ### Bug Fixes
 
- - <csr-id-fc3b210e07bb35cd4acfa1bc3667a19f8088cad6/> Update GitHub Actions
+ - <csr-id-79e79124fc1faf760e34c51b0e26ce57abde7048/> Update GitHub Actions
    - Replace deprecated actions
    - Add udeps, pants, audit, deny GitHub Action checks
    - Fix MainClock::RcOscillator4Mhz typo for atsam4n targets
    - Fix clippy warning
- - <csr-id-edbcf58d7c29b4157b030cecd7a3bbad2fb2ab49/> udeps remove unused dependencies
+ - <csr-id-0a29442da1e23c04fe945bf644efb8540619e091/> udeps remove unused dependencies
 
 ### Commit Statistics
 
 <csr-read-only-do-not-edit/>
 
- - 2 commits contributed to the release.
+ - 3 commits contributed to the release.
  - 12 days passed between releases.
  - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
@@ -32,9 +32,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
-    - Update GitHub Actions ([`fc3b210`](https://github.com/atsam-rs/atsam4-hal/commit/fc3b210e07bb35cd4acfa1bc3667a19f8088cad6))
-    - udeps remove unused dependencies ([`edbcf58`](https://github.com/atsam-rs/atsam4-hal/commit/edbcf58d7c29b4157b030cecd7a3bbad2fb2ab49))
+    - Release atsam4-hal v0.2.4 ([`2983535`](https://github.com/atsam-rs/atsam4-hal/commit/29835358e67df28c0d4cd649e9303e812319853d))
+    - Update GitHub Actions ([`79e7912`](https://github.com/atsam-rs/atsam4-hal/commit/79e79124fc1faf760e34c51b0e26ce57abde7048))
+    - udeps remove unused dependencies ([`0a29442`](https://github.com/atsam-rs/atsam4-hal/commit/0a29442da1e23c04fe945bf644efb8540619e091))
 </details>
+
+## 0.2.4 (2022-11-29)
+
+### Bug Fixes
+
+<csr-id-edbcf58d7c29b4157b030cecd7a3bbad2fb2ab49/>
+
+ - <csr-id-fc3b210e07bb35cd4acfa1bc3667a19f8088cad6/> Update GitHub Actions
+   - Replace deprecated actions
+- Add udeps, pants, audit, deny GitHub Action checks
+- Fix MainClock::RcOscillator4Mhz typo for atsam4n targets
+- Fix clippy warning
+
+<csr-unknown>
+ udeps remove unused dependencies<csr-unknown/>
 
 ## 0.2.3 (2022-11-17)
 
