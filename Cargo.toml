@@ -23,33 +23,33 @@ usb-device = { version = "0.2.9", optional = true }
 void = { version = "1.0.2", default-features = false }
 
 # atsam4e
-atsam4e8c-pac = { version = "0.2.1", optional = true }
-atsam4e8e-pac = { version = "0.2.1", optional = true }
-atsam4e16c-pac = { version = "0.2.1", optional = true }
-atsam4e16e-pac = { version = "0.2.1", optional = true }
+atsam4e8c-pac = { version = "0.2.2", optional = true }
+atsam4e8e-pac = { version = "0.2.2", optional = true }
+atsam4e16c-pac = { version = "0.2.2", optional = true }
+atsam4e16e-pac = { version = "0.2.2", optional = true }
 
 # atsam4n
-atsam4n8a-pac = { version = "0.2.1", optional = true }
-atsam4n8b-pac = { version = "0.2.1", optional = true }
-atsam4n8c-pac = { version = "0.2.1", optional = true }
-atsam4n16b-pac = { version = "0.2.1", optional = true }
-atsam4n16c-pac = { version = "0.2.1", optional = true }
+atsam4n8a-pac = { version = "0.2.2", optional = true }
+atsam4n8b-pac = { version = "0.2.2", optional = true }
+atsam4n8c-pac = { version = "0.2.2", optional = true }
+atsam4n16b-pac = { version = "0.2.2", optional = true }
+atsam4n16c-pac = { version = "0.2.2", optional = true }
 
 # atsam4s
-atsam4s2a-pac = { version = "0.2.1", optional = true }
-atsam4s2b-pac = { version = "0.2.1", optional = true }
-atsam4s2c-pac = { version = "0.2.1", optional = true }
-atsam4s4a-pac = { version = "0.2.1", optional = true }
-atsam4s4b-pac = { version = "0.2.1", optional = true }
-atsam4s4c-pac = { version = "0.2.1", optional = true }
-atsam4s8b-pac = { version = "0.2.1", optional = true }
-atsam4s8c-pac = { version = "0.2.1", optional = true }
-atsam4sa16b-pac = { version = "0.2.1", optional = true }
-atsam4sa16c-pac = { version = "0.2.1", optional = true }
-atsam4sd16b-pac = { version = "0.2.1", optional = true }
-atsam4sd16c-pac = { version = "0.2.1", optional = true }
-atsam4sd32b-pac = { version = "0.2.1", optional = true }
-atsam4sd32c-pac = { version = "0.2.1", optional = true }
+atsam4s2a-pac = { version = "0.2.2", optional = true }
+atsam4s2b-pac = { version = "0.2.2", optional = true }
+atsam4s2c-pac = { version = "0.2.2", optional = true }
+atsam4s4a-pac = { version = "0.2.2", optional = true }
+atsam4s4b-pac = { version = "0.2.2", optional = true }
+atsam4s4c-pac = { version = "0.2.2", optional = true }
+atsam4s8b-pac = { version = "0.2.2", optional = true }
+atsam4s8c-pac = { version = "0.2.2", optional = true }
+atsam4sa16b-pac = { version = "0.2.2", optional = true }
+atsam4sa16c-pac = { version = "0.2.2", optional = true }
+atsam4sd16b-pac = { version = "0.2.2", optional = true }
+atsam4sd16c-pac = { version = "0.2.2", optional = true }
+atsam4sd32b-pac = { version = "0.2.2", optional = true }
+atsam4sd32c-pac = { version = "0.2.2", optional = true }
 
 [features]
 default = ["atsam4e16e"]
