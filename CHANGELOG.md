@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.3.0 (2022-12-06)
+
+### Bug Fixes
+
+ - <csr-id-65b97a3839616b4d02f9e437ae781b08384763ca/> Update -pac and add critical-section feature usage
+   - Also need critical-section-single-core feature from cortex-m
+   - And must enable critical-section feature to use Peripherals::take() in
+     -pac crates
+   - Fix clippy warning
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 6 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Update -pac and add critical-section feature usage ([`65b97a3`](https://github.com/atsam-rs/atsam4-hal/commit/65b97a3839616b4d02f9e437ae781b08384763ca))
+</details>
+
 ## 0.2.6 (2022-11-29)
 
 ### Bug Fixes
@@ -16,7 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
@@ -27,6 +56,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Release atsam4-hal v0.2.6 ([`1299dc7`](https://github.com/atsam-rs/atsam4-hal/commit/1299dc7b48f5306c9e040c294b4690a0d5a45ab6))
     - Update atsam*-pc crates ([`44dfd27`](https://github.com/atsam-rs/atsam4-hal/commit/44dfd271d858715f73c392b821f9d40fdd203f53))
 </details>
 
@@ -38,9 +68,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
  - <csr-id-79e79124fc1faf760e34c51b0e26ce57abde7048/> Update GitHub Actions
    - Replace deprecated actions
-- Add udeps, pants, audit, deny GitHub Action checks
-- Fix MainClock::RcOscillator4Mhz typo for atsam4n targets
-- Fix clippy warning
 
 ### Commit Statistics
 
@@ -65,7 +92,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 </details>
 
 <csr-unknown>
- udeps remove unused dependencies<csr-unknown/>
+Add udeps, pants, audit, deny GitHub Action checksFix MainClock::RcOscillator4Mhz typo for atsam4n targetsFix clippy warning<csr-unknown/>
 
 ## 0.2.4 (2022-11-29)
 
@@ -77,8 +104,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    - Replace deprecated actions
 
 <csr-unknown>
+<csr-unknown>
 Add udeps, pants, audit, deny GitHub Action checksFix MainClock::RcOscillator4Mhz typo for atsam4n targetsFix clippy warning<csr-unknown>
  udeps remove unused dependencies<csr-unknown/>
+<csr-unknown/>
 <csr-unknown/>
 
 ## 0.2.3 (2022-11-17)
