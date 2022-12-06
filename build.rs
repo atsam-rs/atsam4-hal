@@ -8,7 +8,7 @@ fn main() {
 
     if target.starts_with("thumbv") {
         // Static library used for efc C functions
-        fs::copy(format!("bin/{}.a", target), out_dir.join("libatsam4-hal.a")).unwrap();
+        fs::copy(format!("bin/{target}.a"), out_dir.join("libatsam4-hal.a")).unwrap();
         println!("cargo:rustc-link-lib=static=atsam4-hal");
     }
 
