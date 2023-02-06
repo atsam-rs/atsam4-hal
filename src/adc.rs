@@ -46,6 +46,102 @@ pub enum SingleEndedGain {
     Gain4x = 3,
 }
 
+#[derive(PartialEq, Eq, Copy, Clone, Debug, defmt::Format)]
+pub enum StartupTime {
+    /// 0 periods of ADCCLK
+    Sut0,
+    /// 8 periods of ADCCLK
+    Sut8,
+    /// 16 periods of ADCCLK
+    Sut16,
+    /// 24 periods of ADCCLK
+    Sut24,
+    /// 64 periods of ADCCLK
+    Sut64,
+    /// 80 periods of ADCCLK
+    Sut80,
+    /// 96 periods of ADCCLK
+    Sut96,
+    /// 112 periods of ADCCLK
+    Sut112,
+    /// 512 periods of ADCCLK
+    Sut512,
+    /// 576 periods of ADCCLK
+    Sut576,
+    /// 640 periods of ADCCLK
+    Sut640,
+    /// 704 periods of ADCCLK
+    Sut704,
+    /// 768 periods of ADCCLK
+    Sut768,
+    /// 832 periods of ADCCLK
+    Sut832,
+    /// 896 periods of ADCCLK
+    Sut896,
+    /// 960 periods of ADCCLK
+    Sut960,
+}
+
+#[derive(PartialEq, Eq, Copy, Clone, Debug, defmt::Format)]
+pub enum SettlingTime {
+    /// 3 periods of ADCCLK
+    Ast3,
+    /// 5 periods of ADCCLK
+    Ast5,
+    /// 9 periods of ADCCLK
+    Ast9,
+    /// 17 periods of ADCCLK
+    Ast17,
+}
+
+#[derive(PartialEq, Eq, Copy, Clone, Debug, defmt::Format)]
+pub enum TrackingTime {
+    /// 1 period of ADDCLK
+    Tt1 = 0,
+    /// 2 periods of ADDCLK
+    Tt2 = 1,
+    /// 3 periods of ADDCLK
+    Tt3 = 2,
+    /// 4 periods of ADDCLK
+    Tt4 = 3,
+    /// 5 periods of ADDCLK
+    Tt5 = 4,
+    /// 6 periods of ADDCLK
+    Tt6 = 5,
+    /// 7 periods of ADDCLK
+    Tt7 = 6,
+    /// 8 periods of ADDCLK
+    Tt8 = 7,
+    /// 9 periods of ADDCLK
+    Tt9 = 8,
+    /// 10 periods of ADDCLK
+    Tt10 = 9,
+    /// 11 periods of ADDCLK
+    Tt11 = 10,
+    /// 12 periods of ADDCLK
+    Tt12 = 11,
+    /// 13 periods of ADDCLK
+    Tt13 = 12,
+    /// 14 periods of ADDCLK
+    Tt14 = 13,
+    /// 15 periods of ADDCLK
+    Tt15 = 14,
+    /// 16 periods of ADDCLK
+    Tt16 = 15,
+}
+
+#[derive(PartialEq, Eq, Copy, Clone, Debug, defmt::Format)]
+pub enum TransferTime {
+    /// 3 period of ADCCLK
+    Tt3 = 0,
+    /// 5 periods of ADCCLK
+    Tt5 = 1,
+    /// 7 periods of ADCCLK
+    Tt7 = 2,
+    /// 11 periods of ADCCLK
+    Tt11 = 3,
+}
+
 /// An ADC where results are accessible via interrupt servicing.
 /// This is based off of atsamd-hal's InterruptAdc interface.
 /// It supports both single conversion and free running using an interrupt.
@@ -171,6 +267,8 @@ pub trait ConversionMode {
 }
 
 impl Adc {
+    /// Default ADC initialization using 20 MHz ADC clock
+    /// Uses typical configuration.
     pub fn new(adc: ADC, clock: AdcClock<Enabled>) -> Self {
         // Clear ADC write-protect
         adc.wpmr
@@ -228,6 +326,7 @@ impl Adc {
          *     Settling Time = settling value / ADCClock
          *
          *     Hold Time
+         *     (datasheet recommends (2) or 350 ns in this case)
          *     Transfer Time = (0 * 2 + 3) / 20MHz = 150 ns
          *     Transfer Time = (1 * 2 + 3) / 20MHz = 250 ns
          *     Transfer Time = (2 * 2 + 3) / 20MHz = 350 ns
@@ -252,17 +351,17 @@ impl Adc {
          *     Tracking Time = (15 + 1) / 20MHz = 800 ns
          *
          *     Analog Settling Time
-         *     (TODO May need to tune this)
+         *     (Most examples seem to use (3) or 850 ns in this case)
          *     Settling Time = 3 / 20MHz = 150 ns (0)
          *     Settling Time = 5 / 20MHz = 250 ns (1)
          *     Settling Time = 9 / 20MHz = 450 ns (2)
          *     Settling Time = 17 / 20MHz = 850 ns (3)
          *
-         * const uint8_t tracking_time = 10;
+         * const uint8_t tracking_time = 15;
          * const uint8_t transfer_period = 2; // Recommended to be set to 2 by datasheet (42.7.2)
-         * adc_configure_timing(ADC, tracking_time, ADC_SETTLING_TIME_1, transfer_period);
+         * adc_configure_timing(ADC, tracking_time, ADC_SETTLING_TIME_2, transfer_period);
          */
-        let tracking_time = 10;
+        let tracking_time = 15;
         let transfer_period = 2;
         adc.mr.modify(|_, w| unsafe {
             w.transfer()
@@ -270,7 +369,7 @@ impl Adc {
                 .tracktim()
                 .bits(tracking_time)
                 .settling()
-                .ast5()
+                .ast17()
         });
 
         // Enable temperature sensor
@@ -283,6 +382,77 @@ impl Adc {
             adc,
             clock: PhantomData,
         }
+    }
+
+    /// Startup time
+    /// See
+    /// <https://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-11100-32-bit%20Cortex-M4-Microcontroller-SAM4S_Datasheet.pdf>
+    /// page 1088
+    pub fn startup_time(&mut self, sut: StartupTime) {
+        self.adc.mr.modify(|_, w| match sut {
+            StartupTime::Sut0 => w.startup().sut0(),
+            StartupTime::Sut8 => w.startup().sut8(),
+            StartupTime::Sut16 => w.startup().sut16(),
+            StartupTime::Sut24 => w.startup().sut24(),
+            StartupTime::Sut64 => w.startup().sut64(),
+            StartupTime::Sut80 => w.startup().sut80(),
+            StartupTime::Sut96 => w.startup().sut96(),
+            StartupTime::Sut112 => w.startup().sut112(),
+            StartupTime::Sut512 => w.startup().sut512(),
+            StartupTime::Sut576 => w.startup().sut576(),
+            StartupTime::Sut640 => w.startup().sut640(),
+            StartupTime::Sut704 => w.startup().sut704(),
+            StartupTime::Sut768 => w.startup().sut768(),
+            StartupTime::Sut832 => w.startup().sut832(),
+            StartupTime::Sut896 => w.startup().sut896(),
+            StartupTime::Sut960 => w.startup().sut960(),
+        });
+    }
+
+    /// Tracking time
+    /// Tracking Time = (TRACKTIM + 1) * ADCCLK period
+    /// See
+    /// <https://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-11100-32-bit%20Cortex-M4-Microcontroller-SAM4S_Datasheet.pdf>
+    /// page 1088
+    pub fn tracking_time(&mut self, tracking_time: TrackingTime) {
+        self.adc
+            .mr
+            .modify(|_, w| unsafe { w.tracktim().bits(tracking_time as u8) });
+    }
+
+    /// Transfer time / hold time
+    /// Tranfser time = (TRANSFER * 2 + 3) * ADCCLK period
+    /// See
+    /// <https://ww1.microchip.com/downloads/en/Appnotes/Atmel-42298-SAM3-4S-4C-Analog-to-digital-Converter-ADC_ApplicationNote_AT06860.pdf>
+    /// page 28
+    /// Datasheet recommends this is set to at least 2 (Tt7)
+    /// See
+    /// <https://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-11100-32-bit%20Cortex-M4-Microcontroller-SAM4S_Datasheet.pdf>
+    /// page 1088
+    pub fn transfer_time(&mut self, transfer_time: TransferTime) {
+        self.adc
+            .mr
+            .modify(|_, w| unsafe { w.transfer().bits(transfer_time as u8) });
+    }
+
+    /// Settling time
+    /// (most example code seems to use 3 (17 periods of ADCCLK))
+    pub fn settling_time(&mut self, ast: SettlingTime) {
+        self.adc.mr.modify(|_, w| match ast {
+            SettlingTime::Ast3 => w.settling().ast3(),
+            SettlingTime::Ast5 => w.settling().ast5(),
+            SettlingTime::Ast9 => w.settling().ast9(),
+            SettlingTime::Ast17 => w.settling().ast17(),
+        });
+    }
+
+    /// Prescaler
+    /// prescaler = f_peripheral_clk / (2 x f_adcclk)) - 1
+    /// Recommended to be set to 20 MHz (unless you are having issues)
+    pub fn prescaler(&mut self, prescaler: u8) {
+        self.adc
+            .mr
+            .modify(|_, w| unsafe { w.prescal().bits(prescaler) });
     }
 
     /// Enables channel number tags
