@@ -976,10 +976,18 @@ macro_rules! adc_pins {
         $(
             impl Channel<ADC> for $PinId<ExFn> {
                type ID = u8;
-               fn channel() -> u8 { $CHAN }
+               fn channel() -> Self::ID { $CHAN }
             }
         )+
     }
+}
+
+/// Identifies the ADC channel number for a given pin
+/// This is inconvenient to do directly as you want to abstract away the explicit pin type
+/// TODO: Ideally this should be a const fn, but we'll have to wait for that to be stabilized
+///       <https://github.com/rust-lang/rust/issues/67792>
+pub fn ch<PIN: Channel<ADC, ID = u8>>(_pin: &PIN) -> u8 {
+    PIN::channel()
 }
 
 #[cfg(feature = "atsam4s")]
