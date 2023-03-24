@@ -130,6 +130,7 @@ pub enum TrackingTime {
     Tt16 = 15,
 }
 
+/// Transfer time (also known as hold time)
 #[derive(PartialEq, Eq, Copy, Clone, Debug, defmt::Format)]
 pub enum TransferTime {
     /// 3 period of ADCCLK
@@ -306,7 +307,7 @@ impl Adc {
         // Setup prescalar and startup time
         let prescaler = (clock.frequency() / (2 * 20_u32.MHz::<1, 1>()) - 1) as u8;
         adc.mr
-            .modify(|_, w| unsafe { w.prescal().bits(prescaler).startup().sut80() });
+            .modify(|_, w| unsafe { w.prescal().bits(prescaler).startup().sut512() });
 
         /* Set ADC timing.
          * Formula:
@@ -361,7 +362,7 @@ impl Adc {
          * const uint8_t transfer_period = 2; // Recommended to be set to 2 by datasheet (42.7.2)
          * adc_configure_timing(ADC, tracking_time, ADC_SETTLING_TIME_2, transfer_period);
          */
-        let tracking_time = 15;
+        let tracking_time = 10;
         let transfer_period = 2;
         adc.mr.modify(|_, w| unsafe {
             w.transfer()
@@ -487,8 +488,17 @@ impl Adc {
 
     /// Sets the channel read sequence
     /// Used with the PDC
+    /// NOTE: This sequence is a bit odd, the sequence has up to 15 channels.
+    ///       A channel register is ONLY used if the corresponding ADC channel is also enabled.
+    ///       i.e. if you want [0, 1, 2, 3] you need to enable channels 0, 1, 2, 3 even if you
+    ///       are not reading from those ADC channels.
+    ///       If you want to read from [10, 14, 15] but want to read in the order
+    ///       [10, 10, 14, 15, 15], you must enable 2 additional channels and use those channels in
+    ///       the sequence. For example enable channels 0, 1, 10, 14, 15 and use the sequence
+    ///       [10, 10, 0, 0, 0, 0, 0, 0, 0, 0, 14, 0, 0, 0, 15, 15] where the 0's are ignored.
     pub fn sequence(&mut self, channels: &[u8]) {
         for (pos, ch) in channels.iter().enumerate() {
+            defmt::trace!("Setting channel {} to {}", pos, *ch);
             match pos {
                 0 => self.adc.seqr1.modify(|_, w| unsafe { w.usch1().bits(*ch) }),
                 1 => self.adc.seqr1.modify(|_, w| unsafe { w.usch2().bits(*ch) }),
@@ -661,6 +671,7 @@ impl Adc {
 
         if wait {
             while !self.calibration_ready() {}
+            defmt::trace!("Calibration complete");
         }
     }
 
@@ -715,8 +726,14 @@ impl Adc {
     /// This is needed to determine the various gain+offset settings used
     /// See Section in 42.6.12 in the ATSAM4S datasheet for more details
     pub fn enable_channel<PIN: Channel<ADC, ID = u8>>(&mut self, _pin: &mut PIN) {
+        self.enable_channel_id(PIN::channel());
+    }
+
+    /// Useful when you need to access a bit for an internal pin that's not exposed
+    /// as part of your chip's pinout
+    pub fn enable_channel_id(&mut self, channel: u8) {
         unsafe {
-            match PIN::channel() {
+            match channel {
                 0 => self.adc.cher.write_with_zero(|w| w.ch0().set_bit()),
                 1 => self.adc.cher.write_with_zero(|w| w.ch1().set_bit()),
                 2 => self.adc.cher.write_with_zero(|w| w.ch2().set_bit()),
@@ -734,15 +751,19 @@ impl Adc {
                 14 => self.adc.cher.write_with_zero(|w| w.ch14().set_bit()),
                 15 => self.adc.cher.write_with_zero(|w| w.ch15().set_bit()),
                 _ => {
-                    panic!("Invalid channel: {}", PIN::channel());
+                    panic!("Invalid channel: {}", channel);
                 }
             }
         }
     }
 
     pub fn disable_channel<PIN: Channel<ADC, ID = u8>>(&mut self, _pin: &mut PIN) {
+        self.disable_channel_id(PIN::channel());
+    }
+
+    pub fn disable_channel_id(&mut self, channel: u8) {
         unsafe {
-            match PIN::channel() {
+            match channel {
                 0 => self.adc.chdr.write_with_zero(|w| w.ch0().set_bit()),
                 1 => self.adc.chdr.write_with_zero(|w| w.ch1().set_bit()),
                 2 => self.adc.chdr.write_with_zero(|w| w.ch2().set_bit()),
@@ -760,7 +781,7 @@ impl Adc {
                 14 => self.adc.chdr.write_with_zero(|w| w.ch14().set_bit()),
                 15 => self.adc.chdr.write_with_zero(|w| w.ch15().set_bit()),
                 _ => {
-                    panic!("Invalid channel: {}", PIN::channel());
+                    panic!("Invalid channel: {}", channel);
                 }
             }
         }
