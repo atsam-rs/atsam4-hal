@@ -1,7 +1,7 @@
 use crate::pac::udp::csr;
 use crate::pac::udp::csr::EPTYPE_A;
 use crate::pac::UDP;
-use crate::udp::{frm_num, UdpEndpointAddress, UdpEndpointType, UdpUsbDirection};
+use crate::udp::frm_num;
 use crate::BorrowUnchecked;
 use paste::paste;
 use usb_device::{
@@ -242,9 +242,7 @@ impl Endpoint {
                     "{} Endpoint{}::alloc() -> {:?}",
                     frm_num(),
                     self.index,
-                    UdpEndpointAddress {
-                        inner: Some(address)
-                    },
+                    address,
                 );
                 return Ok(address);
             }
@@ -255,8 +253,8 @@ impl Endpoint {
             "{} Endpoint{}::alloc({:?}, {:?}, {}, {})",
             frm_num(),
             self.index,
-            UdpEndpointType { inner: ep_type },
-            UdpUsbDirection { inner: ep_dir },
+            ep_type,
+            ep_dir,
             max_packet_size,
             interval
         );
@@ -297,9 +295,7 @@ impl Endpoint {
             "{} Endpoint{}::alloc() -> {:?}",
             frm_num(),
             self.index,
-            UdpEndpointAddress {
-                inner: Some(address)
-            },
+            address,
         );
         Ok(address)
     }
@@ -620,9 +616,7 @@ impl Endpoint {
                             "{} Endpoint{}::Poll({:?}) -> OUT CSR:{:X}",
                             frm_num(),
                             self.index,
-                            UdpEndpointType {
-                                inner: self.ep_type
-                            },
+                            self.ep_type,
                             csr.bits()
                         );
                         1 << self.index
@@ -638,9 +632,7 @@ impl Endpoint {
                             "{} Endpoint{}::Poll({:?}) -> IN CSR:{:X}",
                             frm_num(),
                             self.index,
-                            UdpEndpointType {
-                                inner: self.ep_type
-                            },
+                            self.ep_type,
                             UDP::borrow_unchecked(|udp| udp.csr()[self.index as usize].read())
                                 .bits()
                         );
@@ -842,7 +834,7 @@ impl Endpoint {
                     self.index,
                     rxbytes,
                     &data[0..rxbytes],
-                    UdpUsbDirection { inner: dir },
+                    dir,
                     UDP::borrow_unchecked(|udp| udp.csr()[self.index as usize].read()).bits()
                 );
                 return Ok(rxbytes);

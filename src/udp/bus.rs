@@ -1,7 +1,7 @@
 use crate::clock::{Disabled, UdpClock};
 use crate::gpio::{Pb10, Pb11, SysFn};
 use crate::pac::{PMC, UDP};
-use crate::udp::{frm_num, Endpoint, UdpEndpointAddress, UdpEndpointType, UdpUsbDirection};
+use crate::udp::{frm_num, Endpoint};
 use crate::BorrowUnchecked;
 use core::cell::RefCell;
 use core::marker::PhantomData;
@@ -221,9 +221,9 @@ impl UsbBus for UdpBus {
     ) -> usb_device::Result<EndpointAddress> {
         defmt::trace!(
             "UdpBus::alloc_ep({:?}, {:?}, {:?}, {}, {})",
-            UdpUsbDirection { inner: ep_dir },
-            UdpEndpointAddress { inner: ep_addr },
-            UdpEndpointType { inner: ep_type },
+            ep_dir,
+            ep_addr,
+            ep_type,
             max_packet_size,
             interval
         );
@@ -359,14 +359,7 @@ impl UsbBus for UdpBus {
     }
 
     fn write(&self, ep_addr: EndpointAddress, buf: &[u8]) -> usb_device::Result<usize> {
-        defmt::trace!(
-            "{} UdpBus::write({:?}, {:02X})",
-            frm_num(),
-            UdpEndpointAddress {
-                inner: Some(ep_addr)
-            },
-            buf
-        );
+        defmt::trace!("{} UdpBus::write({:?}, {:02X})", frm_num(), ep_addr, buf,);
         cortex_m::interrupt::free(|cs| {
             // Make sure the endpoint is configured correctly
             if self.endpoints[ep_addr.index()]
@@ -387,13 +380,7 @@ impl UsbBus for UdpBus {
     }
 
     fn read(&self, ep_addr: EndpointAddress, buf: &mut [u8]) -> usb_device::Result<usize> {
-        defmt::trace!(
-            "{} UdpBus::read({:02X})",
-            frm_num(),
-            UdpEndpointAddress {
-                inner: Some(ep_addr)
-            },
-        );
+        defmt::trace!("{} UdpBus::read({:02X})", frm_num(), ep_addr,);
         cortex_m::interrupt::free(|cs| {
             // Make sure the endpoint is configured correctly
             if self.endpoints[ep_addr.index()]
