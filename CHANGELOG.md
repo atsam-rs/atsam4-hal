@@ -5,21 +5,77 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.3.1 (2023-05-02)
+
+### New Features
+
+ - <csr-id-7709708bcfda27545d57ea2cfa662db0b3bf733d/> Add index-based adc channel enable/disable
+   - Useful when using channels not connected to physical pins (or using
+     those physical pins on another mux)
+   - Small adjustment to default adc configuration
+   - Make sure to enable defmt for usb-device
+ - <csr-id-64a0cfe648590697c922aa86a2f8c3b46921ce8b/> Add helper function to identify ADC channel
+   - This is useful when defining an ADC sequence, which requires a list of
+     channels (which can't be passed in directly as it's a heterogeneous
+     list of possibly repeated elements)
+
+### Bug Fixes
+
+ - <csr-id-6f72465e87bcf9382d64001c1c9927adf3d1e60a/> Update to use atsam-pac 0.3.1
+ - <csr-id-f81d75743b926563527a6559a6236debb11b2c2d/> Remove defmt wrappers now that usb-device has defmt feature flag
+   - No longer necessary
+ - <csr-id-851d608880e67ad21884cba37a764a88b9dd7f18/> Add better ADC configuration support
+   - Add missing ADC clock configuration
+     * Use internal timings as things are very clock speed dependent (and
+       those timings don't explain the timing well)
+       You really need to calculate everything to understand it properly
+       (equations are added in as comments)
+     * Startup time
+     * Tracking time
+     * Transfer time
+     * Settling time
+     * Prescaler
+   - Update default configuration to better reflect the datasheet
+     recommendations
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 5 commits contributed to the release over the course of 84 calendar days.
+ - 146 days passed between releases.
+ - 5 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Update to use atsam-pac 0.3.1 ([`6f72465`](https://github.com/atsam-rs/atsam4-hal/commit/6f72465e87bcf9382d64001c1c9927adf3d1e60a))
+    - Remove defmt wrappers now that usb-device has defmt feature flag ([`f81d757`](https://github.com/atsam-rs/atsam4-hal/commit/f81d75743b926563527a6559a6236debb11b2c2d))
+    - Add index-based adc channel enable/disable ([`7709708`](https://github.com/atsam-rs/atsam4-hal/commit/7709708bcfda27545d57ea2cfa662db0b3bf733d))
+    - Add helper function to identify ADC channel ([`64a0cfe`](https://github.com/atsam-rs/atsam4-hal/commit/64a0cfe648590697c922aa86a2f8c3b46921ce8b))
+    - Add better ADC configuration support ([`851d608`](https://github.com/atsam-rs/atsam4-hal/commit/851d608880e67ad21884cba37a764a88b9dd7f18))
+</details>
+
 ## 0.3.0 (2022-12-06)
 
 ### Bug Fixes
 
  - <csr-id-65b97a3839616b4d02f9e437ae781b08384763ca/> Update -pac and add critical-section feature usage
    - Also need critical-section-single-core feature from cortex-m
-   - And must enable critical-section feature to use Peripherals::take() in
+- And must enable critical-section feature to use Peripherals::take() in
      -pac crates
-   - Fix clippy warning
+- Fix clippy warning
 
 ### Commit Statistics
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 6 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
@@ -31,6 +87,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Release atsam4-hal v0.3.0 ([`d96fa95`](https://github.com/atsam-rs/atsam4-hal/commit/d96fa95864edb8da3c8d30ec57314a4332a939a6))
     - Update -pac and add critical-section feature usage ([`65b97a3`](https://github.com/atsam-rs/atsam4-hal/commit/65b97a3839616b4d02f9e437ae781b08384763ca))
 </details>
 
@@ -88,11 +145,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Release atsam4-hal v0.2.5 ([`8e148a0`](https://github.com/atsam-rs/atsam4-hal/commit/8e148a0b7b63fcc8bd6e11cd1ee9e2fdafba490e))
     - Release atsam4-hal v0.2.4 ([`2983535`](https://github.com/atsam-rs/atsam4-hal/commit/29835358e67df28c0d4cd649e9303e812319853d))
     - Update GitHub Actions ([`79e7912`](https://github.com/atsam-rs/atsam4-hal/commit/79e79124fc1faf760e34c51b0e26ce57abde7048))
-    - udeps remove unused dependencies ([`0a29442`](https://github.com/atsam-rs/atsam4-hal/commit/0a29442da1e23c04fe945bf644efb8540619e091))
+    - Udeps remove unused dependencies ([`0a29442`](https://github.com/atsam-rs/atsam4-hal/commit/0a29442da1e23c04fe945bf644efb8540619e091))
 </details>
-
-<csr-unknown>
-Add udeps, pants, audit, deny GitHub Action checksFix MainClock::RcOscillator4Mhz typo for atsam4n targetsFix clippy warning<csr-unknown/>
 
 ## 0.2.4 (2022-11-29)
 
@@ -105,8 +159,10 @@ Add udeps, pants, audit, deny GitHub Action checksFix MainClock::RcOscillator4Mh
 
 <csr-unknown>
 <csr-unknown>
+<csr-unknown>
 Add udeps, pants, audit, deny GitHub Action checksFix MainClock::RcOscillator4Mhz typo for atsam4n targetsFix clippy warning<csr-unknown>
  udeps remove unused dependencies<csr-unknown/>
+<csr-unknown/>
 <csr-unknown/>
 <csr-unknown/>
 
@@ -150,7 +206,7 @@ Add udeps, pants, audit, deny GitHub Action checksFix MainClock::RcOscillator4Mh
     - Merge pull request #59 from haata/master ([`086f5ee`](https://github.com/atsam-rs/atsam4-hal/commit/086f5ee416249762e45be3b5811fdefea2767100))
     - Updating dependencies and adding DwtTimer ([`5ad6303`](https://github.com/atsam-rs/atsam4-hal/commit/5ad63036ac903fd5986cefc72712385b4bd61229))
     - USB 2.0 compliant remote wakeup ([`37de92b`](https://github.com/atsam-rs/atsam4-hal/commit/37de92badb2453eed2c08784c8d5e5b09beba232))
-    - defmt debugging improvments ([`0f579e1`](https://github.com/atsam-rs/atsam4-hal/commit/0f579e19156d0b2af5a9097c819ff1a835316a29))
+    - Defmt debugging improvments ([`0f579e1`](https://github.com/atsam-rs/atsam4-hal/commit/0f579e19156d0b2af5a9097c819ff1a835316a29))
     - Add more defmt support for enums ([`c7e7b22`](https://github.com/atsam-rs/atsam4-hal/commit/c7e7b22f2992d79bd53166bc46ebbcfce9c1778a))
     - Replacing iap_function with C RAM functions ([`d3a8697`](https://github.com/atsam-rs/atsam4-hal/commit/d3a8697259940982ec58fc28a214c1709068e4ed))
     - Updating defmt to 0.3 ([`2847826`](https://github.com/atsam-rs/atsam4-hal/commit/284782616817af6fa4ffb8d0b920e5b078c812b4))
@@ -219,7 +275,7 @@ Add udeps, pants, audit, deny GitHub Action checksFix MainClock::RcOscillator4Mh
     - Added change to allow clippy::upper_case_acronyms.   Since the PACs generate these (and macros exist that consume those types exist), they're being allowed. ([`f246a9d`](https://github.com/atsam-rs/atsam4-hal/commit/f246a9d10d7f93edeb3d3a92359ca3d837d50001))
     - Adding GitHub Actions ([`f97465b`](https://github.com/atsam-rs/atsam4-hal/commit/f97465bdfc7ebd5ac9188714cf467ed5406ef953))
     - Fixing clippy warnings ([`b7a7137`](https://github.com/atsam-rs/atsam4-hal/commit/b7a71374a13a7fe09984da56954e0d8cc09f3eda))
-    - cargo fmt ([`338fd0f`](https://github.com/atsam-rs/atsam4-hal/commit/338fd0f1f60f2dc300960c70884f628b400aa8c8))
+    - Cargo fmt ([`338fd0f`](https://github.com/atsam-rs/atsam4-hal/commit/338fd0f1f60f2dc300960c70884f628b400aa8c8))
     - Modified location of eui48 dependency ([`b389520`](https://github.com/atsam-rs/atsam4-hal/commit/b3895205a917ed4ff8fa8df1951eb2a473f6d990))
     - Unstable ethernet controller driver.   Changes for satisfy clippy. ([`cebdd89`](https://github.com/atsam-rs/atsam4-hal/commit/cebdd89c34bf7068f6814bd7fcf83487f41c9763))
     - Version 0.1.5 ([`0696afc`](https://github.com/atsam-rs/atsam4-hal/commit/0696afc951c1e40f30e784a9be9ec92cf288332a))
