@@ -275,8 +275,8 @@ impl Efc {
     /// Returns: (page, offset, bank)
     #[cfg(not(feature = "atsam4sd"))]
     fn translate_address(&self, address: u32) -> Result<(u16, u16, u8), EfcError> {
-        if address < FLASH_PARAMS.flash0_addr
-            || address > FLASH_PARAMS.flash0_addr + FLASH_PARAMS.flash0_size
+        if !(FLASH_PARAMS.flash0_addr..=FLASH_PARAMS.flash0_addr + FLASH_PARAMS.flash0_size)
+            .contains(&address)
         {
             return Err(EfcError::AddressBoundsError);
         }

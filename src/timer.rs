@@ -1,6 +1,7 @@
 use crate::hal::timer::{CountDown, Periodic};
 use crate::BorrowUnchecked;
 use core::marker::PhantomData;
+use core::ptr::addr_of_mut;
 use cortex_m::{interrupt, peripheral::DWT};
 use fugit::{
     HertzU32 as Hertz, RateExtU32, TimerDurationU32 as TimerDuration, TimerRateU32 as TimerRate,
@@ -327,16 +328,17 @@ impl<const TIMER_HZ: u32> DwtTimer<TIMER_HZ> {
 
         interrupt::free(|_| {
             // Safety: These static mut variables are accessed in an interrupt free section.
-            let (overflows, last_cnt) = unsafe { (&mut DWT_OVERFLOWS, &mut OLD_DWT) };
+            let (overflows, last_cnt) =
+                unsafe { (addr_of_mut!(DWT_OVERFLOWS), addr_of_mut!(OLD_DWT)) };
 
             let cyccnt = DWT::cycle_count();
 
-            if cyccnt <= *last_cnt {
-                *overflows += 1;
+            if cyccnt <= unsafe { *last_cnt } {
+                unsafe { *overflows += 1 };
             }
 
-            let ticks = (*overflows as u64) << 32 | (cyccnt as u64);
-            *last_cnt = cyccnt;
+            let ticks = unsafe { (*overflows as u64) << 32 | (cyccnt as u64) };
+            unsafe { *last_cnt = cyccnt };
 
             ticks
         })

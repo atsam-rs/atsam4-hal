@@ -680,21 +680,19 @@ where
     }
 
     fn spi_write(&mut self, words: &[FRAMESIZE]) -> Result<(), Error> {
-        for word in words {
-            loop {
-                let sr = self.spi.sr.read();
-                if sr.tdre().bit_is_set() {
-                    // Fixed Mode
-                    if self.spi.mr.read().ps().bit_is_clear() {
-                        self.write_fixed_data_reg(*word);
+        if let Some(word) = words.iter().next() {
+            let sr = self.spi.sr.read();
+            if sr.tdre().bit_is_set() {
+                // Fixed Mode
+                if self.spi.mr.read().ps().bit_is_clear() {
+                    self.write_fixed_data_reg(*word);
 
-                    // Variable Mode
-                    } else {
-                        self.write_variable_data_reg(*word);
-                    }
-                    if sr.modf().bit_is_set() {
-                        return Err(Error::ModeFault);
-                    }
+                // Variable Mode
+                } else {
+                    self.write_variable_data_reg(*word);
+                }
+                if sr.modf().bit_is_set() {
+                    return Err(Error::ModeFault);
                 }
             }
         }
